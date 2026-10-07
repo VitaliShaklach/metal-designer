@@ -16,7 +16,7 @@ function dim3(a,b,off,text,lp=.5){   // lp — где подпись на лин
     else{arrow(A2,d.clone());arrow(B2,d.clone().negate());}}
   let lp3=null;
   if(text){lp3=A2.clone().lerp(B2,lp);
-    if(L<2.5){const m=lp3.clone();lp3.add((on||new V(0,1,0)).clone().multiplyScalar(2.2));P.push(m,lp3.clone());}}   // маленький размер: подпись сбоку на полочке, чтобы не закрывала линию
+    if(L<2.5){const m=lp3.clone();lp3.add((on||new V(0,1,0)).clone().multiplyScalar(3.2));P.push(m,lp3.clone());}}   // маленький размер: подпись сбоку на полочке, чтобы не закрывала линию
   const ls=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(P),new THREE.LineBasicMaterial({color:DIMC,depthTest:false,transparent:true}));
   ls.renderOrder=10;ls.userData.dim=1;group.add(ls);
   if(lp3)lab(text,lp3);
