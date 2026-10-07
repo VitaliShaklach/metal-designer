@@ -243,3 +243,27 @@ function partAt(ev){if(!ok||!group)return null;
 (()=>{const l=document.getElementById('loading');if(!l)return;
   if(ok)requestAnimationFrame(()=>requestAnimationFrame(()=>l.remove()));
   else{l.classList.add('err');l.textContent='3D-модель не загрузилась (нет WebGL или нет связи с CDN) — размеры, раскрой и DXF ниже работают';}})();
+
+/* ---------- справка «Управление» и горячие клавиши ---------- */
+(()=>{const hp=document.getElementById('help'),bt=document.getElementById('helpBtn');
+  const set=o=>{hp.hidden=!o;bt.setAttribute('aria-expanded',String(o));if(o)document.getElementById('helpClose').focus();};
+  bt.addEventListener('click',()=>set(hp.hidden));
+  document.getElementById('helpClose').addEventListener('click',()=>{set(false);bt.focus();});
+  addEventListener('pointerdown',e=>{if(!hp.hidden&&!hp.contains(e.target)&&e.target!==bt)set(false);});
+  const press=sel=>{const b=document.querySelector(sel);if(b)b.click();};
+  addEventListener('keydown',e=>{
+    const a=document.activeElement;if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(a&&(a.tagName==='TEXTAREA'||a.tagName==='SELECT'||(a.tagName==='INPUT'&&a.type!=='checkbox'&&a.type!=='range')))return;
+    const k=e.key;
+    if(k==='Escape'){if(!hp.hidden){set(false);bt.focus();}else if(S.sel.el){S.sel={el:null,part:null};selEl.value='';applySel();}return;}
+    if(k==='?'||(e.code==='Slash'&&e.shiftKey)){e.preventDefault();set(hp.hidden);return;}
+    const c=e.code;
+    if(c==='KeyF'){fitSel();}
+    else if(c==='Digit1')press('#modeSeg [data-v=both]');
+    else if(c==='Digit2')press('#modeSeg [data-v=grill]');
+    else if(c==='Digit3')press('#modeSeg [data-v=stove]');
+    else if(c==='KeyD'){const vis=dimVisible();press(vis.some(r=>!S.dims.has(r.id))?'#dAll':'#dNone');}
+    else if(c==='KeyX')press('#cXray');
+    else if(c==='KeyU')press(`#unitSeg [data-v=${UNIT==='mm'?'cm':'mm'}]`);
+    else return;
+    e.preventDefault();});})();

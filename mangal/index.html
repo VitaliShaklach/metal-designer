@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2026.10.07">
+<link rel="stylesheet" href="css/style.css?v=1.0.0">
 </head>
 <body>
 <div class="wrap">
@@ -47,7 +47,39 @@
         <button class="viewbtn" id="copyView" type="button" title="Ссылка на эту страницу с тем же видом камеры, деталью, размерами и галочками">Поделиться видом</button>
         <div class="viewbox" id="viewBox" hidden><span id="viewMsg">Ссылка скопирована</span><input id="viewTxt" readonly></div>
         <div class="hovtag" id="hovTag" hidden></div>
-        <div class="hint">Клик по детали — выбрать · ЛКМ — вращать · колесо — зум · пробел + тянуть (или ПКМ) — двигать</div>
+        <button class="helpbtn" id="helpBtn" type="button" aria-haspopup="dialog" aria-controls="help" title="Управление и горячие клавиши (?)">? Управление</button>
+        <div class="help" id="help" role="dialog" aria-modal="false" aria-labelledby="helpT" hidden>
+          <div class="helphead"><b id="helpT">Управление</b><button type="button" id="helpClose" aria-label="Закрыть">✕</button></div>
+          <div class="helpcols">
+            <div><h4>Мышь</h4><dl>
+              <dt>ЛКМ + тянуть</dt><dd>вращать модель</dd>
+              <dt>Колесо</dt><dd>приблизить / отдалить</dd>
+              <dt>ПКМ + тянуть</dt><dd>двигать модель</dd>
+              <dt><kbd>Пробел</kbd> + тянуть</dt><dd>двигать (как в Figma)</dd>
+              <dt>Клик по детали</dt><dd>показать только её — размеры и раскрой тоже</dd>
+              <dt>Двойной клик по пустому</dt><dd>снова вся модель</dd>
+              <dt>Наведение</dt><dd>имя детали под курсором</dd></dl></div>
+            <div><h4>Телефон</h4><dl>
+              <dt>Один палец</dt><dd>вращать</dd>
+              <dt>Два пальца</dt><dd>щипок — масштаб, сдвиг — двигать</dd>
+              <dt>Касание детали</dt><dd>выбрать её</dd>
+              <dt>«Настройки»</dt><dd>кнопка внизу — галочки и ползунки</dd></dl></div>
+            <div><h4>Клавиши</h4><dl>
+              <dt><kbd>F</kbd></dt><dd>камера на всю модель (или на выбранное)</dd>
+              <dt><kbd>Esc</kbd></dt><dd>сбросить выбор детали</dd>
+              <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>печь + мангал / мангал / печь</dd>
+              <dt><kbd>D</kbd></dt><dd>показать / скрыть все размеры</dd>
+              <dt><kbd>X</kbd></dt><dd>прозрачный корпус</dd>
+              <dt><kbd>U</kbd></dt><dd>мм ⇄ см</dd>
+              <dt><kbd>?</kbd></dt><dd>эта справка</dd></dl></div>
+            <div><h4>Интерфейс</h4><dl>
+              <dt>Значок «?»</dt><dd>у галочки — пояснение</dd>
+              <dt>Заголовок группы</dt><dd>свернуть / развернуть</dd>
+              <dt>Вкладки</dt><dd>переключаются и стрелками <kbd>←</kbd> <kbd>→</kbd></dd>
+              <dt>«Поделиться видом»</dt><dd>ссылка с той же камерой, деталью и галочками</dd></dl></div>
+          </div>
+        </div>
+        <div class="hint">Клик по детали — выбрать · <kbd>?</kbd> — управление и горячие клавиши</div>
       </div>
       <button class="drawerbtn" id="drawerBtn" type="button" aria-controls="controls" aria-expanded="false">Настройки</button>
       <div class="controls" id="controls">
@@ -201,7 +233,7 @@
   </section>
 
   <footer>
-    <span>Автор — Виталий Шаклач</span>
+    <span>Автор — Виталий Шаклач · <span class="ver">v1.0.0</span></span>
     <span>Заявки на улучшения принимаю на email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -209,12 +241,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/params.js?v=2026.10.07"></script>
-<script src="js/parts.js?v=2026.10.07"></script>
-<script src="js/model.js?v=2026.10.07"></script>
-<script src="js/dims.js?v=2026.10.07"></script>
-<script src="js/cut.js?v=2026.10.07"></script>
-<script src="js/dxf.js?v=2026.10.07"></script>
-<script src="js/ui.js?v=2026.10.07"></script>
+<script src="js/params.js?v=1.0.0"></script>
+<script src="js/parts.js?v=1.0.0"></script>
+<script src="js/model.js?v=1.0.0"></script>
+<script src="js/dims.js?v=1.0.0"></script>
+<script src="js/cut.js?v=1.0.0"></script>
+<script src="js/dxf.js?v=1.0.0"></script>
+<script src="js/ui.js?v=1.0.0"></script>
 </body>
 </html>
