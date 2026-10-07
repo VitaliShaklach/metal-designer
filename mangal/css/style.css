@@ -222,3 +222,6 @@ kbd{display:inline-block;min-width:20px;padding:1px 5px;border:1px solid var(--l
 .hint kbd{font-size:10px;padding:0 4px;min-width:0}
 @media (max-width:900px){.helpbtn{right:auto;left:12px;top:36px}.help{left:8px;right:8px;width:auto;top:70px}.helpcols{grid-template-columns:1fr}}
 .ver{font-family:var(--f-mono);font-size:12px}
+
+svg.cutsk .fl{fill:var(--accent);fill-opacity:.25}
+#cut td:nth-child(2){vertical-align:middle;width:1%}

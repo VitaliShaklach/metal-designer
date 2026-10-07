@@ -74,19 +74,19 @@ function cutRows(){
   ];
 }
 function drawCut(){
-  let tot=0,sel=0,el=null,grp=null,skip=false,h='<thead><tr><th>Деталь</th><th>Размер, мм</th><th class="r">Кол-во</th><th class="r">Масса, кг</th></tr></thead><tbody>';
+  let tot=0,sel=0,el=null,grp=null,skip=false,h='<thead><tr><th>Деталь</th><th>Эскиз</th><th>Размер, мм</th><th class="r">Кол-во</th><th class="r">Масса, кг</th></tr></thead><tbody>';
   cutRows().forEach(p=>{
     if(p.g){el=p.el;grp=elOk(el)?p.g:null;skip=!elOk(el);return;}
     if(skip||(p.pt&&![].concat(p.pt).some(partOk))||!p.q)return;   // нет в текущем режиме
     const m=p.m*p.q;tot+=m;
     if(!inSel(el,p.pt))return;
     sel+=m;
-    if(grp){h+=`<tr class="grp"><td colspan="4">${grp}</td></tr>`;grp=null;}
-    h+=`<tr><td>${p.n}${p.note?`<small>${p.note}</small>`:''}</td><td class="n">${String(p.s).replace(/\d+\.\d+/g,v=>fmt(+v,1))}</td><td class="n r">${p.q}</td><td class="n r">${m?m.toFixed(2).replace('.',','):'—'}</td></tr>`;
+    if(grp){h+=`<tr class="grp"><td colspan="5">${grp}</td></tr>`;grp=null;}
+    h+=`<tr><td>${p.n}${p.note?`<small>${p.note}</small>`:''}</td><td>${cutSketch(p)}</td><td class="n">${String(p.s).replace(/\d+\.\d+/g,v=>fmt(+v,1))}</td><td class="n r">${p.q}</td><td class="n r">${m?m.toFixed(2).replace('.',','):'—'}</td></tr>`;
   });
   const kg=v=>v.toFixed(1).replace('.',',');
-  if(S.sel.el)h+=`<tr class="tot"><td colspan="3">Итого выбранного: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}</td><td class="n r">${kg(sel)}</td></tr>`;
-  h+=`<tr class="tot"><td colspan="3">Итого металла ${({both:'всего мангала',grill:'мангала',stove:'печи'})[S.mode]} (без колёс)</td><td class="n r">${kg(tot)}</td></tr></tbody>`;
+  if(S.sel.el)h+=`<tr class="tot"><td colspan="4">Итого выбранного: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}</td><td class="n r">${kg(sel)}</td></tr>`;
+  h+=`<tr class="tot"><td colspan="4">Итого металла ${({both:'всего мангала',grill:'мангала',stove:'печи'})[S.mode]} (без колёс)</td><td class="n r">${kg(tot)}</td></tr></tbody>`;
   document.getElementById('cut').innerHTML=h;
   const ln=(a)=>fmt(a/100,2)+' м',ar=(a)=>fmt(a/10000,2)+' м²';
   const g=gOn(),k=sOn(),LL=legsList(),nW=LL.filter(l=>l[3]).length,nF=LL.length-nW;
@@ -114,3 +114,58 @@ function drawCut(){
     gOn()?[`${holes().length*2} / ${slots().length*2}`,'отверстий / прорезей']:[`${KZ.v} л`,'казан'],
   ].map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');
 }
+
+/* ---------- эскизы в раскрое: листовые детали — тот же контур, что в DXF; прокат — сечение и длина; покупное — значок ---------- */
+const skSvg=(w,h,g)=>`<svg class="dxfsk cutsk" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${g}</svg>`;
+const SEC={   // сечения проката в квадрате 24×24 (x 2…26, y 8…32)
+  angle:'<polygon points="4,10 8,10 8,26 24,26 24,30 4,30"/>',
+  tube:'<circle cx="14" cy="20" r="10"/><circle cx="14" cy="20" r="7.5"/>',
+  rod:'<circle class="fl" cx="14" cy="20" r="6"/>',
+  ptube:'<rect x="4" y="10" width="20" height="20"/><rect x="7" y="13" width="14" height="14"/>',
+  sq:'<rect class="fl" x="8" y="14" width="12" height="12"/>',
+  strip:'<rect class="fl" x="4" y="17" width="20" height="6"/>'};
+function skBar(sec,len){const bw=Math.round(30+110*Math.min(1,len/1000));   // длина — в масштабе до 1 м
+  return skSvg(176,40,SEC[sec]+`<rect x="34" y="17" width="${bw}" height="6"/>`);}
+function skRect(a,b,extra=''){const k=Math.min(150/a,40/b),w=Math.max(6,a*k),h=Math.max(4,b*k);
+  return skSvg(Math.ceil(w)+4,Math.ceil(h)+4,`<rect x="2" y="2" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>`+(typeof extra==='function'?extra(w,h):extra));}
+const SKI={   // значки покупного
+  wheel:'<rect x="6" y="3" width="28" height="4"/><path d="M14 7v6M26 7v6"/><circle cx="20" cy="25" r="12"/><circle cx="20" cy="25" r="3"/>',
+  bolt:'<polygon points="4,14 8,8 16,8 20,14 16,20 8,20"/><rect x="20" y="11" width="36" height="6"/><path d="M26 11v6M32 11v6M38 11v6M44 11v6M50 11v6"/>',
+  nut:'<path d="M4 6c6 0 10 6 12 10M40 6c-6 0-10 6-12 10"/><polygon points="14,16 30,16 32,26 12,26"/><circle cx="22" cy="21" r="3"/>',
+  washer:'<circle cx="18" cy="18" r="14"/><circle cx="18" cy="18" r="5"/>',
+  hinge:'<rect x="4" y="12" width="40" height="8"/><path d="M24 12v8"/><rect x="2" y="10" width="4" height="12"/>',
+  ring:'<circle cx="18" cy="18" r="12"/><circle cx="18" cy="18" r="9"/>',
+  cap:'<circle cx="18" cy="18" r="13"/><circle class="fl" cx="18" cy="18" r="4"/>'};
+const skIcon=(k,w=60,h=38)=>skSvg(w,h,SKI[k]);
+function cutSketch(p){const n=p.n.toLowerCase(),sz=String(p.s),nums=(sz.match(/\d+(?:[.,]\d+)?/g)||[]).map(v=>+v.replace(',','.'));
+  // листовая деталь из DXF — тот же контур
+  if(typeof laserParts==='function'){const pts=[].concat(p.pt||[]);
+    const cand=laserParts().filter(l=>pts.includes(l.pt)).map(l=>[l,partMM(l)]);
+    const lp=cand.find(([l,m])=>nums.length>=2&&((Math.round(m.w)===nums[0]&&Math.round(m.h)===nums[1])||(Math.round(m.w)===nums[1]&&Math.round(m.h)===nums[0])))||(cand.length===1&&pts.length===1&&/лист|перегородка/i.test(p.n)?cand[0]:null);   // одна листовая деталь — её контур (перегородка в DXF шире на ручку)
+    if(lp)return dxfSketch(lp[1]);}
+  const L=/^L\s*(\d+)/.exec(sz),len=L?+L[1]:nums[0]||0;
+  if(/колесо/.test(n))return skIcon('wheel',40,40);
+  if(/болт/.test(n))return skIcon('bolt');
+  if(/барашек/.test(n))return skIcon('nut',44,30);
+  if(/шайба/.test(n))return skIcon('washer',36,36);
+  if(/петля/.test(n))return skIcon('hinge',48,32);
+  if(/проушина/.test(n))return skIcon('ring',36,36);
+  if(/заглушка/.test(n))return skIcon('cap',36,36);
+  if(/плита/.test(n))return skRect(45,45,(w,h)=>[19.5,15,10.5,6].map(r=>`<circle cx="${(2+w/2).toFixed(1)}" cy="${(2+h/2).toFixed(1)}" r="${(r/45*w).toFixed(1)}"/>`).join(''));
+  if(/^ручка (печи )?—|^ручка — труба/.test(n)||/^ручка/.test(n)&&/труба/.test(n))return skSvg(90,40,'<path d="M6 36V8h78v28"/><path d="M2 36h8M80 36h8"/>');
+  if(/ручка дверцы/.test(n))return skSvg(70,30,'<path d="M6 26V6h58v20"/>');
+  if(/крючок/.test(n))return skSvg(50,34,'<path d="M6 30V6h30"/><circle cx="40" cy="6" r="3"/>');
+  if(/скоба/.test(n))return skSvg(40,40,'<polyline points="30,6 30,30 12,30 12,36"/><polyline points="34,6 34,34 16,34 16,38" />');
+  if(/ручка колосника|уголок/.test(n))return skBar('angle',len);
+  if(/профтруба/.test(n))return skBar('ptube',len);
+  if(/квадрат/.test(n))return skBar('sq',len);
+  if(/труба|трубка|патрубок/.test(n))return skBar('tube',len);
+  if(/арматура|пруток/.test(n))return skBar('rod',len);
+  if(/полоса/.test(n)&&L)return skBar('strip',len);
+  if(nums.length>=2){const [a,b]=nums;
+    if(/перфолист|колосник/.test(n))return skRect(a,b,(w,h)=>{let d='';for(let x=6;x<w;x+=6)for(let y=6;y<h;y+=6)d+=`<circle cx="${(x+2).toFixed(1)}" cy="${(y+2).toFixed(1)}" r="1.2"/>`;return d;});
+    if(/решётка/.test(n))return skRect(a,b,(w,h)=>{let d='';for(let x=5;x<w;x+=5)d+=`<path d="M${(x+2).toFixed(1)} 2v${h.toFixed(1)}"/>`;return d;});
+    if(/профлист/.test(n))return skRect(a,b,(w,h)=>{let d='';for(let y=4;y<h;y+=4)d+=`<path d="M2 ${(y+2).toFixed(1)}h${w.toFixed(1)}"/>`;return d;});
+    if(/логотип/.test(n))return skRect(a,b,(w,h)=>`<path d="M${(2+w*.15).toFixed(1)} ${(2+h*.15).toFixed(1)}h${(w*.7).toFixed(1)}v${(h*.6).toFixed(1)}h-${(w*.7).toFixed(1)}z"/>`);
+    return skRect(a,b);}
+  return '';}
