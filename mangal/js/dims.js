@@ -36,6 +36,8 @@ function dimDefs(){
   ['l80','Длина жаровни',L1,()=>dim3([0,T,f],[L1,T,f],[0,0,12],u(L1))],
   ['h12','Глубина жаровни',u(H1),()=>dim3([L1,B,f],[L1,T,f],[0,0,6],u(H1))],
   ['holeB','Отверстия: от низа боковины (до центра / до края)',`${fmt((HOLE_Y-t)*10)} / ${fmt((HOLE_Y-t-HOLE/2)*10)} мм`,()=>{const x=holes()[2];dim3([x,B+t,W],[x,B+HOLE_Y,W],[0,0,3],`до центра ${fmt((HOLE_Y-t)*10)} мм`);dim3([x+3,B+t,W],[x+3,B+HOLE_Y-HOLE/2,W],[0,0,3],`до края ${fmt((HOLE_Y-t-HOLE/2)*10)} мм`);}],
+  ['holeD','Отверстия поддува: диаметр',`Ø${fmt(HOLE*10)} мм`,()=>{const x=holes()[4],y=B+HOLE_Y,z=W+.05;dim3([x-HOLE/2,y,z],[x+HOLE/2,y,z],[0,-(HOLE/2+1.5),0],`Ø${fmt(HOLE*10)} мм`);}],
+  ['holeGap','Отверстия поддува: между краями',u(S.pitch-HOLE),()=>{const h=holes(),y=B+HOLE_Y,z=W+.05;dim3([h[6]+HOLE/2,y,z],[h[7]-HOLE/2,y,z],[0,HOLE/2+1.5,0],`между краями ${u(S.pitch-HOLE)}`);}],
   ['hole1','Первое отверстие от края',u(hs[0]),()=>dim3([0,B+HOLE_Y,f],[hs[0],B+HOLE_Y,f],[0,-5,0],u(hs[0]))],
   ['nHoles','Отверстия: кол-во и шаг',`${hs.length} × Ø15 мм`,()=>lab(`${hs.length} отв. Ø15 мм · шаг ${u(S.pitch)} · центр ${u(HOLE_Y)} от низа`,new V(40,B+HOLE_Y,W+.4),'n3')],
   ['nSlots','Прорези под шампуры: описание',`${slots().length} шт`,()=>{const ss=slots().filter(x=>x>30&&x<50),k=Math.floor(ss.length/2)-1,z=W+.05;

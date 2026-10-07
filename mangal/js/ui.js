@@ -43,8 +43,6 @@ if(ok){new ResizeObserver(sizeStage).observe(stage);sizeStage();(function loop()
 
 
 function render(){recompute();updUI();build3D();dimList();drawCut();}
-document.querySelectorAll('#pitchSeg button').forEach(bt=>bt.addEventListener('click',()=>{
-  S.pitch=+bt.dataset.p;document.querySelectorAll('#pitchSeg button').forEach(x=>x.setAttribute('aria-pressed',x===bt));render();}));
 const hTop=document.getElementById('hTop'),hFire=document.getElementById('hFire'),hBar=document.getElementById('hBar');
 hTop.addEventListener('input',()=>{TOPH=+hTop.value;render();});
 hFire.addEventListener('input',()=>{H2=+hFire.value;render();});
