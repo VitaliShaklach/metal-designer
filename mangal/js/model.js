@@ -135,7 +135,7 @@ function buildParts(tag){
     const me=ext(s,M.prop,DIV_T);me.rotation.y=-Math.PI/2;me.position.set(x0+DIV_T,0,0);group.add(me);
     box(DIV_T,DIV_HH,DIV_HL,x0,T-DIV_SD,-DIV_HL,M.prop);}   // ручка — прямоугольный выступ того же листа, наружу через прорезь задней боковины
   // уголки под колосник (задний — cgrAngB, передний — cgrAngF): полка вниз плотно по боковине над отверстиями, полка сверху внутрь: одна полка вверх — плотно к боковине, вторая внутрь под решётку, над отверстиями поддува
-  if(S.cgr&&S.cgrAng)[[t,1],[W-t,-1]].forEach(([zw,sd])=>{tag(sd>0?'cgrAngB':'cgrAngF');box(CA_L,CA_T,CA_A,t+.25,B+CA_TOP-CA_T,sd>0?zw:zw-CA_A,M.prop);box(CA_L,CA_A,CA_T,t+.25,B+CA_Y,sd>0?zw:zw-CA_T,M.prop);});   // полка сверху внутрь + полка вниз по боковине
+  if(S.cgr&&S.cgrAng)[[t,1],[W-t,-1]].forEach(([zw,sd])=>{tag(sd>0?'cgrAngB':'cgrAngF');box(CA_L,CA_T,CA_A,CA_X0,B+CA_TOP-CA_T,sd>0?zw:zw-CA_A,M.prop);box(CA_L,CA_A,CA_T,CA_X0,B+CA_Y,sd>0?zw:zw-CA_T,M.prop);});   // полка сверху внутрь + полка вниз по боковине
   // колосниковая решётка: 2 половины — «Колосник 1» (левая) и «Колосник 2» (правая, у ручки), лист с отверстиями, ручки — уголки 30×30×3
   if(S.cgr)[0,1].forEach(i=>{tag('cgr'+(i+1));if(!S['cgrPlate'+(i+1)])return;const y=B+CA_TOP,z0=W/2-CG_W/2;box(CG_L,CG_T,CG_W,cgX()[i],y,z0,M.perf);   // перфолист (отверстия — рисунком)
       [cgHX()[i]].forEach(xc=>{const yt=B+CA_TOP+CG_T,x0=xc-CG_HA/2;   // ручка — уголок 30×30×3: вертикальная полка приварена нижней кромкой, верхняя торчит вбок; поперёк жаровни
