@@ -1,16 +1,25 @@
 /* ---------- размеры на 3D ---------- */
 const DIMC=0xd0561f;
 function lab(text,pos,cls='d3'){const el=document.createElement('div');el.className=cls;el.textContent=text;const o=new THREE.CSS2DObject(el);o.userData.dim=1;o.position.copy(pos);group.add(o);return o;}
+// размер как на чертеже: 2 выносные линии (если есть отступ off) и размерная линия со стрелками на концах.
+// Маленький размер — стрелки снаружи, смотрят внутрь. text '' — просто линия-отметка без стрелок
 function dim3(a,b,off,text,lp=.5){   // lp — где подпись на линии (0…1)
   const V=THREE.Vector3,A=new V(...a),Bp=new V(...b),O=new V(...off),A2=A.clone().add(O),B2=Bp.clone().add(O);
-  const has=O.lengthSq()>0,on=has?O.clone().normalize():new V(1,0,0);
-  const d=B2.clone().sub(A2).normalize(),tk=d.clone().add(on).setLength(1.1);
+  const has=O.lengthSq()>0,on=has?O.clone().normalize():null,L=A2.distanceTo(B2),d=B2.clone().sub(A2).normalize();
   const P=[A2,B2];
-  if(has)P.push(A.clone().add(on.clone().multiplyScalar(.6)),A2.clone().add(on.clone().multiplyScalar(1.2)),Bp.clone().add(on.clone().multiplyScalar(.6)),B2.clone().add(on.clone().multiplyScalar(1.2)));
-  P.push(A2.clone().sub(tk),A2.clone().add(tk),B2.clone().sub(tk),B2.clone().add(tk));
+  if(has)P.push(A.clone().add(on.clone().multiplyScalar(.3)),A2.clone().add(on.clone().multiplyScalar(.6)),Bp.clone().add(on.clone().multiplyScalar(.3)),B2.clone().add(on.clone().multiplyScalar(.6)));   // выносные: от детали с зазором, за размерную на 6 мм
+  if(text!==''){
+    const ar=Math.min(1,Math.max(.35,L*.22)),out=L<2.5*ar;   // стрелка ~10 мм, у мелких — короче; не влезает — снаружи
+    let pp=on||new V().crossVectors(d,new V(0,1,0));if(pp.lengthSq()<1e-6)pp=new V().crossVectors(d,new V(1,0,0));pp.normalize();
+    const w=pp.multiplyScalar(ar*.28),arrow=(tip,dir)=>{const base=tip.clone().add(dir.clone().multiplyScalar(ar));P.push(tip,base.clone().add(w),tip,base.clone().sub(w));};
+    if(out){arrow(A2,d.clone().negate());arrow(B2,d.clone());P.push(A2,A2.clone().sub(d.clone().multiplyScalar(ar*2)),B2,B2.clone().add(d.clone().multiplyScalar(ar*2)));}   // полки за стрелками
+    else{arrow(A2,d.clone());arrow(B2,d.clone().negate());}}
+  let lp3=null;
+  if(text){lp3=A2.clone().lerp(B2,lp);
+    if(L<2.5){const m=lp3.clone();lp3.add((on||new V(0,1,0)).clone().multiplyScalar(2.2));P.push(m,lp3.clone());}}   // маленький размер: подпись сбоку на полочке, чтобы не закрывала линию
   const ls=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(P),new THREE.LineBasicMaterial({color:DIMC,depthTest:false,transparent:true}));
   ls.renderOrder=10;ls.userData.dim=1;group.add(ls);
-  if(text)lab(text,A2.clone().lerp(B2,lp));
+  if(lp3)lab(text,lp3);
 }
 function dimDefs(){
   const f=W,hs=holes(),V=THREE.Vector3,xl=tubes[0][0],xr=tubes[2][0],gap=Math.round(slopeY(W/2)-kzTop()),zB=gOn()?0:ZK0,zF=gOn()?W:ZK1;
@@ -74,7 +83,8 @@ function dimDefs(){
   ['hkX','Скобы: от левого края (центр)',AIR_HOOK.map(v=>u(v)).join(' и '),()=>{if(!S.hook)return;const y=B+HOLE_Y-AIR_H/2-BR_T-BR_LEG-.3,z=W+.7;AIR_HOOK.forEach((x,i)=>dim3([0,y,z],[x,y,z],[0,-3-i*3,1],`${u(x)}`));}],
   ['hkW','Скоба: ширина полосы',`${BR_W*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1],z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2+BR_UP;dim3([x-BR_W/2,y,z],[x+BR_W/2,y,z],[0,2,1],`${BR_W*10} мм`);}],
   ['hkH','Скоба: загиб вверх',`${BR_UP*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]+BR_W/2,z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2;dim3([x,y,z],[x,y+BR_UP,z],[2,0,1],`загиб ${BR_UP*10} мм`);}],
-  ['hkG',`Скоба: от уха (загиба) до стенки — под планку 3 мм + ${Math.round((BR_IN-AIR_T)*10)} мм запас`,`${Math.round(BR_IN*10)} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1],y=B+HOLE_Y-AIR_H/2+BR_UP;dim3([x,y,W],[x,y,W+BR_IN],[0,.4,0],`${Math.round(BR_IN*10)} мм`);}],
+  ['hkG',`Скоба: зазор от стенки до уха — под планку 3 мм + ${Math.round((BR_IN-AIR_T)*10)} мм запас`,`${Math.round(BR_IN*10)} мм`,()=>{if(!S.hook)return;   
+    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y,W],[x,y,W+BR_IN],[0,-(BR_LEG+1.2),0],`зазор ${Math.round(BR_IN*10)} мм (планка 3 + запас ${Math.round((BR_IN-AIR_T)*10)})`);}],   // под скобой: выносные вниз — от стенки (по лапке) и от уха
   ['hkL','Скоба: лапка к стенке',`${BR_LEG*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]-BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y-BR_LEG,W],[x,y,W],[-2,0,1],`лапка ${BR_LEG*10} мм`);}],
   ['#Перегородка жаровни','div'],
   ['divP','Перегородка: прорези от торца (со стороны ручки)',DIV_POS.map(v=>u(v)).join(' / '),()=>{const y=T+1,z=W;DIV_POS.forEach((p,i)=>dim3([L1-p,y,z],[L1,y,z],[0,2+i*3,2],`${u(p)}`));}],

@@ -51,8 +51,8 @@ node mangal/tools/labels.js grill mm   # все подписи размеров 
 
 После правок JS/CSS поднимите версию `?v=…` (сейчас 1.0.1; при выпуске — та же, что в CHANGELOG и подвале) в `mangal/index.html`, чтобы браузеры не брали старые файлы из кэша.
 
-## Автор
+## Связь
 
-Виталий Шаклач. Заявки на улучшения принимаю на email: vashaklach@gmail.com
+email: vashaklach@gmail.com
 
 Версия — 1.0.1 ([история](CHANGELOG.md)). Лицензия — [MIT](LICENSE).
