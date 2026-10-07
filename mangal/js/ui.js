@@ -128,7 +128,7 @@ function applySel(){fillParts();setHint();
   build3D();dimList();drawCut();fitSel();}
 selEl.addEventListener('change',()=>{S.sel={el:selEl.value||null,part:null};applySel();});
 selPart.addEventListener('change',()=>{S.sel.part=selPart.value||null;applySel();});
-document.querySelectorAll('#modeSeg button').forEach(bt=>bt.addEventListener('click',()=>{if(S.mode===bt.dataset.v)return;S.mode=bt.dataset.v;S.sel={el:null,part:null};recompute();updUI();applySel();}));
+document.querySelectorAll('#modeSeg button').forEach(bt=>bt.addEventListener('click',()=>{if(S.mode===bt.dataset.v)return;S.mode=bt.dataset.v;S.sel={el:null,part:null};recompute();updUI();applySel();document.querySelectorAll('.controls .grp').forEach(g=>g._fold&&g._fold());}));
 fillParts();
 /* ---------- «Скопировать вид»: камера + деталь + размеры + галочки одной строкой (?view=…) ---------- */
 function viewString(){const r=v=>+v.toFixed(1),p=camera.position,g=controls.target;
@@ -183,17 +183,17 @@ document.querySelectorAll('#unitSeg button').forEach(b=>b.addEventListener('clic
 
 /* ---------- сворачиваемые группы: панель настроек и список размеров ---------- */
 const store=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}};
-const grpShut=new Set(store('md-grpshut')||[]);
+const grpFold=store('md-grp')||{},grpIsShut=k=>k in grpFold?grpFold[k]:k!==mainGrp();   // по умолчанию раскрыта только главная группа
 document.querySelectorAll('.controls .grp').forEach(g=>{const k=g.dataset.g,bt=g.querySelector('.gt');
   const set=sh=>{g.classList.toggle('shut',sh);bt.setAttribute('aria-expanded',String(!sh));};
-  set(grpShut.has(k));
-  bt.addEventListener('click',()=>{const sh=!g.classList.contains('shut');set(sh);sh?grpShut.add(k):grpShut.delete(k);store('md-grpshut',[...grpShut]);});});
+  g._fold=()=>set(grpIsShut(k));g._fold();
+  bt.addEventListener('click',()=>{const sh=!g.classList.contains('shut');set(sh);grpFold[k]=sh;store('md-grp',grpFold);});});
 document.getElementById('dimList').addEventListener('click',e=>{const bt=e.target.closest('h3 button');if(!bt)return;
   const dg=bt.closest('.dg'),k=dg.dataset.el,sh=!dg.classList.contains('shut');dg.classList.toggle('shut',sh);bt.setAttribute('aria-expanded',String(!sh));
-  sh?dimShut.add(k):dimShut.delete(k);store('md-dimshut',[...dimShut]);foldBtn();});
+  dimFold[k]=sh;store('md-dims',dimFold);foldBtn();});
 const foldBtn=()=>{const all=[...document.querySelectorAll('#dimList .dg')];document.getElementById('dFold').textContent=all.length&&all.every(d=>d.classList.contains('shut'))?'Развернуть группы':'Свернуть группы';};
 document.getElementById('dFold').addEventListener('click',()=>{const all=[...document.querySelectorAll('#dimList .dg')],open=all.every(d=>d.classList.contains('shut'));
-  all.forEach(d=>open?dimShut.delete(d.dataset.el):dimShut.add(d.dataset.el));store('md-dimshut',[...dimShut]);dimList();});
+  all.forEach(d=>dimFold[d.dataset.el]=!open);store('md-dims',dimFold);dimList();});
 // после каждой перерисовки списка — подпись кнопки
 new MutationObserver(foldBtn).observe(document.getElementById('dimList'),{childList:true});foldBtn();
 

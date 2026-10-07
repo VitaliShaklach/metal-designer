@@ -331,7 +331,10 @@ function dims3D(){dimVisible().forEach(r=>{if(!S.dims.has(r.id))return;const n0=
     if(o.isCSS2DObject)o.position.z=W-o.position.z;
     else if(o.geometry&&o.geometry.attributes.position){const a=o.geometry.attributes.position;for(let k=0;k<a.count;k++)a.setZ(k,W-a.getZ(k));a.needsUpdate=true;}}});}
 // свёрнутые группы списка размеров (по элементу) — помним в браузере
-const dimShut=new Set((()=>{try{return JSON.parse(localStorage.getItem('md-dimshut')||'[]');}catch(e){return [];}})());
+// по умолчанию раскрыта только главная группа (жаровня; в режиме «Печь» — печь), остальные свёрнуты; что человек раскрыл/свернул — помним
+const mainGrp=()=>S.mode==='stove'?'stove':'grill';
+const dimFold=(()=>{try{return JSON.parse(localStorage.getItem('md-dims')||'{}')||{};}catch(e){return {};}})();
+const dimIsShut=k=>k in dimFold?dimFold[k]:k!==mainGrp();
 function dimList(){
   const rows=dimRows(),out=[];let h3=null,h4=null,cur=null;
   const close=()=>{if(cur){out.push('</div>');cur=null;}};
@@ -339,7 +342,7 @@ function dimList(){
     if(!modeOk(r)||!inSel(r.el,r.pts))return;
     if(h3){close();cur=h3.el;
       const n=dimVisible().filter(x=>x.el===cur&&S.dims.has(x.id)).length;
-      out.push(`<div class="dg${dimShut.has(cur)?' shut':''}" data-el="${cur}"><h3><button type="button" aria-expanded="${!dimShut.has(cur)}">${h3.h3}<small>${n?'показано '+n:''}</small></button></h3>`);h3=null;}
+      out.push(`<div class="dg${dimIsShut(cur)?' shut':''}" data-el="${cur}"><h3><button type="button" aria-expanded="${!dimIsShut(cur)}">${h3.h3}<small>${n?'показано '+n:''}</small></button></h3>`);h3=null;}
     if(h4){out.push(`<h4>${h4.h4}</h4>`);h4=null;}
     out.push(`<label class="chk"><input type="checkbox" id="dm_${r.id}" data-id="${r.id}"${S.dims.has(r.id)?' checked':''}><span>${r.name}<b>${typeof r.val==='number'?u(r.val):r.val}</b></span></label>`);});
   close();
