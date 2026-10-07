@@ -16,6 +16,7 @@ function updUI(){modeUI();
   document.querySelectorAll('[data-u]').forEach(e=>e.textContent=us(+e.dataset.u));   // числа в кнопках: с подписью и без
   document.querySelectorAll('[data-n]').forEach(e=>e.textContent=u(+e.dataset.n));
   document.querySelectorAll('#unitSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===UNIT));
+  notesUI();
   const gap=Math.round(slopeY(W/2)-kzTop()), head=BAR_TOP_F;
   document.getElementById('fit').innerHTML=
     `<span>Верх жаровни: <b>${us(T)}</b> ${T>=95&&T<=100?'':`<span class="warn">· при росте 184 см удобно ${u(95)}–${us(100)}</span>`}</span>`+
@@ -71,7 +72,7 @@ document.getElementById('cGAng').addEventListener('change',e=>{S.gAng=e.target.c
 document.getElementById('cAirSl').addEventListener('change',e=>{S.airSl=e.target.checked;build3D();});
 document.getElementById('cHook').addEventListener('change',e=>{S.hook=e.target.checked;build3D();});
 document.querySelectorAll('#airSeg button').forEach(bt=>bt.addEventListener('click',()=>{S.air=bt.dataset.v;document.querySelectorAll('#airSeg button').forEach(x=>x.setAttribute('aria-pressed',x===bt));build3D();}));
-document.getElementById('cDiv').addEventListener('change',e=>{S.div=e.target.checked;build3D();});
+document.getElementById('cDiv').addEventListener('change',e=>{S.div=e.target.checked;build3D();notesUI();});
 document.querySelectorAll('#divSeg button').forEach(bt=>bt.addEventListener('click',()=>{S.divPos=+bt.dataset.v;document.querySelectorAll('#divSeg button').forEach(x=>x.setAttribute('aria-pressed',x===bt));build3D();}));
 document.getElementById('cLogo').addEventListener('change',e=>{S.logo=e.target.checked;build3D();drawCut();});
 document.getElementById('cMan').addEventListener('change',e=>{S.man=e.target.checked;build3D();});
@@ -267,3 +268,26 @@ function partAt(ev){if(!ok||!group)return null;
     else if(c==='KeyU')press(`#unitSeg [data-v=${UNIT==='mm'?'cm':'mm'}]`);
     else return;
     e.preventDefault();});})();
+
+/* ---------- «Заметки» и «Что купить» — под то, что проектируем ---------- */
+function notesUI(){const g=gOn(),k=sOn(),both=S.mode==='both',el=document.getElementById('notesBox');
+  document.querySelectorAll('#tab-buy li[data-m]').forEach(li=>{const m=li.dataset.m;li.hidden=!(m==='g'?g:m==='s'?k:m===S.mode);});
+  const bw=document.getElementById('brakeWhere');if(bw)bw.textContent=both?'под печью':g?'у ручки мангала':'у ручки печи';
+  if(!el)return;
+  const how=[
+    g&&`<li><b>Жаровня ${u(L1)} × ${u(W)} × ${us(H1)}</b> под шампуры — лист 5 мм: боковины стоят на дне, торцы — между боковинами.${both?` Приваривается встык к перегородке печи по центру, ступенька ${(WK-W)/2*10} мм с каждой стороны.`:''}</li>`,
+    g&&S.cgr&&`<li><b>Колосниковая решётка</b> — 2 половины из перфолиста 5–10 мм на уголках 30×30×4 над отверстиями поддува: воздух идёт под угли, зола проваливается на дно. От решётки до верха бортов ${us(13)}.</li>`,
+    g&&`<li><b>Поддув</b> — ${holes().length} отверстий Ø15 мм в каждой боковине; задвижки снаружи регулируют жар.</li>`,
+    k&&`<li><b>Печь под казан шириной ${us(WK)}</b> — под покупную плиту 450 × 450 мм с кольцами. Ширину уточните по купленной плите: внутренний размер между рёбрами минус 2–3 мм — плита садится на стенки как крышка.</li>`,
+    k&&`<li><b>Топка</b> с ${S.mode==='stove'?'торца':'открытого левого торца'}: дверца на петлях, колосник на уголках, снизу поддувало с шибером, труба 60×60 мм сзади.</li>`,
+    `<li><b>Ножки</b> — труба Ø40, откручиваются (шпилька М16 в гайку под дном). Внизу площадка 150 × 150 × 6 мм под поворотные колёса Ø100, два колеса — с тормозом ${both?'под печью':g?'у ручки':'у ручки печи'}.</li>`,
+    S.rain&&`<li><b>Крыша от дождя</b> — стойки из арматуры Ø16 в трубках по углам, лист крепится болтами М8 с барашками — снимается без ключа.</li>`];
+  const att=[
+    `Колёса (обод пластиковый) от жара защищены: над каждым — стальная площадка, ножка остывает по длине. Опасны только угли, выпавшие на землю рядом с колесом.`,
+    `Все 4 колеса поворотные, 2 — с тормозом: на месте зажмите тормоза.`,
+    g&&S.cgr&&`<b>Уголки под колосник</b> приваривайте по верху и торцам: шов по нижнему краю закроет отверстия поддува.`,
+    g&&S.div&&`<b>Перегородка жаровни</b> съёмная — висит «ушками» в прорезях боковин, переставляется на ${DIV_POS.map(v=>u(v)).join(' / ')} ${UN()} от торца.`,
+    k&&`<b>Колосник печи</b>: уголки 40×40×4 в 60 мм от дна, на них ${S.grType==='plate'?'лист 15 мм с отверстиями Ø20':'решётка из арматуры Ø20'} (переключатель в «Топке»), вынимается через торец.`,
+    `Все размеры — номинальные. Перед резкой сверьте покупные изделия (${[k&&'плиту','колёса','болты'].filter(Boolean).join(', ')}) с фактическими.`];
+  el.innerHTML=`<div><h3>Как устроено — ${({both:'печь + мангал',grill:'мангал',stove:'печь'})[S.mode]}</h3><ul>${how.filter(Boolean).join('')}</ul></div>`+
+    `<div><h3>На что обратить внимание</h3><ol class="q">${att.filter(Boolean).map(x=>`<li>${x}</li>`).join('')}</ol></div>`;}
