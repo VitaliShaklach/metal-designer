@@ -2,7 +2,7 @@
 const stage=document.getElementById('stage');
 let renderer,scene,camera,controls,group,labels,ok=true,camAnim=null;
 try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);}
-catch(e){ok=false;stage.insertAdjacentHTML('beforeend','<p style="padding:40px">3D недоступно в этом браузере — чертежи ниже.</p>');}
+catch(e){ok=false;}   // сообщение — в заглушке загрузки (ui.js)
 const M={};
 if(ok){
   scene=new THREE.Scene();

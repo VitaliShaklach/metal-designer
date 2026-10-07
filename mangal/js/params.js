@@ -1,5 +1,5 @@
 const S={mode:'grill',legTw:true,cgr:true,cgrPlate:true,cgrAng:true,hook:true,logo:false,man:false,sheet:true,bolt:true,wsh1:true,wsh2:true,nut:true,pitch:4.5,rain:true,wood:true,skew:false,skewD:false,lift:false,plate:true,kazan:true,wheels:true,legs:true,grate:true,tie:true,lintel:true,chim:true,chimX:true,fb:true,airSl:true,div:false,divPos:30,air:'half',damper:true,obe:false,grType:'plate',angles:true,draft:true,sh:'half',deep:true,gAng:true,grates2:false,grillGrate:false,door:true,doorOpen:true,dims:new Set(),sel:{el:null,part:null}};
-// все размеры в см
+// все размеры в модели — в см (на экран — через u(): мм или см)
 const L1=80,W=42,t=0.5,L2=60,PLX=45,PLZ=45,TIE_W=15,PL_GAP=.5,PCX=t-PLX/2,STR=L2+PCX-PLX/2,NX=2.8,NZ=.7,HOLE=1.5,HOLE_Y=2.5,SLOT=3,SLOT_D=1,SLOT_W=0.3;   // прорези под шампуры: 3 × 10 мм, шаг 30
 const TUBE_H=12, WH=12.6, WR=5;                     // колесо TOR SC 42 / SCb 42: поворотное Ø100, высота 126, площадка 101×84, отверстия 80×60
 // TOPH — верх жаровни от земли (ползунок). Глубина жаровни H1: 13; с колосником от верха решётки до верха бортов те же 13 — жаровня растёт вниз (18,25), верх не меняется
@@ -127,4 +127,9 @@ const cgX=()=>[(L1-2*CG_L-CG_GAP)/2,(L1+CG_GAP)/2];                   // лев�
 const cgHX=()=>{const [a,b]=cgX();return [a+CG_L/2,(L1-DIV_POS[0]+DIV_T/2+b+CG_L)/2];};
 const divY0=()=>S.cgr?cgTop()+.5:B+t+DIV_GAP, divHt=()=>T-divY0();   // перегородка с колосником — над решёткой
 const fmt=(v,d=1)=>v.toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:d});
+// единицы показа: внутри модели всё в см, на экране — мм (по умолчанию) или см; переключатель «мм / см» в шапке
+let UNIT='mm';try{UNIT=localStorage.getItem('md-unit')==='cm'?'cm':'mm';}catch(e){}
+const u=(v,d)=>(UNIT==='mm'?v*10:v).toLocaleString('ru-RU',{maximumFractionDigits:d??(UNIT==='mm'?1:2),useGrouping:false});   // длина в см → число в единицах показа, без подписи
+const UN=()=>UNIT==='mm'?'мм':'см';
+const us=(v,d)=>u(v,d)+' '+UN();                        // то же с подписью
 recompute();

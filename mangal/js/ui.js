@@ -1,25 +1,28 @@
 /* ---------- интерфейс ---------- */
 // режим: заголовок, лид, группы галочек, переключатель
-const LEDE={both:()=>`Три части. <b>Жаровня</b> ${L1} × ${W} × ${fmt(H1,2)} под шампуры — отдельный элемент. <b>Печь под казан</b> ${L2} × ${WK} × ${H2} слева, под покупную плиту 45 × 45 с кольцами; топка с открытого левого торца. <b>Защита от дождя</b>: трубки по углам, стойки и лист. Ручка 50 см справа. Четыре ножки с поворотными колёсами Ø100 на площадках, под печью два — с тормозом. Ножки откручиваются (М16).`,
-  grill:()=>`<b>Мангал</b> ${L1} × ${W} × ${fmt(H1,2)} под шампуры: задвижки поддува, съёмная перегородка, глубокие прорези. Ручка 50 см справа. Четыре ножки на поворотных колёсах Ø100, у ручки два — с тормозом: выкатывается целиком. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`,
-  stove:()=>`<b>Печь под казан</b> ${L2} × ${WK} × ${H2} под покупную плиту 45 × 45 с кольцами; топка с левого торца, труба сзади. Ручка 50 см на перегородке справа. Четыре ножки на поворотных колёсах Ø100, у ручки два — с тормозом. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`};
+const LEDE={both:()=>`Три части. <b>Жаровня</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры — отдельный элемент. <b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} слева, под покупную плиту 450 × 450 мм с кольцами; топка с открытого левого торца. <b>Защита от дождя</b>: трубки по углам, стойки и лист. Ручка справа. Четыре ножки на поворотных колёсах Ø100 мм, под печью две — с тормозом. Ножки откручиваются (М16).`,
+  grill:()=>`<b>Мангал</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры: задвижки поддува, колосниковая решётка, съёмная перегородка, глубокие прорези. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом: выкатывается целиком. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`,
+  stove:()=>`<b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} под покупную плиту 450 × 450 мм с кольцами; топка с левого торца, труба сзади. Ручка на перегородке справа. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`};
 const TTL={both:'Мангал с казанницей',grill:'Мангал',stove:'Печь под казан'};
 function modeUI(){document.getElementById('ttl').textContent=document.title=TTL[S.mode];document.getElementById('lede').innerHTML=LEDE[S.mode]();
   document.getElementById('grpGrill').hidden=!gOn();document.getElementById('grpStove').hidden=!sOn();
   document.querySelectorAll('#modeSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===S.mode));
   if(typeof fillEls==='function')fillEls();}
 function updUI(){modeUI();
-  document.getElementById('hTopV').textContent=T+' см';
-  document.getElementById('hFireV').textContent=H2+' см';
-  document.getElementById('hBarV').textContent=`${BAR_F} / ${BAR_B} см`;
-  document.getElementById('rainSm').textContent=`стойки ${BAR_F} / ${BAR_B}, лист 0,5 мм`;
+  document.getElementById('hTopV').textContent=us(T);
+  document.getElementById('hFireV').textContent=us(H2);
+  document.getElementById('hBarV').textContent=`${u(BAR_F)} / ${us(BAR_B)}`;
+  document.getElementById('rainSm').textContent=`стойки ${u(BAR_F)} / ${us(BAR_B)}, лист 0,5 мм`;
+  document.querySelectorAll('[data-u]').forEach(e=>e.textContent=us(+e.dataset.u));   // числа в кнопках: с подписью и без
+  document.querySelectorAll('[data-n]').forEach(e=>e.textContent=u(+e.dataset.n));
+  document.querySelectorAll('#unitSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===UNIT));
   const gap=Math.round(slopeY(W/2)-kzTop()), head=BAR_TOP_F;
   document.getElementById('fit').innerHTML=
-    `<span>Верх жаровни: <b>${T}</b> см ${T>=95&&T<=100?'':'<span class="warn">· для роста 184 советую 95–100</span>'}</span>`+
-    `<span>Крыша спереди: <b>${head}</b> см ${head>=190?'':'<span class="warn">· ниже головы</span>'}</span>`+
-    (sOn()?`<span>Казан ${KZ.v} л в проёме Ø${fmt(KZ.open*2)}: в топке <b>${fmt(KZ.sink)}</b> из ${KZ.d} см</span>`:'')+
-    (S.mode==='both'?`<span>Ножки без колёс: жаровня <b>${fmt(B-WH)}</b>, печь <b>${fmt(KB-WH)}</b></span>`:`<span>Ножки без колёс: <b>${fmt((gOn()?B:KB)-WH)}</b> см</span>`)+
-    (sOn()?`<span>От крышки казана до крыши: <b class="${gap<25?'warn':''}">${gap}</b> см</span>`:'');
+    `<span>Верх жаровни: <b>${us(T)}</b> ${T>=95&&T<=100?'':`<span class="warn">· при росте 184 см удобно ${u(95)}–${us(100)}</span>`}</span>`+
+    `<span>Крыша спереди: <b>${us(head)}</b> ${head>=190?'':'<span class="warn">· ниже головы</span>'}</span>`+
+    (sOn()?`<span>Казан ${KZ.v} л в проёме Ø${u(KZ.open*2)}: в топке <b>${u(KZ.sink)}</b> из ${us(KZ.d)}</span>`:'')+
+    (S.mode==='both'?`<span>Ножки без колёс: жаровня <b>${u(B-WH)}</b>, печь <b>${us(KB-WH)}</b></span>`:`<span>Ножки без колёс: <b>${us((gOn()?B:KB)-WH)}</b></span>`)+
+    (sOn()?`<span>От крышки казана до крыши: <b class="${gap<25?'warn':''}">${us(gap)}</b></span>`:'');
 }
 // пробел + тянуть мышью = двигать эскиз (как в Figma)
 let spacePan=null,spaceHeld=false,overStage=false;
@@ -121,8 +124,8 @@ function fitSel(){if(!ok)return;
   // деталь — в верхней части картинки: смотрим чуть ниже её центра
   const up=new THREE.Vector3().setFromMatrixColumn(camera.matrix,1),tg=c.clone().sub(up.multiplyScalar(r>12&&S.sel.el?d*Math.tan(vf)*.45:0));   // мелкие детали — точно в центре, чтобы вращать вокруг них
   flyTo(tg.clone().add(dir.multiplyScalar(d)),tg);}
-function applySel(){fillParts();
-  document.getElementById('pickHint').textContent=S.sel.el?`Показано: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}. Размеры и раскрой — только для него`:'Выберите элемент — на модели, в размерах и раскрое останется только он';
+function setHint(){document.getElementById('pickHint').textContent=S.sel.el?`Показано: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}. Размеры и раскрой — только для него · двойной клик по пустому месту — всё`:'Выберите элемент или кликните деталь на модели — в размерах и раскрое останется только она';}
+function applySel(){fillParts();setHint();
   build3D();dimList();drawCut();fitSel();}
 selEl.addEventListener('change',()=>{S.sel={el:selEl.value||null,part:null};applySel();});
 selPart.addEventListener('change',()=>{S.sel.part=selPart.value||null;applySel();});
@@ -131,31 +134,112 @@ fillParts();
 /* ---------- «Скопировать вид»: камера + деталь + размеры + галочки одной строкой (?view=…) ---------- */
 function viewString(){const r=v=>+v.toFixed(1),p=camera.position,g=controls.target;
   const f={};Object.keys(S).forEach(k=>{if(typeof S[k]==='boolean'||k==='sh'||k==='grType'||k==='mode')f[k]=S[k];});
-  f.kz=KZ.v;f.H2=H2;f.TOPH=TOPH;f.BAR_F=BAR_F;
+  f.kz=KZ.v;f.H2=H2;f.TOPH=TOPH;f.BAR_F=BAR_F;if(ok&&M.steel.transparent)f.xray=true;
   const q=new URLSearchParams({view:[p.x,p.y,p.z,g.x,g.y,g.z].map(r).join(','),fov:camera.fov,asp:camera.aspect.toFixed(2),dims:[...S.dims].join(','),flags:JSON.stringify(f)});
   if(S.sel.el)q.set('sel',S.sel.el+(S.sel.part?'.'+S.sel.part:''));
   return '?'+q.toString();}
 document.getElementById('copyView').addEventListener('click',async()=>{if(!ok)return;
-  const txt=viewString(),box=document.getElementById('viewBox'),inp=document.getElementById('viewTxt'),msg=document.getElementById('viewMsg');
+  const txt=location.href.split(/[?#]/)[0]+viewString(),box=document.getElementById('viewBox'),inp=document.getElementById('viewTxt'),msg=document.getElementById('viewMsg');
   inp.value=txt;box.hidden=false;let done=false;
   try{await navigator.clipboard.writeText(txt);done=true;}catch(e){}
   if(!done){inp.focus();inp.select();try{done=document.execCommand('copy');}catch(e){}}
-  msg.textContent=done?'Скопировано — пришлите эту строку':'Выделено — нажмите Ctrl+C и пришлите строку';
+  msg.textContent=done?'Ссылка скопирована — откроет этот же вид':'Выделено — нажмите Ctrl+C';
   clearTimeout(box._t);box._t=setTimeout(()=>box.hidden=true,12000);});
-// режим снимка (для PDF и проверок): ?view=cx,cy,cz,tx,ty,tz&fov=35&dims=id,id&parts=grill,stove&flags={"wood":false}
-const Q=new URLSearchParams(location.search);
-if(Q.has('view')&&ok){document.body.classList.add('shot');
+/* ---------- галочки, кнопки и ползунки — по состоянию S (после ссылки с видом) ---------- */
+const CHK={cMan:'man',cLogo:'logo',cAirSl:'airSl',cHook:'hook',cDiv:'div',cCgr:'cgr',cCgrPlate:'cgrPlate',cCgrAng:'cgrAng',cDeep:'deep',cGAng:'gAng',cGrillGrate:'grillGrate',cGrates2:'grates2',cSkew:'skew',cSkewD:'skewD',
+  cPlate:'plate',cLift:'lift',cKazan:'kazan',cFb:'fb',cObe:'obe',cDamper:'damper',cChim:'chim',cChimX:'chimX',cTie:'tie',cLintel:'lintel',cDoor:'door',cDoorOpen:'doorOpen',cGrate:'grate',cAngles:'angles',cDraft:'draft',cWood:'wood',
+  cLegs:'legs',cLegTw:'legTw',cWheels:'wheels',cRain:'rain',cSheet:'sheet',cBolt:'bolt',cWsh1:'wsh1',cWsh2:'wsh2',cNut:'nut'};
+function syncInputs(){
+  for(const id in CHK){const e=document.getElementById(id);if(e)e.checked=!!S[CHK[id]];}
+  const seg=(id,v)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v)===String(v)));
+  seg('airSeg',S.air);seg('divSeg',S.divPos);seg('kzSeg',KZ.v);seg('grSeg',S.grType);seg('shSeg',S.sh);
+  hTop.value=TOPH;hFire.value=H2;hBar.value=BAR_F;}
+
+// ссылка с видом: ?view=cx,cy,cz,tx,ty,tz&fov=35&dims=id,id&flags={"wood":false}&sel=el.part — обычная страница с этим видом;
+// &shot=1 — снимок без интерфейса (для PDF и проверок), &parts=grill,stove — старое деление на части
+const Q=new URLSearchParams(location.search),SHOT=Q.has('shot');
+if(SHOT)document.body.classList.add('shot');
+if(Q.has('view')&&ok){
   S.dims=new Set((Q.get('dims')||'').split(',').filter(Boolean));
   if(Q.has('parts'))S.parts=new Set(Q.get('parts').split(','));
   const f=JSON.parse(Q.get('flags')||'{}');   // размеры из ползунков и казан — отдельно, остальное — галочки S
   if('kz' in f){setKZ(f.kz);delete f.kz;}
   if('H2' in f){H2=f.H2;delete f.H2;} if('LEG' in f){TOPH=f.LEG+13;delete f.LEG;} if('TOPH' in f){TOPH=f.TOPH;delete f.TOPH;} if('BAR_F' in f){BAR_F=f.BAR_F;delete f.BAR_F;}
-  if(f.xray){M.steel.transparent=true;M.steel.opacity=.22;M.steel.depthWrite=false;M.steel.needsUpdate=true;delete f.xray;}   // прозрачный корпус
+  if(f.xray){M.steel.transparent=true;M.steel.opacity=SHOT?.22:.28;M.steel.depthWrite=false;M.steel.needsUpdate=true;document.getElementById('cXray').checked=true;delete f.xray;}   // прозрачный корпус
+  if('unit' in f)delete f.unit;
   Object.assign(S,f);recompute();
+  syncInputs();
   const v=Q.get('view').split(',').map(Number);camera.fov=+(Q.get('fov')||35);camera.updateProjectionMatrix();
   camera.position.set(v[0],v[1],v[2]);controls.target.set(v[3],v[4],v[5]);}
 if(Q.has('sel')){const [e,pt]=Q.get('sel').split('.');S.sel={el:e||null,part:pt||null};selEl.value=e||'';fillParts();}
-window.addEventListener('error',e=>document.body.classList.contains('shot')&&document.body.insertAdjacentHTML('afterbegin','<h1 style="color:red">'+e.message+' @'+e.lineno+'</h1>'));
-render();
+window.addEventListener('error',e=>SHOT&&document.body.insertAdjacentHTML('afterbegin','<h1 style="color:red">'+e.message+' @'+e.lineno+'</h1>'));
+render();setHint();
 if(ok&&!Q.has('view')&&!Q.has('sel')){sizeStage();fitSel();if(camAnim){camera.position.copy(camAnim.p1);controls.target.copy(camAnim.t1);camAnim=null;}}   // старт: камера на весь блок текущего режима
 if(Q.has('sel')&&ok&&(Q.has('fit')||!Q.has('view'))){sizeStage();fitSel();if(camAnim&&Q.has('view')){camera.position.copy(camAnim.p1);controls.target.copy(camAnim.t1);camAnim=null;}}   // ?sel=stove.chim — сразу показать деталь (&fit — подогнать камеру)
+/* ---------- единицы: мм / см ---------- */
+document.querySelectorAll('#unitSeg button').forEach(b=>b.addEventListener('click',()=>{if(UNIT===b.dataset.v)return;UNIT=b.dataset.v;
+  try{localStorage.setItem('md-unit',UNIT);}catch(e){}
+  updUI();build3D();dimList();drawCut();}));
+
+/* ---------- сворачиваемые группы: панель настроек и список размеров ---------- */
+const store=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}};
+const grpShut=new Set(store('md-grpshut')||[]);
+document.querySelectorAll('.controls .grp').forEach(g=>{const k=g.dataset.g,bt=g.querySelector('.gt');
+  const set=sh=>{g.classList.toggle('shut',sh);bt.setAttribute('aria-expanded',String(!sh));};
+  set(grpShut.has(k));
+  bt.addEventListener('click',()=>{const sh=!g.classList.contains('shut');set(sh);sh?grpShut.add(k):grpShut.delete(k);store('md-grpshut',[...grpShut]);});});
+document.getElementById('dimList').addEventListener('click',e=>{const bt=e.target.closest('h3 button');if(!bt)return;
+  const dg=bt.closest('.dg'),k=dg.dataset.el,sh=!dg.classList.contains('shut');dg.classList.toggle('shut',sh);bt.setAttribute('aria-expanded',String(!sh));
+  sh?dimShut.add(k):dimShut.delete(k);store('md-dimshut',[...dimShut]);foldBtn();});
+const foldBtn=()=>{const all=[...document.querySelectorAll('#dimList .dg')];document.getElementById('dFold').textContent=all.length&&all.every(d=>d.classList.contains('shut'))?'Развернуть группы':'Свернуть группы';};
+document.getElementById('dFold').addEventListener('click',()=>{const all=[...document.querySelectorAll('#dimList .dg')],open=all.every(d=>d.classList.contains('shut'));
+  all.forEach(d=>open?dimShut.delete(d.dataset.el):dimShut.add(d.dataset.el));store('md-dimshut',[...dimShut]);dimList();});
+// после каждой перерисовки списка — подпись кнопки
+new MutationObserver(foldBtn).observe(document.getElementById('dimList'),{childList:true});foldBtn();
+
+/* ---------- вкладки под 3D: Размеры | Раскрой | Лазер | Что купить | Заметки ---------- */
+const TABS=[...document.querySelectorAll('.tabbar button')];
+function showTab(k){if(!TABS.some(b=>b.dataset.tab===k))k='dims';
+  TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;document.getElementById('tab-'+b.dataset.tab).hidden=!on;});
+  store('md-tab',k);}
+TABS.forEach((b,i)=>{b.addEventListener('click',()=>showTab(b.dataset.tab));
+  b.addEventListener('keydown',e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;const n=TABS[(i+d+TABS.length)%TABS.length];n.focus();showTab(n.dataset.tab);});});
+showTab((location.hash.match(/^#(dims|cut|dxf|buy|notes)$/)||[])[1]||store('md-tab')||'dims');
+
+/* ---------- клик по детали на модели — выбрать её; под курсором — имя детали ---------- */
+const PART_OF={cgrAngB:'cgrAng',cgrAngF:'cgrAng',rings:'plate',coal:null};   // теги 3D, у которых в списке другая деталь
+function partAt(ev){if(!ok||!group)return null;
+  const r=renderer.domElement.getBoundingClientRect(),m=new THREE.Vector2((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(m,camera);
+  const vis=o=>{for(;o;o=o.parent)if(!o.visible)return false;return true;};
+  for(const h of rc.intersectObjects(group.children,true)){if(!vis(h.object))continue;
+    let o=h.object;while(o.parent&&o.parent!==group)o=o.parent;if(o.userData.dim)continue;
+    let p=o.userData.part;if(p in PART_OF)p=PART_OF[p];if(!p)continue;
+    const e=PARTS.find(e=>e.d.some(d=>d[0]===p&&partOk(p)));
+    if(e)return {el:e.id,part:p,name:partName(p)};
+    const e2=PARTS.find(e=>e.id===PDF_PART[p]);   // деталь без строки в списке (решётки, шампуры) — выбираем элемент
+    if(e2&&elOk(e2.id))return {el:e2.id,part:null,name:e2.name};}
+  return null;}
+(()=>{if(!ok)return;const cv=renderer.domElement,tagEl=document.getElementById('hovTag');let down=null,last=0;
+  cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};tagEl.hidden=true;});
+  cv.addEventListener('pointerup',e=>{if(!down||spaceHeld||e.button!==0)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y),dt=performance.now()-down.t;down=null;
+    if(mv>5||dt>500)return;const p=partAt(e);if(!p)return;
+    if(S.sel.el===p.el&&S.sel.part===p.part)return;
+    S.sel={el:p.el,part:p.part};selEl.value=p.el;applySel();});
+  cv.addEventListener('dblclick',e=>{if(partAt(e)||!S.sel.el)return;S.sel={el:null,part:null};selEl.value='';applySel();});
+  cv.addEventListener('pointermove',e=>{if(e.buttons||spaceHeld||e.pointerType==='touch'){tagEl.hidden=true;return;}
+    const now=performance.now();if(now-last<50)return;last=now;const p=partAt(e);stage.classList.toggle('pickable',!!p);
+    if(!p){tagEl.hidden=true;return;}const r=stage.getBoundingClientRect();tagEl.textContent=p.name;tagEl.style.left=(e.clientX-r.left)+'px';tagEl.style.top=(e.clientY-r.top)+'px';tagEl.hidden=false;});
+  cv.addEventListener('pointerleave',()=>{tagEl.hidden=true;});})();
+
+/* ---------- телефон: панель настроек — шторка снизу ---------- */
+(()=>{const pn=document.getElementById('controls'),bt=document.getElementById('drawerBtn');
+  const set=o=>{pn.classList.toggle('open',o);bt.setAttribute('aria-expanded',String(o));bt.textContent=o?'Готово':'Настройки';};
+  bt.addEventListener('click',()=>set(!pn.classList.contains('open')));
+  document.getElementById('drawerClose').addEventListener('click',()=>set(false));
+  addEventListener('keydown',e=>{if(e.key==='Escape'&&pn.classList.contains('open'))set(false);});})();
+
+/* ---------- заглушка загрузки 3D ---------- */
+(()=>{const l=document.getElementById('loading');if(!l)return;
+  if(ok)requestAnimationFrame(()=>requestAnimationFrame(()=>l.remove()));
+  else{l.classList.add('err');l.textContent='3D-модель не загрузилась (нет WebGL или нет связи с CDN) — размеры, раскрой и DXF ниже работают';}})();

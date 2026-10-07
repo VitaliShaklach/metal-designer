@@ -1,0 +1,11 @@
+# выгрузки и проверки — не в репозиторий
+*.dxf
+*.pdf
+*.zip
+dxf/
+shots/
+mangal/tools/*.png
+node_modules/
+.claude/
+Thumbs.db
+.DS_Store
