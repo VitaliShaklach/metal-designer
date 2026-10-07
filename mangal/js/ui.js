@@ -76,7 +76,7 @@ document.getElementById('cDiv').addEventListener('change',e=>{S.div=e.target.che
 document.querySelectorAll('#divSeg button').forEach(bt=>bt.addEventListener('click',()=>{S.divPos=+bt.dataset.v;document.querySelectorAll('#divSeg button').forEach(x=>x.setAttribute('aria-pressed',x===bt));build3D();}));
 document.getElementById('cLogo').addEventListener('change',e=>{S.logo=e.target.checked;build3D();drawCut();});
 document.getElementById('cMan').addEventListener('change',e=>{S.man=e.target.checked;build3D();});
-[['cCgr','cgr'],['cCgrPlate','cgrPlate'],['cCgrAng','cgrAng']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{S[k]=e.target.checked;render();}));
+[['cCgr','cgr'],['cCgrPlate1','cgrPlate1'],['cCgrPlate2','cgrPlate2'],['cCgrAng','cgrAng']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{S[k]=e.target.checked;render();}));
 document.getElementById('cDeep').addEventListener('change',e=>{S.deep=e.target.checked;build3D();});
 document.getElementById('cChimX').addEventListener('change',e=>{S.chimX=e.target.checked;build3D();});
 document.getElementById('cObe').addEventListener('change',e=>{S.obe=e.target.checked;build3D();drawCut();});
@@ -147,7 +147,7 @@ document.getElementById('copyView').addEventListener('click',async()=>{if(!ok)re
   msg.textContent=done?'Ссылка скопирована — откроет этот же вид':'Выделено — нажмите Ctrl+C';
   clearTimeout(box._t);box._t=setTimeout(()=>box.hidden=true,12000);});
 /* ---------- галочки, кнопки и ползунки — по состоянию S (после ссылки с видом) ---------- */
-const CHK={cMan:'man',cLogo:'logo',cAirSl:'airSl',cHook:'hook',cDiv:'div',cCgr:'cgr',cCgrPlate:'cgrPlate',cCgrAng:'cgrAng',cDeep:'deep',cGAng:'gAng',cGrillGrate:'grillGrate',cGrates2:'grates2',cSkew:'skew',cSkewD:'skewD',
+const CHK={cMan:'man',cLogo:'logo',cAirSl:'airSl',cHook:'hook',cDiv:'div',cCgr:'cgr',cCgrPlate1:'cgrPlate1',cCgrPlate2:'cgrPlate2',cCgrAng:'cgrAng',cDeep:'deep',cGAng:'gAng',cGrillGrate:'grillGrate',cGrates2:'grates2',cSkew:'skew',cSkewD:'skewD',
   cPlate:'plate',cLift:'lift',cKazan:'kazan',cFb:'fb',cObe:'obe',cDamper:'damper',cChim:'chim',cChimX:'chimX',cTie:'tie',cLintel:'lintel',cDoor:'door',cDoorOpen:'doorOpen',cGrate:'grate',cAngles:'angles',cDraft:'draft',cWood:'wood',
   cLegs:'legs',cLegTw:'legTw',cWheels:'wheels',cRain:'rain',cSheet:'sheet',cBolt:'bolt',cWsh1:'wsh1',cWsh2:'wsh2',cNut:'nut'};
 function syncInputs(){
@@ -168,6 +168,7 @@ if(Q.has('view')&&ok){
   if('H2' in f){H2=f.H2;delete f.H2;} if('LEG' in f){TOPH=f.LEG+13;delete f.LEG;} if('TOPH' in f){TOPH=f.TOPH;delete f.TOPH;} if('BAR_F' in f){BAR_F=f.BAR_F;delete f.BAR_F;}
   if(f.xray){M.steel.transparent=true;M.steel.opacity=SHOT?.22:.28;M.steel.depthWrite=false;M.steel.needsUpdate=true;document.getElementById('cXray').checked=true;delete f.xray;}   // прозрачный корпус
   if('unit' in f)delete f.unit;
+  if('cgrPlate' in f){f.cgrPlate1=f.cgrPlate2=f.cgrPlate;delete f.cgrPlate;}   // старые ссылки: одна галочка на обе половины
   Object.assign(S,f);recompute();
   syncInputs();
   const v=Q.get('view').split(',').map(Number);camera.fov=+(Q.get('fov')||35);camera.updateProjectionMatrix();
