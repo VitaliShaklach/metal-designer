@@ -86,7 +86,7 @@ function dimDefs(){
   ['hkW','Скоба: ширина полосы',`${BR_W*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1],z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2+BR_UP;dim3([x-BR_W/2,y,z],[x+BR_W/2,y,z],[0,2,1],`${BR_W*10} мм`);}],
   ['hkH','Скоба: загиб вверх',`${BR_UP*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]+BR_W/2,z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2;dim3([x,y,z],[x,y+BR_UP,z],[2,0,1],`загиб ${BR_UP*10} мм`);}],
   ['hkG',`Скоба: зазор от стенки до уха — под планку 3 мм + ${Math.round((BR_IN-AIR_T)*10)} мм запас`,`${Math.round(BR_IN*10)} мм`,()=>{if(!S.hook)return;   
-    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y,W],[x,y,W+BR_IN],[0,-(BR_LEG+1.2),0],`зазор ${Math.round(BR_IN*10)} мм (планка 3 + запас ${Math.round((BR_IN-AIR_T)*10)})`);}],   // под скобой: выносные вниз — от стенки (по лапке) и от уха
+    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2;dim3([x,y,W],[x,y,W+BR_IN],[0,BR_UP+1.2,0],`зазор ${Math.round(BR_IN*10)} мм (планка 3 + запас ${Math.round((BR_IN-AIR_T)*10)})`);}],   // над скобой: выносные вверх по щели — от стенки и от внутренней грани уха, размерная — над ухом
   ['hkL','Скоба: лапка к стенке',`${BR_LEG*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]-BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y-BR_LEG,W],[x,y,W],[-2,0,1],`лапка ${BR_LEG*10} мм`);}],
   ['#Перегородка жаровни','div'],
   ['divP','Перегородка: прорези от торца (со стороны ручки)',DIV_POS.map(v=>u(v)).join(' / '),()=>{const y=T+1,z=W;DIV_POS.forEach((p,i)=>dim3([L1-p,y,z],[L1,y,z],[0,2+i*3,2],`${u(p)}`));}],
