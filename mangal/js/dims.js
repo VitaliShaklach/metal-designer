@@ -84,6 +84,8 @@ function dimDefs(){
   ['#Скобы задвижек','hook'],
   ['hkX','Скобы: от левого края (центр)',AIR_HOOK.map(v=>u(v)).join(' и '),()=>{if(!S.hook)return;const y=B+HOLE_Y-AIR_H/2-BR_T-BR_LEG-.3,z=W+.7;AIR_HOOK.forEach((x,i)=>dim3([0,y,z],[x,y,z],[0,-3-i*3,1],`${u(x)}`));}],
   ['hkW','Скоба: ширина полосы',`${BR_W*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1],z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2+BR_UP;dim3([x-BR_W/2,y,z],[x+BR_W/2,y,z],[0,2,1],`${BR_W*10} мм`);}],
+  ['hkT','Скоба: толщина металла',`${fmt(BR_T*10)} мм`,()=>{if(!S.hook)return;   // толщина уха: под скобой, выносные вниз от его граней (зазор — сверху, не пересекаются)
+    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y,W+BR_IN],[x,y,W+BR_IN+BR_T],[0,-(BR_LEG+1.2),0],`толщина ${fmt(BR_T*10)} мм`);}],
   ['hkH','Скоба: загиб вверх',`${BR_UP*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]+BR_W/2,z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2;dim3([x,y,z],[x,y+BR_UP,z],[2,0,1],`загиб ${BR_UP*10} мм`);}],
   ['hkG',`Скоба: зазор от стенки до уха — под планку 3 мм + ${Math.round((BR_IN-AIR_T)*10)} мм запас`,`${Math.round(BR_IN*10)} мм`,()=>{if(!S.hook)return;   
     const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2;dim3([x,y,W],[x,y,W+BR_IN],[0,BR_UP+1.2,0],`зазор ${Math.round(BR_IN*10)} мм (планка 3 + запас ${Math.round((BR_IN-AIR_T)*10)})`);}],   // над скобой: выносные вверх по щели — от стенки и от внутренней грани уха, размерная — над ухом
