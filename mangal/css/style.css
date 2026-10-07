@@ -168,9 +168,9 @@ body.shot .n3{font-size:14px}
 /* ---------- вкладки под 3D ---------- */
 .tabbar{display:flex;gap:0;border-bottom:2px solid var(--ink);overflow-x:auto;scrollbar-width:none}
 .tabbar::-webkit-scrollbar{display:none}
-.tabbar button{font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em;padding:10px 18px;border:0;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabbar button{font:700 18px var(--f-display);text-transform:uppercase;letter-spacing:.05em;padding:12px 22px;border:0;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:4px solid transparent;margin-bottom:-2px}
 .tabbar button:hover{color:var(--ink)}
-.tabbar button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabbar button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel)}
 .tabpane{display:flex;flex-direction:column;gap:14px;padding-top:14px}
 .tabpane[hidden]{display:none}
 .tabnote{margin:0;color:var(--muted);font-size:13px}
