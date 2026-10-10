@@ -268,3 +268,4 @@ textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10
 
 .endseg{grid-template-columns:1fr 1fr}
 .endseg button{font-size:12px;padding:5px}
+#stage{overflow:hidden}

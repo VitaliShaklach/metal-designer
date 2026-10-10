@@ -14,7 +14,7 @@ if(ok){scene=new THREE.Scene();
   MAT.steel=std(0x59616a);MAT.sel=std(0xd0561f);MAT.dim=std(0x59616a,{transparent:true,opacity:.18,depthWrite:false});
   MAT.weld=new THREE.MeshBasicMaterial({color:0xe08a1f,depthTest:false,transparent:true,opacity:.95});MAT.clash=new THREE.MeshBasicMaterial({color:0xd01f1f,depthTest:false,transparent:true});
   MAT.edge=new THREE.LineBasicMaterial({color:0x1b2124,transparent:true,opacity:.55});
-  MAT.node=new THREE.MeshBasicMaterial({color:0x1f8fe0,depthTest:false,transparent:true,opacity:.9});MAT.handle=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});MAT.handle2=new THREE.MeshBasicMaterial({color:0x7d878c,depthTest:false,transparent:true,opacity:.85});MAT.nodeSel=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});
+  MAT.node=new THREE.MeshBasicMaterial({color:0x1f8fe0,depthTest:false,transparent:true,opacity:.9});MAT.handle=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});MAT.handle2=new THREE.MeshBasicMaterial({color:0x7d878c,depthTest:false,transparent:true,opacity:.85});MAT.add=new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false,transparent:true});MAT.addBg=new THREE.MeshBasicMaterial({color:0x1e9e5a,depthTest:false,transparent:true,side:THREE.DoubleSide});MAT.nodeSel=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});
   group=new THREE.Group();scene.add(group);dimGroup=new THREE.Group();scene.add(dimGroup);
   const grid=new THREE.GridHelper(20000,200,0xb9c0bd,0xd5dad7);grid.material.transparent=true;grid.material.opacity=.5;scene.add(grid);}
 // тело трубы: 4 угла сечения на каждом конце, каждый — пересечение ребра с плоскостью реза
@@ -25,7 +25,7 @@ function memberGeo(c){const f=frame(c.m),p=prof(c.m.prof),hw=p.w/2,hh=p.h/2;
   for(let i=0;i<4;i++){const j=(i+1)%4;idx.push(i,j,4+j,i,4+j,4+i);}
   idx.push(0,2,1,0,3,2,4,5,6,4,6,7);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));g.setIndex(idx);g.computeVertexNormals();return g;}
-let SHOW_WELD=true,ONLY_GRP=null,DRAG=null;
+let SHOW_WELD=true,ONLY_GRP=null,DRAG=null,GROW=null;
 function build3D(){if(!ok)return;
   [group,dimGroup].forEach(G=>{G.traverse(o=>{if(o.element&&o.element.parentNode)o.element.parentNode.removeChild(o.element);});G.clear();});
   const cuts=memberCuts();
@@ -39,7 +39,12 @@ function build3D(){if(!ok)return;
   cuts.filter(c=>SEL.m.has(c.m.id)).forEach(c=>{const f=frame(c.m);[['a',c.ea,V3.mul(f.d,-1),f.A],['b',c.eb,f.d,f.B]].forEach(([k,e,out,N])=>{
     const act=activeEnd(c.m.id)===k,g=new THREE.ConeGeometry(R*(act?.75:.55),R*(act?2:1.4),16);g.translate(0,R*(act?1:.7),0);
     const h=new THREE.Mesh(g,act?MAT.handle:MAT.handle2);h.position.set(...V3.add(N,V3.mul(out,Math.max(0,e.ext)+R*.3)));
-    h.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...out));h.userData.handle={member:c.m.id,end:k};h.userData.out=out;h.userData.len=R*(act?2:1.4);h.renderOrder=13;group.add(h);});});
+    h.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...out));h.userData.handle={member:c.m.id,end:k};h.userData.out=out;h.userData.len=R*(act?2:1.4);h.renderOrder=13;group.add(h);
+    // зелёный «+» у активного конца: тянуть — из этого конца вырастает новая труба
+    if(act&&SEL.m.size===1){const pl=new THREE.Group(),bar=(x,y)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(x,y,R*.25),MAT.add);pl.add(b);};
+      const disc=new THREE.Mesh(new THREE.CircleGeometry(R*.75,24),MAT.addBg);pl.add(disc);bar(R*.95,R*.24);bar(R*.24,R*.95);pl.children.forEach(o=>o.renderOrder=14);
+      const side=V3.norm(V3.cross(out,Math.abs(out[1])>.9?[1,0,0]:[0,1,0]));pl.position.set(...V3.add(N,V3.mul(side,R*1.8)));pl.quaternion.copy(camera.quaternion);
+      pl.userData.grow={member:c.m.id,end:k,node:c.m[k]};group.add(pl);}});});
   if(SHOW_WELD){const cs=contacts(),r=Math.max(10,Math.min(35,sceneSize()*.007));
     cs.forEach(c=>{const clash=c.type==='clash',g=new THREE.TorusGeometry(r,r*.28,8,20),mk=new THREE.Mesh(g,clash?MAT.clash:MAT.weld);mk.position.set(...c.p);
       if(c.n){const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(...c.n));mk.quaternion.copy(q);}mk.renderOrder=11;mk.userData.weld=1;group.add(mk);});}
@@ -54,6 +59,8 @@ function fitAll(instant){if(!ok)return;const bb=bbox(),c=new THREE.Vector3((bb.m
 // что под курсором: труба или узел
 function pickAt(ev){if(!ok)return null;const r=renderer.domElement.getBoundingClientRect();
   const m=new THREE.Vector2((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1),rc=new THREE.Raycaster();rc.setFromCamera(m,camera);rc.params.Line.threshold=4;
+  // зелёный «+» — новая труба из конца
+  {const g=group.children.find(o=>o.userData.grow);if(g){const q=g.position.clone().project(camera),d=Math.hypot((q.x+1)/2*r.width-(ev.clientX-r.left),(1-q.y)/2*r.height-(ev.clientY-r.top));if(q.z<=1&&d<22)return {grow:g.userData.grow};}}
   // стрелка на конце выбранной трубы — если курсор ближе 18 px к её основанию или острию
   {let best=null,bd=18;group.children.filter(o=>o.userData.handle).forEach(o=>{[0,o.userData.len||0].forEach(t=>{const q=o.position.clone().add(new THREE.Vector3(...o.userData.out).multiplyScalar(t)).project(camera);if(q.z>1)return;
     const d=Math.hypot((q.x+1)/2*r.width-(ev.clientX-r.left),(1-q.y)/2*r.height-(ev.clientY-r.top));if(d<bd){bd=d;best=o.userData.handle;}});});if(best)return {handle:best};}
@@ -64,6 +71,6 @@ function pickAt(ev){if(!ok)return null;const r=renderer.domElement.getBoundingCl
 function sizeStage(){if(!ok)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);labels.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 if(ok){new ResizeObserver(sizeStage).observe(stage);sizeStage();
   (function loop(){requestAnimationFrame(loop);if(camAnim){const k=Math.min(1,(performance.now()-camAnim.s)/600),e=k<.5?2*k*k:1-(-2*k+2)**2/2;camera.position.lerpVectors(camAnim.p0,camAnim.p1,e);controls.target.lerpVectors(camAnim.t0,camAnim.t1,e);if(k>=1)camAnim=null;}
-    controls.update();renderer.render(scene,camera);labels.render(scene,camera);})();}
+    controls.update();group.children.forEach(o=>{if(o.userData.grow)o.quaternion.copy(camera.quaternion);});renderer.render(scene,camera);labels.render(scene,camera);})();}
 // виды: спереди / сбоку / сверху / изометрия
 function viewDir(k){if(!ok)return;const D={front:[0,0,1],side:[1,0,0],top:[0,1,.0001],iso:[.55,.45,.7]}[k];camera.position.copy(controls.target.clone().add(new THREE.Vector3(...D).normalize().multiplyScalar(camera.position.distanceTo(controls.target))));fitAll();}
