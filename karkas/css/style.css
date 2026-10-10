@@ -104,7 +104,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .controls .gt{font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);background:none;border:0;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px}
 .controls .gt::before{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
 .controls .grp.shut .gt::before{transform:rotate(-45deg)}
-.controls .grp.shut>*:not(.gt){display:none!important}
+.controls .grp.shut>*:not(.gt):not(.hq){display:none!important}
 .controls .gt:hover{color:var(--accent)}
 .pick{display:flex;gap:14px;align-items:end;flex-wrap:wrap}
 .pick label,.pick .lbl{display:flex;flex-direction:column;gap:4px}
@@ -278,3 +278,24 @@ textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10
 .aimbar{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
 .aimbar button{font:500 12px var(--f-mono);padding:6px 2px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .aimbar button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- инструкции ---------- */
+.controls .grp{position:relative}
+.hq{position:absolute;right:0;top:12px;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);color:var(--muted);font:700 13px/1 var(--f-mono);cursor:pointer;display:grid;place-items:center;padding:0}
+.drawerhead+.grp .hq{top:-2px}
+.hq:hover,.hq[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.helpbox{border-left:3px solid var(--accent);background:var(--bg);padding:8px 10px;font-size:12.5px;line-height:1.45;color:var(--ink);display:flex;flex-direction:column;gap:6px}
+.helpbox[hidden]{display:none!important}
+.helpbox p{margin:0}
+.helpbox ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px}
+svg.hsk{display:block;max-width:100%;height:auto;color:var(--muted)}
+.howbtn{position:absolute;left:12px;top:10px;z-index:2;font:500 12px var(--f-body);padding:6px 10px;border:1px solid var(--accent);background:var(--panel);color:var(--accent);cursor:pointer}
+.howbtn:hover,.howbtn[aria-expanded="true"]{background:var(--accent);color:#fff}
+.how{position:absolute;left:12px;top:44px;z-index:6;width:min(430px,calc(100% - 24px));max-height:calc(100% - 60px);overflow:auto;background:var(--panel);border:1.5px solid var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px 14px;font-size:13px}
+.how[hidden]{display:none}
+.howhead{display:flex;justify-content:space-between;align-items:center;font:600 16px var(--f-display);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.howhead button{border:1px solid var(--line);background:var(--bg);color:var(--ink);width:28px;height:28px;cursor:pointer}
+.how ol{margin:0 0 10px;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.how dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:12.5px}
+.how dt{font-weight:600;white-space:nowrap}.how dd{margin:0;color:var(--muted)}
+@media (max-width:900px){.howbtn{top:auto;bottom:10px}.how{top:auto;bottom:48px}}

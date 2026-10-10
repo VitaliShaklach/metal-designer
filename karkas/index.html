@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.1.1">
+<link rel="stylesheet" href="css/style.css?v=0.1.2">
 </head>
 <body>
 <div class="wrap">
@@ -41,7 +41,7 @@
         <div class="loading" id="loading"><i></i>Загружаю 3D…</div>
         <div class="vbar"><button data-v="iso" type="button">3D</button><button data-v="front" type="button">Спереди</button><button data-v="side" type="button">Сбоку</button><button data-v="top" type="button">Сверху</button><button id="bFit" type="button" title="Камера на всю модель (F)">Всё</button></div>
         <div class="hovtag" id="hovTag" hidden></div>
-        <div class="hint">Клик по трубе у нужного конца — выбрать · оранжевая стрелка — удлинить · зелёный «+» — протянуть новую трубу (Shift — шаг 1 мм) · ЛКМ — вращать · колесо — зум · ПКМ — двигать</div>
+        <div class="hint">Клик по трубе у конца — выбрать · оранжевая стрелка — длиннее · зелёный «+» — новая труба · «?» — инструкции</div>
       </div>
       <button class="drawerbtn" id="drawerBtn" type="button" aria-expanded="false">Панель</button>
       <div class="controls" id="controls">
@@ -116,7 +116,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.1.1</span>
+    <span class="ver">v0.1.2</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -124,12 +124,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/profiles.js?v=0.1.1"></script>
-<script src="js/model.js?v=0.1.1"></script>
-<script src="js/dims.js?v=0.1.1"></script>
-<script src="js/view3d.js?v=0.1.1"></script>
-<script src="js/edit.js?v=0.1.1"></script>
-<script src="js/examples.js?v=0.1.1"></script>
-<script src="js/ui.js?v=0.1.1"></script>
+<script src="js/profiles.js?v=0.1.2"></script>
+<script src="js/model.js?v=0.1.2"></script>
+<script src="js/dims.js?v=0.1.2"></script>
+<script src="js/view3d.js?v=0.1.2"></script>
+<script src="js/edit.js?v=0.1.2"></script>
+<script src="js/examples.js?v=0.1.2"></script>
+<script src="js/ui.js?v=0.1.2"></script>
+<script src="js/help.js?v=0.1.2"></script>
 </body>
 </html>
