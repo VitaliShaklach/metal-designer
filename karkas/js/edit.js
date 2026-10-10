@@ -57,6 +57,15 @@ function aimMember(id,ax){const m=M.members.find(x=>x.id===id);if(!m)return;cons
     if(M.members.some(o=>o!==m&&(o.a===mv.id||o.b===mv.id))){const n={id:nextId(M.nodes,'n'),x:0,y:0,z:0};M.nodes.push(n);m[k]=n.id;mv=n;}
     Object.assign(mv,{x:Math.round(fix.x+d[0]*f.L),y:Math.round(fix.y+d[1]*f.L),z:Math.round(fix.z+d[2]*f.L)});mergeNode(mv);gcNodes();});
   syncEnds();renderAll(false);}
+// углы трубы от неактивного конца к активному: наклон к горизонту (−90…90) и поворот в плане (0 — вдоль +X, 90 — вдоль +Z), градусы
+function memberAngles(id){const m=M.members.find(x=>x.id===id),f=frame(m),d=activeEnd(id)==='b'?f.d:V3.mul(f.d,-1);
+  return {el:Math.round(Math.asin(Math.max(-1,Math.min(1,d[1])))*180/Math.PI*10)/10,az:Math.round(((Math.atan2(d[2],d[0])*180/Math.PI)+360)%360*10)/10};}
+// повернуть трубу на заданные углы вокруг неактивного конца, длина по оси та же
+function setAngles(id,el,az){const m=M.members.find(x=>x.id===id);if(!m)return;const k=activeEnd(id),f=frame(m),e=el*Math.PI/180,a=az*Math.PI/180,d=[Math.cos(e)*Math.cos(a),Math.sin(e),Math.cos(e)*Math.sin(a)];
+  change(()=>{const fix=nodeById(k==='b'?m.a:m.b);let mv=nodeById(m[k]);
+    if(M.members.some(o=>o!==m&&(o.a===mv.id||o.b===mv.id))){const n={id:nextId(M.nodes,'n'),x:0,y:0,z:0};M.nodes.push(n);m[k]=n.id;mv=n;}
+    Object.assign(mv,{x:Math.round(fix.x+d[0]*f.L),y:Math.round(fix.y+d[1]*f.L),z:Math.round(fix.z+d[2]*f.L)});mergeNode(mv);gcNodes();});
+  syncEnds();renderAll(false);}
 function moveSel(dx,dy,dz){if(!dx&&!dy&&!dz)return;const sel=[...SEL.m].map(id=>M.members.find(m=>m.id===id)).filter(Boolean);
   if(!sel.length&&!SEL.n.size)return;
   change(()=>{const moved=new Set(),clone={};
