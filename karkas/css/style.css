@@ -274,3 +274,7 @@ textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10
 .movebar label{display:flex;flex-direction:column;gap:3px;font:11px var(--f-mono);color:var(--muted);text-transform:uppercase}
 .movebar button{font:500 12px var(--f-mono);padding:6px 2px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .movebar button:hover{border-color:var(--accent);color:var(--accent)}
+
+.aimbar{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.aimbar button{font:500 12px var(--f-mono);padding:6px 2px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.aimbar button:hover{border-color:var(--accent);color:var(--accent)}

@@ -34,6 +34,8 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
       <div class="row2"><label>Профиль всем<select data-k="prof"><option value="">—</option>${profOpts('')}</select></label><label>Сборка всем<select data-k="grp"><option value="__">—</option>${grpOpts('__')}</select></label></div>`;}
   if(ns.length===1&&!ms.length){const n=ns[0];h+=`<p class="note"><b>Узел ${n.id}</b> · труб в узле: ${M.members.filter(m=>m.a===n.id||m.b===n.id).length}</p>
       <div class="xyz"><label>X<input class="inp" data-n="x" type="number" value="${n.x}"></label><label>Y<input class="inp" data-n="y" type="number" value="${n.y}"></label><label>Z<input class="inp" data-n="z" type="number" value="${n.z}"></label></div>`;}
+  if(ms.length===1)h+=`<p class="note"><b>Направить трубу</b> — повернуть вокруг серого конца строго по оси (длина та же):</p>
+    <div class="aimbar">${Object.entries({'-y':'↓ Y','+y':'↑ Y','+x':'→ X','-x':'← X','+z':'↙ Z','-z':'↗ Z'}).map(([k,t])=>`<button type="button" data-aim="${k}">${t}</button>`).join('')}</div>`;
   h+=`<p class="note"><b>Переместить выбранное</b> — стрелками на шаг или точно (впишите dX / dY / dZ и Enter), мм:</p>
     <div class="movebar"><label>шаг<input class="inp" id="mvStep" type="number" value="${store('kk-step')||100}" min="1"></label>${Object.entries({'+y':'↑','-y':'↓','-x':'←','+x':'→','+z':'↙','-z':'↗'}).map(([k,t])=>`<button type="button" data-mv="${k}" title="${t} ${k.slice(1).toUpperCase()}">${t} ${k.slice(1).toUpperCase()}</button>`).join('')}</div>
     <div class="xyz"><label>dX<input class="inp" id="mvx" type="number" value="0"></label><label>dY<input class="inp" id="mvy" type="number" value="0"></label><label>dZ<input class="inp" id="mvz" type="number" value="0"></label><button id="bMove" type="button">Переместить</button></div>
@@ -45,6 +47,7 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
   box.querySelectorAll('input[data-n]').forEach(i=>i.addEventListener('change',()=>{const n=ns[0];change(()=>{n[i.dataset.n]=Math.round(+i.value||0);});}));
   $('bMove').addEventListener('click',()=>moveSel(+$('mvx').value||0,+$('mvy').value||0,+$('mvz').value||0));
   ['mvx','mvy','mvz'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('bMove').click();}}));
+  box.querySelectorAll('[data-aim]').forEach(b=>b.addEventListener('click',()=>aimMember(ms[0].id,b.dataset.aim)));
   box.querySelectorAll('[data-mv]').forEach(b=>b.addEventListener('click',()=>{const st=Math.max(1,+$('mvStep').value||100),d=AX[b.dataset.mv];store('kk-step',String(st));moveSel(d[0]*st,d[1]*st,d[2]*st);}));
   $('bDel').addEventListener('click',delSel);$('bDesel').addEventListener('click',()=>select(null,false));}
 /* сборки */

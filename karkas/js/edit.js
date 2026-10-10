@@ -51,6 +51,12 @@ function snapAlong(fix,dir,s,skip,tol=80){let best=null;
 // после правки: узел совпал с другим — склеиваем
 function mergeNode(n){const ex=M.nodes.find(q=>q!==n&&Math.hypot(q.x-n.x,q.y-n.y,q.z-n.z)<1);if(!ex)return;
   M.members.forEach(m=>{if(m.a===n.id)m.a=ex.id;if(m.b===n.id)m.b=ex.id;});M.members=M.members.filter(m=>m.a!==m.b);M.nodes=M.nodes.filter(q=>q!==n);}
+// направить трубу по оси: поворот вокруг неактивного конца, длина по оси сохраняется; активный конец отрывается от чужих труб
+function aimMember(id,ax){const m=M.members.find(x=>x.id===id);if(!m)return;const k=activeEnd(id),f=frame(m),d=AX[ax];
+  change(()=>{const fix=nodeById(k==='b'?m.a:m.b);let mv=nodeById(m[k]);
+    if(M.members.some(o=>o!==m&&(o.a===mv.id||o.b===mv.id))){const n={id:nextId(M.nodes,'n'),x:0,y:0,z:0};M.nodes.push(n);m[k]=n.id;mv=n;}
+    Object.assign(mv,{x:Math.round(fix.x+d[0]*f.L),y:Math.round(fix.y+d[1]*f.L),z:Math.round(fix.z+d[2]*f.L)});mergeNode(mv);gcNodes();});
+  syncEnds();renderAll(false);}
 function moveSel(dx,dy,dz){if(!dx&&!dy&&!dz)return;const sel=[...SEL.m].map(id=>M.members.find(m=>m.id===id)).filter(Boolean);
   if(!sel.length&&!SEL.n.size)return;
   change(()=>{const moved=new Set(),clone={};
