@@ -38,8 +38,20 @@ function setCutLen(id,L,end){const m=M.members.find(x=>x.id===id);if(!m||!(L>0))
   const moveB=end?end==='b':onG(m.a)!==onG(m.b)?onG(m.a):deg(m.b)<=deg(m.a);   // end — какой конец двигать (активный)
   change(()=>{const f=frame(m),fix=nodeById(moveB?m.a:m.b),mv=nodeById(moveB?m.b:m.a),d=moveB?f.d:V3.mul(f.d,-1);
     mv.x=Math.round(fix.x+d[0]*axis);mv.y=Math.round(fix.y+d[1]*axis);mv.z=Math.round(fix.z+d[2]*axis);});}
-function moveSel(dx,dy,dz){const ids=new Set(SEL.n);SEL.m.forEach(id=>{const m=M.members.find(x=>x.id===id);if(m){ids.add(m.a);ids.add(m.b);}});
-  if(!ids.size)return;change(()=>ids.forEach(id=>{const n=nodeById(id);n.x+=dx;n.y+=dy;n.z+=dz;}));}
+// сдвиг выбранных труб: узлы, где к ним примыкают НЕвыбранные трубы, копируются — выбранное отрывается и едет, остальное стоит на месте
+// (например, перемычка у низа стойки поднимается вдоль стойки, стойка не укорачивается); после сдвига совпавшие узлы склеиваются
+function moveSel(dx,dy,dz){if(!dx&&!dy&&!dz)return;const sel=[...SEL.m].map(id=>M.members.find(m=>m.id===id)).filter(Boolean);
+  if(!sel.length&&!SEL.n.size)return;
+  change(()=>{const moved=new Set(),clone={};
+    sel.forEach(m=>['a','b'].forEach(k=>{const nid=m[k],shared=M.members.some(o=>!SEL.m.has(o.id)&&(o.a===nid||o.b===nid));
+      if(shared){if(!clone[nid]){const o=nodeById(nid),n={id:nextId(M.nodes,'n'),x:o.x,y:o.y,z:o.z};M.nodes.push(n);clone[nid]=n.id;}m[k]=clone[nid];}
+      moved.add(m[k]);}));
+    if(!sel.length)SEL.n.forEach(id=>moved.add(id));
+    moved.forEach(id=>{const n=nodeById(id);n.x+=dx;n.y+=dy;n.z+=dz;});
+    moved.forEach(id=>{const n=nodeById(id),ex=M.nodes.find(q=>q!==n&&!moved.has(q.id)&&Math.hypot(q.x-n.x,q.y-n.y,q.z-n.z)<1);   // доехали до другого узла — соединяем
+      if(ex){M.members.forEach(m=>{if(m.a===id)m.a=ex.id;if(m.b===id)m.b=ex.id;});M.nodes=M.nodes.filter(q=>q!==n);}});
+    gcNodes();});
+  syncEnds();renderAll(false);}
 function delSel(){if(!SEL.m.size&&!SEL.n.size)return;change(()=>{SEL.m.forEach(id=>delMember(id));SEL.n.forEach(id=>delNode(id));gcNodes();});SEL.m.clear();SEL.n.clear();renderAll(false);}
 function setMembers(key,val){if(!SEL.m.size)return;change(()=>SEL.m.forEach(id=>{const m=M.members.find(x=>x.id===id);if(m)m[key]=val;}));}
 // текущая сборка для новых труб — сборка выбранной трубы

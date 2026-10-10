@@ -269,3 +269,8 @@ textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10
 .endseg{grid-template-columns:1fr 1fr}
 .endseg button{font-size:12px;padding:5px}
 #stage{overflow:hidden}
+
+.movebar{display:grid;grid-template-columns:70px repeat(6,1fr);gap:4px;align-items:end}
+.movebar label{display:flex;flex-direction:column;gap:3px;font:11px var(--f-mono);color:var(--muted);text-transform:uppercase}
+.movebar button{font:500 12px var(--f-mono);padding:6px 2px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.movebar button:hover{border-color:var(--accent);color:var(--accent)}
