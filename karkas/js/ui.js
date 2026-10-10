@@ -119,7 +119,7 @@ document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector
       controls.enabled=false;cv.setPointerCapture(e.pointerId);down=null;e.preventDefault();return;}
     if(!h||!h.handle)return;   // взяли стрелку на конце трубы — тянем вдоль оси
     const m=M.members.find(x=>x.id===h.handle.member),k=h.handle.end,f=frame(m),fix=nodeById(k==='b'?m.a:m.b),mv=nodeById(m[k]);
-    SEL.end.set(m.id,k);syncEnds();DRAG={m,k,fix:P3(fix),dir:k==='b'?f.d:V3.mul(f.d,-1),mv,start:snap(),moved:false};controls.enabled=false;cv.setPointerCapture(e.pointerId);down=null;e.preventDefault();});
+    SEL.end.set(m.id,k);syncEnds();DRAG={m,k,fixId:fix.id,fix:P3(fix),dir:k==='b'?f.d:V3.mul(f.d,-1),mv,start:snap(),moved:false};controls.enabled=false;cv.setPointerCapture(e.pointerId);down=null;e.preventDefault();});
   // тянем «+»: ось — та из шести, что ближе к движению мыши на экране; длина — по лучу мыши, шаг 10 мм (Shift — 1)
   cv.addEventListener('pointermove',e=>{if(!GROW)return;const r=renderer.domElement.getBoundingClientRect(),dx=e.clientX-GROW.x0,dy=e.clientY-GROW.y0;if(Math.hypot(dx,dy)<6)return;
     const o0=GROW.n0,P0=[o0.x,o0.y,o0.z],scr=v=>{const q=new THREE.Vector3(...v).project(camera);return [(q.x+1)/2*r.width,(1-q.y)/2*r.height];},s0=scr(P0);
@@ -127,14 +127,15 @@ document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector
     const rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
     const o=rc.ray.origin.toArray(),rd=rc.ray.direction.toArray(),dir=best[1],w=V3.sub(P0,o),b=V3.dot(dir,rd),d=V3.dot(dir,w),e2=V3.dot(rd,w),den=1-b*b;
     const step=e.shiftKey?1:10;let s=den<1e-6?0:(b*e2-d)/den;s=Math.max(step,Math.round(s/step)*step);
-    const p=V3.add(P0,V3.mul(dir,s));
+    const sn=snapAlong(P0,dir,s,{nodes:new Set([o0.id].concat(GROW.made?[GROW.made.n.id]:[])),members:new Set(GROW.made?[GROW.made.m.id]:[])});GROW.snap=sn;
+    const p=sn?sn.p:V3.add(P0,V3.mul(dir,s));
     if(!GROW.made){const n={id:nextId(M.nodes,'n'),x:0,y:0,z:0};M.nodes.push(n);const m={id:nextId(M.members,'m'),a:o0.id,b:n.id,prof:GROW.prof,rot:0,endA:'auto',endB:'auto',grp:GROW.grp};M.members.push(m);GROW.made={n,m};}
     Object.assign(GROW.made.n,{x:Math.round(p[0]),y:Math.round(p[1]),z:Math.round(p[2])});build3D();
-    const c=memberCuts().find(x=>x.m.id===GROW.made.m.id),rr=stage.getBoundingClientRect();tag.textContent=`${({'+x':'→ X','-x':'← X','+y':'↑ Y','-y':'↓ Y','+z':'↙ Z','-z':'↗ Z'})[best[0]]} · ${prof(GROW.prof).name} · L ${us(c?c.L:s)}`;
+    const c=memberCuts().find(x=>x.m.id===GROW.made.m.id),rr=stage.getBoundingClientRect();tag.textContent=`${({'+x':'→ X','-x':'← X','+y':'↑ Y','-y':'↓ Y','+z':'↙ Z','-z':'↗ Z'})[best[0]]} · ${prof(GROW.prof).name} · L ${us(c?c.L:s)}`+(GROW.snap?` · прилипло: ${GROW.snap.what}`:'');
     tag.style.left=(e.clientX-rr.left)+'px';tag.style.top=(e.clientY-rr.top)+'px';tag.hidden=false;},true);
   const endGrow=()=>{if(!GROW)return;const g=GROW;GROW=null;controls.enabled=true;tag.hidden=true;if(!g.made){renderAll(false);return;}
     // конец совпал с существующим узлом — соединяем с ним
-    const n=g.made.n,ex=M.nodes.find(q=>q!==n&&Math.hypot(q.x-n.x,q.y-n.y,q.z-n.z)<1);if(ex){g.made.m.b=ex.id;M.nodes=M.nodes.filter(q=>q!==n);}
+    mergeNode(g.made.n);
     UNDO.push(g.start);REDO.length=0;SEL.m.clear();SEL.end.clear();SEL.n.clear();SEL.m.add(g.made.m.id);SEL.end.set(g.made.m.id,'b');syncEnds();renderAll();msg('Новая труба — тяните «+» дальше или стрелку, чтобы поправить длину');};
   cv.addEventListener('pointerup',endGrow,true);cv.addEventListener('pointercancel',endGrow);
   cv.addEventListener('pointermove',e=>{if(!DRAG)return;const r=renderer.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
@@ -142,9 +143,10 @@ document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector
     // точка на оси трубы, ближайшая к лучу мыши
     const o=rc.ray.origin.toArray(),rd=rc.ray.direction.toArray(),w=V3.sub(DRAG.fix,o),b=V3.dot(DRAG.dir,rd),d=V3.dot(DRAG.dir,w),e2=V3.dot(rd,w),den=1-b*b;if(den<1e-6)return;
     let s=(b*e2-d)/den;const step=e.shiftKey?1:10;s=Math.max(step,Math.round(s/step)*step);
-    const p=V3.add(DRAG.fix,V3.mul(DRAG.dir,s));DRAG.mv.x=Math.round(p[0]);DRAG.mv.y=Math.round(p[1]);DRAG.mv.z=Math.round(p[2]);DRAG.moved=true;build3D();
-    const c=memberCuts().find(x=>x.m.id===DRAG.m.id),rr=stage.getBoundingClientRect();tag.textContent=`L ${us(c.L)}`;tag.style.left=(e.clientX-rr.left)+'px';tag.style.top=(e.clientY-rr.top)+'px';tag.hidden=false;},true);
-  const endDrag=()=>{if(!DRAG)return;const d=DRAG;DRAG=null;controls.enabled=true;tag.hidden=true;if(d.moved){UNDO.push(d.start);REDO.length=0;renderAll();}else renderAll(false);};
+    const sn=snapAlong(DRAG.fix,DRAG.dir,s,{nodes:new Set([DRAG.mv.id,DRAG.fixId]),members:new Set([DRAG.m.id])});DRAG.snap=sn;   // прилипло к трубе или узлу
+    const p=sn?sn.p:V3.add(DRAG.fix,V3.mul(DRAG.dir,s));DRAG.mv.x=Math.round(p[0]);DRAG.mv.y=Math.round(p[1]);DRAG.mv.z=Math.round(p[2]);DRAG.moved=true;build3D();
+    const c=memberCuts().find(x=>x.m.id===DRAG.m.id),rr=stage.getBoundingClientRect();tag.textContent=`L ${us(c.L)}`+(DRAG.snap?` · прилипло: ${DRAG.snap.what}`:'');tag.style.left=(e.clientX-rr.left)+'px';tag.style.top=(e.clientY-rr.top)+'px';tag.hidden=false;},true);
+  const endDrag=()=>{if(!DRAG)return;const d=DRAG;DRAG=null;controls.enabled=true;tag.hidden=true;if(d.moved){mergeNode(d.mv);UNDO.push(d.start);REDO.length=0;renderAll();}else renderAll(false);};
   cv.addEventListener('pointerup',endDrag,true);cv.addEventListener('pointercancel',endDrag);
   cv.addEventListener('pointerup',e=>{if(!down||e.button!==0)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y),dt=performance.now()-down.t;down=null;if(mv>5||dt>600)return;
     select(pickAt(e),e.shiftKey||e.ctrlKey||e.metaKey);});

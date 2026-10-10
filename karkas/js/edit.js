@@ -40,6 +40,17 @@ function setCutLen(id,L,end){const m=M.members.find(x=>x.id===id);if(!m||!(L>0))
     mv.x=Math.round(fix.x+d[0]*axis);mv.y=Math.round(fix.y+d[1]*axis);mv.z=Math.round(fix.z+d[2]*axis);});}
 // сдвиг выбранных труб: узлы, где к ним примыкают НЕвыбранные трубы, копируются — выбранное отрывается и едет, остальное стоит на месте
 // (например, перемычка у низа стойки поднимается вдоль стойки, стойка не укорачивается); после сдвига совпавшие узлы склеиваются
+// прилипание при протягивании: на луче от fix вдоль dir ищем узлы и оси других труб, через которые он проходит (±3 мм);
+// если текущая длина s ближе tol к такой точке — возвращаем её (точно на оси трубы → потом Т-стык «встык»)
+function snapAlong(fix,dir,s,skip,tol=80){let best=null;
+  M.nodes.forEach(n=>{if(skip.nodes.has(n.id))return;const v=V3.sub(P3(n),fix),t=V3.dot(v,dir);if(t<5)return;if(V3.len(V3.sub(v,V3.mul(dir,t)))>3)return;
+    if(Math.abs(t-s)<tol&&(!best||Math.abs(t-s)<Math.abs(best.s-s)))best={s:t,p:P3(n),what:'узел '+n.id};});
+  M.members.forEach(o=>{if(skip.members.has(o.id))return;const f=frame(o),c=segClosest(fix,dir,1e6,f.A,f.d,f.L);if(c.dist>3||c.s<5)return;
+    if(Math.abs(c.s-s)<tol&&(!best||Math.abs(c.s-s)<Math.abs(best.s-s)-1))best={s:c.s,p:c.Q,what:'труба '+o.id};});
+  return best;}
+// после правки: узел совпал с другим — склеиваем
+function mergeNode(n){const ex=M.nodes.find(q=>q!==n&&Math.hypot(q.x-n.x,q.y-n.y,q.z-n.z)<1);if(!ex)return;
+  M.members.forEach(m=>{if(m.a===n.id)m.a=ex.id;if(m.b===n.id)m.b=ex.id;});M.members=M.members.filter(m=>m.a!==m.b);M.nodes=M.nodes.filter(q=>q!==n);}
 function moveSel(dx,dy,dz){if(!dx&&!dy&&!dz)return;const sel=[...SEL.m].map(id=>M.members.find(m=>m.id===id)).filter(Boolean);
   if(!sel.length&&!SEL.n.size)return;
   change(()=>{const moved=new Set(),clone={};
