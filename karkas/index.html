@@ -49,7 +49,8 @@
 
         <div class="grp" data-g="draw"><button type="button" class="gt">Рисовать</button>
           <p class="note" id="drawFrom">Выберите узел на модели — от него пойдёт труба. Или задайте первый узел:</p>
-          <div class="xyz"><label>X<input class="inp" id="nx" type="number" value="0"></label><label>Y<input class="inp" id="ny" type="number" value="0"></label><label>Z<input class="inp" id="nz" type="number" value="0"></label><button id="bNode" type="button">Узел</button></div>
+          <div class="xyz"><label>X<input class="inp" id="nx" type="number" value="0"></label><label>Y<input class="inp" id="ny" type="number" value="0"></label><label>Z<input class="inp" id="nz" type="number" value="0"></label><button id="bNode" type="button" title="Создать новый узел в этих координатах">Новый узел</button></div>
+          <button id="bNodeMv" type="button" class="wide" hidden>Перенести выбранный узел в эти координаты</button>
           <div class="row2"><label>Профиль<select id="dProf"></select></label><label>Длина, мм<input class="inp" id="dLen" type="number" value="1000" min="1"></label></div>
           <div class="axes" id="axes"><button data-a="+x">→ X</button><button data-a="-x">← X</button><button data-a="+y">↑ Y</button><button data-a="-y">↓ Y</button><button data-a="+z">↙ Z</button><button data-a="-z">↗ Z</button></div>
           <button id="bJoin" type="button" class="wide">Труба между двумя выбранными узлами</button>

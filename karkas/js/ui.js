@@ -12,7 +12,10 @@ const endInfo=e=>e.type==='miter'?`скос ${Math.round(e.ang)}°`:e.type==='bu
 function renderAll(full=true){build3D();selUI();drawUI();if(!full)return;grpUI();tables();dimList();stats();jsonUI();
   $('ttl').textContent=document.title=M.meta.name||'Каркас';if(document.activeElement!==$('mName'))$('mName').value=M.meta.name||'';
   store('kk-model',JSON.stringify(M));}
-function drawUI(){const n=nodeById([...SEL.n].pop()||'');$('drawFrom').textContent=n?`От узла ${n.id} (${u(n.x)}; ${u(n.y)}; ${u(n.z)}) — выберите направление:`:'Выберите узел на модели — от него пойдёт труба. Или задайте первый узел:';}
+function drawUI(){const n=nodeById([...SEL.n].pop()||'');
+  $('drawFrom').innerHTML=n?`<b>Узел ${n.id}</b> — координаты (мм), труба пойдёт от него. Направление — кнопками ниже`:'Выберите узел на модели (синяя точка) — от него пойдёт труба. Или задайте первый узел:';
+  if(n)['x','y','z'].forEach(k=>{const i=$('n'+k);if(document.activeElement!==i)i.value=n[k];});
+  $('bNodeMv').hidden=!n;}
 function stats(){const bb=bbox(),pos=positions(),L=pos.reduce((s,p)=>s+p.L*p.total,0);
   $('stats').innerHTML=[[`${u(bb.max[0]-bb.min[0])} × ${u(bb.max[2]-bb.min[2])} × ${u(bb.max[1]-bb.min[1])}`,`Ш × Г × В, ${UN()}`],[`${M.members.length}`,'труб в модели'],[`${fmt(L/1000,1)} м`,'трубы всего'],[`≈ ${Math.round(massTotal())} кг`,'металл']]
     .map(([b,s])=>`<div class="stat"><b>${b}</b><span>${s}</span></div>`).join('');}
@@ -78,6 +81,7 @@ function jsonUI(){if(document.activeElement!==$('jsonTxt'))$('jsonTxt').value=JS
 $('dProf').innerHTML=profOpts('40x40x1.5');
 $('axes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=drawAlong(b.dataset.a,+$('dLen').value,$('dProf').value);if(r)msg(r);});
 $('bNode').addEventListener('click',()=>{let id;change(()=>{id=addNode(+$('nx').value||0,+$('ny').value||0,+$('nz').value||0).id;});SEL.n.clear();SEL.m.clear();SEL.n.add(id);renderAll(false);msg('Узел '+id+' — теперь выберите направление трубы');});
+$('bNodeMv').addEventListener('click',()=>{const n=nodeById([...SEL.n].pop()||'');if(!n)return;change(()=>{n.x=Math.round(+$('nx').value||0);n.y=Math.round(+$('ny').value||0);n.z=Math.round(+$('nz').value||0);});msg('Узел '+n.id+' перенесён');});
 $('bJoin').addEventListener('click',()=>{const r=joinNodes($('dProf').value);if(r)msg(r);});
 $('bCopy').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выберите трубы для копии');const ids=[...SEL.m];change(()=>copyMembers(ids,+$('cx').value||0,+$('cy').value||0,+$('cz').value||0,Math.max(1,+$('cn').value||1)));});
 $('bMirror').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выберите трубы для зеркала');const ids=[...SEL.m];change(()=>mirrorMembers(ids,$('mAx').value,+$('mC').value||0));});
