@@ -31,7 +31,8 @@ function dimRows(){const pos=positions(),r=[{h:'Габариты'},{id:'gx',name
 function dimVal(id){const bb=bbox();return id==='gx'?bb.max[0]-bb.min[0]:id==='gy'?bb.max[1]-bb.min[1]:id==='gz'?bb.max[2]-bb.min[2]:null;}
 function dims3D(){if(!ok)return;const bb=bbox(),mn=bb.min,mx=bb.max,g=Math.max(mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2])*.06+60;
   if(DIMS.has('gx'))dim3([mn[0],mn[1],mx[2]],[mx[0],mn[1],mx[2]],[0,0,g],us(mx[0]-mn[0]));
-  if(DIMS.has('gy'))dim3([mx[0],mn[1],mx[2]],[mx[0],mx[1],mx[2]],[g,0,0],us(mx[1]-mn[1]));
+  if(DIMS.has('gy')){   // высота — у самой высокой точки каркаса (у навеса — у задних столбов), сбоку справа
+    const top=M.nodes.reduce((b,n)=>n.y>b.y?n:b,M.nodes[0]||{y:0,z:mx[2]});dim3([mx[0],mn[1],top.z],[mx[0],mx[1],top.z],[g,0,0],us(mx[1]-mn[1]));}
   if(DIMS.has('gz'))dim3([mx[0],mn[1],mn[2]],[mx[0],mn[1],mx[2]],[g,0,0],us(mx[2]-mn[2]));
   const cuts=memberCuts();positions().forEach(p=>{if(!DIMS.has('p'+p.no))return;
     p.ids.forEach(id=>{const c=cuts.find(x=>x.m.id===id);if(!c)return;const f=frame(c.m),pr=prof(c.m.prof);
