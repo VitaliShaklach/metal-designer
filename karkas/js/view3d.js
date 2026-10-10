@@ -12,6 +12,7 @@ if(ok){scene=new THREE.Scene();
   const d2=new THREE.DirectionalLight(0xbfd0e0,.4);d2.position.set(-2000,900,-1500);scene.add(d2);
   const std=(c,x={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,metalness:.5,roughness:.55,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1},x));
   MAT.steel=std(0x59616a);MAT.sel=std(0xd0561f);MAT.dim=std(0x59616a,{transparent:true,opacity:.18,depthWrite:false});
+  MAT.weld=new THREE.MeshBasicMaterial({color:0xe08a1f,depthTest:false,transparent:true,opacity:.95});MAT.clash=new THREE.MeshBasicMaterial({color:0xd01f1f,depthTest:false,transparent:true});
   MAT.edge=new THREE.LineBasicMaterial({color:0x1b2124,transparent:true,opacity:.55});
   MAT.node=new THREE.MeshBasicMaterial({color:0x1f8fe0,depthTest:false,transparent:true,opacity:.9});MAT.nodeSel=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});
   group=new THREE.Group();scene.add(group);dimGroup=new THREE.Group();scene.add(dimGroup);
@@ -24,7 +25,7 @@ function memberGeo(c){const f=frame(c.m),p=prof(c.m.prof),hw=p.w/2,hh=p.h/2;
   for(let i=0;i<4;i++){const j=(i+1)%4;idx.push(i,j,4+j,i,4+j,4+i);}
   idx.push(0,2,1,0,3,2,4,5,6,4,6,7);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));g.setIndex(idx);g.computeVertexNormals();return g;}
-let SHOW_NODES=true,ONLY_GRP=null;
+let SHOW_NODES=true,SHOW_WELD=true,ONLY_GRP=null;
 function build3D(){if(!ok)return;
   [group,dimGroup].forEach(G=>{G.traverse(o=>{if(o.element&&o.element.parentNode)o.element.parentNode.removeChild(o.element);});G.clear();});
   const cuts=memberCuts();
@@ -33,6 +34,9 @@ function build3D(){if(!ok)return;
     if(!dimmed){const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,20),MAT.edge);e.userData.member=c.m.id;group.add(e);}});
   if(SHOW_NODES){const r=Math.max(12,Math.min(45,sceneSize()*.009)),sg=new THREE.SphereGeometry(r,14,10);   // узлы видны и сквозь трубы
     M.nodes.forEach(n=>{const sel=SEL.n.has(n.id),s=new THREE.Mesh(sel?new THREE.SphereGeometry(r*1.5,14,10):sg,sel?MAT.nodeSel:MAT.node);s.position.set(n.x,n.y,n.z);s.userData.node=n.id;s.renderOrder=12;group.add(s);});}
+  if(SHOW_WELD){const cs=contacts(),r=Math.max(10,Math.min(35,sceneSize()*.007));
+    cs.forEach(c=>{const clash=c.type==='clash',g=new THREE.TorusGeometry(r,r*.28,8,20),mk=new THREE.Mesh(g,clash?MAT.clash:MAT.weld);mk.position.set(...c.p);
+      if(c.n){const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(...c.n));mk.quaternion.copy(q);}mk.renderOrder=11;mk.userData.weld=1;group.add(mk);});}
   dims3D();}
 const sceneSize=()=>{const bb=bbox();return Math.max(400,bb.max[0]-bb.min[0],bb.max[1]-bb.min[1],bb.max[2]-bb.min[2]);};
 function flyTo(p,t){camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now()};}

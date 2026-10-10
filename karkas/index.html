@@ -75,6 +75,7 @@
 
         <div class="grp" data-g="view"><button type="button" class="gt">Вид</button>
           <label class="chk"><input type="checkbox" id="cNodes" checked><span>Показывать узлы</span></label>
+          <label class="chk"><input type="checkbox" id="cWeld" checked><span>Места приварки (труба лежит на трубе) — оранжевые кольца; пересечения — красные</span></label>
           <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
         </div>
       </div>
@@ -96,6 +97,7 @@
     </div>
     <div class="tabpane" id="tab-cut" role="tabpanel" hidden>
       <p class="tabnote">Длина реза — по длинной грани, целые мм. Угол — угол реза к оси трубы (90° — прямой рез)</p>
+      <div class="warnbox" id="warn" hidden></div>
       <div class="tbl"><table id="cut"></table></div>
     </div>
     <div class="tabpane" id="tab-spec" role="tabpanel" hidden>

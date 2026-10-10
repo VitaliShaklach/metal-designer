@@ -24,7 +24,8 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
   if(!ms.length&&!ns.length){box.innerHTML='<p class="note">Ничего не выбрано. Клик по трубе или узлу на модели</p>';return;}
   let h='';
   if(ms.length===1){const m=ms[0],c=memberCuts().find(x=>x.m.id===m.id),f=frame(m);
-    h+=`<p class="note"><b>Труба ${m.id}</b> · длина реза <b>${us(c.L)}</b> · концы: ${endInfo(c.ea)} / ${endInfo(c.eb)}</p>
+    const tc=touching(m.id),cl=contacts().filter(x=>x.type==='clash'&&(x.a===m.id||x.b===m.id)).map(x=>x.a===m.id?x.b:x.a);
+    h+=`<p class="note"><b>Труба ${m.id}</b> · длина реза <b>${us(c.L)}</b> · концы: ${endInfo(c.ea)} / ${endInfo(c.eb)}${tc.length?`<br>Касается: ${tc.join(', ')} — приварить по месту касания`:''}${cl.length?`<br><b class="bad">Пересекается с ${cl.join(', ')} — проверьте модель</b>`:''}</p>
       <div class="row2"><label>Профиль<select data-k="prof">${profOpts(m.prof)}</select></label><label>Поворот<select data-k="rot">${[0,90].map(r=>`<option value="${r}"${(+m.rot||0)===r?' selected':''}>${r}°</option>`).join('')}</select></label></div>
       <div class="row2"><label>Конец A (${m.a})<select data-k="endA">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endA===k?' selected':''}>${t}</option>`).join('')}</select></label><label>Конец B (${m.b})<select data-k="endB">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endB===k?' selected':''}>${t}</option>`).join('')}</select></label></div>
       <div class="row2"><label>Длина реза, мм — впишите и Enter<input class="inp" id="sLen" type="number" value="${c.L}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
@@ -57,10 +58,14 @@ function grpUI(){const pos=positions();
 function barSketch(L,angA,angB,maxL){const W=190,H=16,len=Math.max(40,W*Math.min(1,L/Math.max(maxL,1))),s=a=>a>=89.5?0:Math.min(H*1.5,H/Math.tan(a*Math.PI/180));
   const x0=2,x1=2+len,a=s(angA),b=s(angB);
   return `<svg class="barsk" width="${Math.ceil(x1+4)}" height="${H+4}" viewBox="0 0 ${Math.ceil(x1+4)} ${H+4}" aria-hidden="true"><polygon points="${x0+a},2 ${x1-b},2 ${x1},${H+2} ${x0},${H+2}"/></svg>`;}
-function tables(){const pos=positions(),maxL=Math.max(1,...pos.map(p=>p.L));
+function tables(){const pos=positions(),maxL=Math.max(1,...pos.map(p=>p.L)),cs=contacts(),noOf=id=>{const p=pos.find(q=>q.ids.includes(id));return p?p.no:id;};
+  // примечание: на чём лежит позиция (по месту касания — приварить)
+  const restNote=p=>{const on=new Set();p.ids.forEach(id=>cs.filter(c=>c.type==='rest'&&(c.a===id||c.b===id)).forEach(c=>on.add(noOf(c.a===id?c.b:c.a))));return on.size?`касается поз. ${[...on].join(', ')} — приварить по месту`:'';};
+  const clashes=cs.filter(c=>c.type==='clash');$('warn').hidden=!clashes.length;
+  $('warn').innerHTML=clashes.length?`<b>Проверьте модель:</b> трубы пересекаются насквозь — ${clashes.map(c=>`${c.a} и ${c.b} (на ${-c.gap} мм)`).join('; ')}. На 3D — красные кольца`:'';
   let h='<thead><tr><th>Поз.</th><th>Эскиз</th><th>Профиль</th><th class="r">Длина, мм</th><th>Концы</th><th class="r">На сборку</th><th class="r">Всего</th><th class="r">Масса, кг</th></tr></thead><tbody>';
   let gcur=null;pos.forEach(p=>{if(p.grp!==gcur){gcur=p.grp;const g=grpOf(p.grp);h+=`<tr class="grp"><td colspan="8">${g?esc(g.name)+(g.qty>1?` · ×${g.qty}`:'')+(g.mirror?' · зеркальные':''):'Без сборки'}</td></tr>`;}
-    h+=`<tr><td class="n">${p.no}</td><td>${barSketch(p.L,p.ang[0],p.ang[1],maxL)}</td><td>${prof(p.prof).name}</td><td class="n r">${p.L}</td><td class="n">${p.ang.map(a=>a===90?'90°':a+'°').join(' / ')}</td><td class="n r">${p.qty}</td><td class="n r">${p.total}</td><td class="n r">${fmt(p.kg,2)}</td></tr>`;});
+    const rn=restNote(p);h+=`<tr><td class="n">${p.no}</td><td>${barSketch(p.L,p.ang[0],p.ang[1],maxL)}</td><td>${prof(p.prof).name}${rn?`<small>${rn}</small>`:''}</td><td class="n r">${p.L}</td><td class="n">${p.ang.map(a=>a===90?'90°':a+'°').join(' / ')}</td><td class="n r">${p.qty}</td><td class="n r">${p.total}</td><td class="n r">${fmt(p.kg,2)}</td></tr>`;});
   h+=`<tr class="tot"><td colspan="6">Итого</td><td class="n r">${pos.reduce((s,p)=>s+p.total,0)}</td><td class="n r">${fmt(massTotal(),1)}</td></tr></tbody>`;
   $('cut').innerHTML=pos.length?h:'<tbody><tr><td>Труб пока нет — нарисуйте каркас или откройте пример</td></tr></tbody>';
   // спецификация по сборкам
@@ -87,6 +92,7 @@ $('bCopy').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выбери
 $('bMirror').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выберите трубы для зеркала');const ids=[...SEL.m];change(()=>mirrorMembers(ids,$('mAx').value,+$('mC').value||0));});
 $('bGrp').addEventListener('click',()=>{const r=makeGroup($('gName').value.trim());if(r)msg(r);else $('gName').value='';});
 $('cNodes').addEventListener('change',e=>{SHOW_NODES=e.target.checked;build3D();});
+$('cWeld').addEventListener('change',e=>{SHOW_WELD=e.target.checked;build3D();});
 $('bUndo').addEventListener('click',undo);$('bRedo').addEventListener('click',redo);
 $('mName').addEventListener('change',e=>change(()=>M.meta.name=e.target.value.trim()||'Каркас'));
 document.querySelectorAll('.vbar [data-v]').forEach(b=>b.addEventListener('click',()=>viewDir(b.dataset.v)));$('bFit').addEventListener('click',()=>fitAll());

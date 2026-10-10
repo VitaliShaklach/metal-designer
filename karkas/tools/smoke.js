@@ -19,6 +19,10 @@ for(const [post,want,msg] of [['40x40x1.5','41,49','скосы 41° / 49°'],['6
   addMember(a.id,b.id,'${post}');addMember(d.id,e.id,'${post}');addMember(b.id,e.id,'40x40x1.5');`,c);
  const cut=vm.runInContext('memberCuts().find(x=>x.m.a==="n2")',c),pc=vm.runInContext('memberCuts().find(x=>x.m.a==="n1")',c);
  ok(cut&&[cut.angA,cut.angB].sort().join()===want,`стропило (столбы ${post}): ${msg} — получилось ${[cut.angA,cut.angB]}°, L ${cut.L}, столб L ${pc.L}`);}
+// касания: прогоны навеса лежат на двух стропилах (по 2 касания), пересечений нет
+{const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/naves-3x2.json','utf8')));vm.runInContext('M=this.M',c);
+ const cs=vm.runInContext('contacts()',c),rest=cs.filter(x=>x.type==='rest'),clash=cs.filter(x=>x.type==='clash');
+ ok(rest.length===6&&!clash.length,`навес: прогоны лежат на стропилах — касаний ${rest.length}, пересечений ${clash.length}`);}
 // 3. раскрой хлыстов
 {const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/mk16-1sb.json','utf8')));vm.runInContext('M=this.M',c);
  const n=vm.runInContext('nesting()',c);ok(n.length===2&&n.every(x=>x.bars.length>0),'раскрой: '+n.map(x=>`${x.prof} — ${x.bars.length} хлыст(а)`).join(', '));}

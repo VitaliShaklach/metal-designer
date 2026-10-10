@@ -261,3 +261,7 @@ textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10
 .d3.edit{pointer-events:auto;cursor:text;font-size:13px;padding:3px 8px;border-width:2px;background:var(--accent);color:#fff}
 .d3.edit:hover{filter:brightness(1.1)}
 .d3.edit input{font:600 13px var(--f-mono);width:90px;border:0;padding:1px 3px;color:var(--ink);background:#fff}
+
+.warnbox{padding:10px 12px;border:1.5px solid #d01f1f;background:var(--panel);color:var(--ink);font-size:13px}
+.warnbox[hidden]{display:none}
+.bad{color:#d01f1f}

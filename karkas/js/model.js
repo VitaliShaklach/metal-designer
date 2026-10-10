@@ -105,3 +105,25 @@ function normModel(o){const r=Object.assign(emptyModel(),o||{});r.meta=Object.as
   r.nodes=(r.nodes||[]).map(n=>({id:String(n.id),x:+n.x||0,y:+n.y||0,z:+n.z||0}));const ids=new Set(r.nodes.map(n=>n.id));
   r.members=(r.members||[]).filter(m=>ids.has(String(m.a))&&ids.has(String(m.b))&&m.a!==m.b).map(m=>({id:String(m.id),a:String(m.a),b:String(m.b),prof:PROFILES[m.prof]?m.prof:'40x40x1.5',rot:+m.rot||0,endA:m.endA||'auto',endB:m.endB||'auto',grp:m.grp||''}));
   r.groups=(r.groups||[]).map(g=>({id:String(g.id),name:g.name||String(g.id),qty:Math.max(1,+g.qty||1),mirror:!!g.mirror}));return r;}
+// ---------- касания: труба лежит на другой (гранью, без общего узла) — приварить; пересечение насквозь — ошибка модели ----------
+// ближайшие точки двух отрезков: P = A0 + s·u (0…La), Q = B0 + t·v (0…Lb)
+function segClosest(A0,u,La,B0,v,Lb){const w=V3.sub(A0,B0),b=V3.dot(u,v),d=V3.dot(u,w),e=V3.dot(v,w),den=1-b*b;
+  let s,t;if(den<1e-9){s=0;t=e;}else{s=(b*e-d)/den;t=(e-b*d)/den;}
+  const cl=(x,L)=>Math.max(0,Math.min(L,x));s=cl(s,La);t=cl(b*s+e,Lb);s=cl(b*t-d,La);t=cl(b*s+e,Lb);
+  const P=V3.add(A0,V3.mul(u,s)),Q=V3.add(B0,V3.mul(v,t));return {P,Q,s,t,dist:V3.len(V3.sub(Q,P))};}
+// tol — зазор до 2 мм ещё касание; sink — врезание до 5 мм (ровная труба на наклонной) тоже «лежит»
+function contacts(tol=2,sink=5){const out=[],ms=M.members;
+  for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++){const a=ms[i],b=ms[j];
+    if(a.a===b.a||a.a===b.b||a.b===b.a||a.b===b.b)continue;   // общий узел — это стык, его считают концы
+    const fa=frame(a),fb=frame(b);
+    if([a.a,a.b].some(n=>throughAt(b,P3(nodeById(n))))||[b.a,b.b].some(n=>throughAt(a,P3(nodeById(n)))))continue;   // Т-узел
+    const c=segClosest(fa.A,fa.d,fa.L,fb.A,fb.d,fb.L);if(c.dist<1e-6)continue;
+    const n=V3.norm(V3.sub(c.Q,c.P)),need=halfExt(a,n)+halfExt(b,n);
+    // касание должно быть в теле обеих труб (не за концами)
+    const inA=c.s>-1&&c.s<fa.L+1,inB=c.t>-1&&c.t<fb.L+1;if(!inA||!inB)continue;
+    const gap=c.dist-need;
+    if(gap<=tol&&gap>=-sink)out.push({type:'rest',a:a.id,b:b.id,p:V3.add(c.P,V3.mul(n,halfExt(a,n))),n});
+    else if(gap<-sink)out.push({type:'clash',a:a.id,b:b.id,p:V3.mul(V3.add(c.P,c.Q),.5),gap:Math.round(gap)});}
+  return out;}
+// на чём лежит / что лежит на трубе (id труб)
+const touching=id=>contacts().filter(c=>c.type==='rest'&&(c.a===id||c.b===id)).map(c=>c.a===id?c.b:c.a);
