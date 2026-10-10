@@ -19,6 +19,11 @@ for(const [post,want,msg] of [['40x40x1.5','41,49','скосы 41° / 49°'],['6
   addMember(a.id,b.id,'${post}');addMember(d.id,e.id,'${post}');addMember(b.id,e.id,'40x40x1.5');`,c);
  const cut=vm.runInContext('memberCuts().find(x=>x.m.a==="n2")',c),pc=vm.runInContext('memberCuts().find(x=>x.m.a==="n1")',c);
  ok(cut&&[cut.angA,cut.angB].sort().join()===want,`стропило (столбы ${post}): ${msg} — получилось ${[cut.angA,cut.angB]}°, L ${cut.L}, столб L ${pc.L}`);}
+// ферма 4.1СБ МК-16 (листы 18–19): пояса 2036 41°/49° ×4, стойки 232 ×4, распорки 150 ×6, столбы 2100 и 2394; стойки фермы лежат на столбах
+{const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/mk16-ferma.json','utf8')));vm.runInContext('M=this.M',c);
+ const pos=vm.runInContext('positions()',c),g=(L,a)=>pos.find(p=>p.L===L&&p.ang.join()===a);
+ ok(g(2036,'41,49')?.total===4&&g(232,'41,49')?.total===4&&g(150,'90,90')?.total===6&&g(2100,'90,90')?.total===2&&g(2394,'90,90')?.total===2,'ферма МК-16: '+pos.map(p=>`${p.L} ${p.ang.join('/')}° ×${p.total}`).join(', '));
+ ok(vm.runInContext('contacts().filter(x=>x.type==="rest").length',c)===2,'ферма приваривается к столбам по месту — 2 касания');}
 // касания: прогоны навеса лежат на двух стропилах (по 2 касания), пересечений нет
 {const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/naves-3x2.json','utf8')));vm.runInContext('M=this.M',c);
  const cs=vm.runInContext('contacts()',c),rest=cs.filter(x=>x.type==='rest'),clash=cs.filter(x=>x.type==='clash');
