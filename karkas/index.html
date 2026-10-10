@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.1.2">
+<link rel="stylesheet" href="css/style.css?v=0.2.0">
 </head>
 <body>
 <div class="wrap">
@@ -88,6 +88,7 @@
       <button role="tab" data-tab="cut" aria-selected="false">Раскрой</button>
       <button role="tab" data-tab="spec" aria-selected="false">Спецификация</button>
       <button role="tab" data-tab="metal" aria-selected="false">Металл</button>
+      <button role="tab" data-tab="sheets" aria-selected="false">Чертежи</button>
       <button role="tab" data-tab="json" aria-selected="false">Модель (JSON)</button>
     </div>
     <div class="tabpane" id="tab-dims" role="tabpanel">
@@ -108,6 +109,11 @@
       <p class="tabnote">Хлысты по 6 м, рез 2 мм. Берите с запасом</p>
       <div class="tbl"><table id="metal"></table></div>
     </div>
+    <div class="tabpane" id="tab-sheets" role="tabpanel" hidden>
+      <p class="tabnote">Листы А3 для производства: общий вид, сборки со спецификацией, детали с длиной реза и углами. Размеры в мм</p>
+      <div class="dimbar"><button id="shPdf" type="button">Скачать PDF</button><select id="shGo" aria-label="Перейти к листу"></select><span class="dxfmsg" id="shMsg">PDF: в окне печати выберите «Сохранить как PDF», формат A3, альбомная</span></div>
+      <div class="sheets" id="sheets"></div>
+    </div>
     <div class="tabpane" id="tab-json" role="tabpanel" hidden>
       <p class="tabnote">Модель целиком: узлы, трубы, стыки, сборки. Можно вставить модель, собранную по описанию, и нажать «Применить»</p>
       <textarea id="jsonTxt" class="json" spellcheck="false"></textarea>
@@ -116,7 +122,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.1.2</span>
+    <span class="ver">v0.2.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -124,13 +130,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/profiles.js?v=0.1.2"></script>
-<script src="js/model.js?v=0.1.2"></script>
-<script src="js/dims.js?v=0.1.2"></script>
-<script src="js/view3d.js?v=0.1.2"></script>
-<script src="js/edit.js?v=0.1.2"></script>
-<script src="js/examples.js?v=0.1.2"></script>
-<script src="js/ui.js?v=0.1.2"></script>
-<script src="js/help.js?v=0.1.2"></script>
+<script src="js/profiles.js?v=0.2.0"></script>
+<script src="js/model.js?v=0.2.0"></script>
+<script src="js/dims.js?v=0.2.0"></script>
+<script src="js/view3d.js?v=0.2.0"></script>
+<script src="js/edit.js?v=0.2.0"></script>
+<script src="js/examples.js?v=0.2.0"></script>
+<script src="js/ui.js?v=0.2.0"></script>
+<script src="js/sheets.js?v=0.2.0"></script>
+<script src="js/help.js?v=0.2.0"></script>
+<div id="printBox"></div>
 </body>
 </html>

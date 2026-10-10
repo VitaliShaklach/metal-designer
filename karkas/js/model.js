@@ -64,6 +64,11 @@ function resolveEnds(){const res={};
 // длина реза каждой трубы (по наружным граням) и углы
 function memberCuts(){const R=resolveEnds();return M.members.map(m=>{const f=frame(m),ea=R[m.id+':a'],eb=R[m.id+':b'];
   return {m,ea,eb,L:Math.round(f.L+ea.ext+eb.ext),angA:Math.round(ea.ang),angB:Math.round(eb.ang)};});}
+// 4 угла сечения на каждом конце трубы — пересечение рёбер с плоскостями реза (для 3D и чертежей)
+function memberCorners(c){const f=frame(c.m),p=prof(c.m.prof),hw=p.w/2,hh=p.h/2;
+  const corners=[[1,1],[-1,1],[-1,-1],[1,-1]].map(([s,t])=>V3.add(V3.mul(f.u,s*hw),V3.mul(f.v,t*hh)));
+  const endPts=(N,dir,cut)=>corners.map(o=>{const q=V3.add(N,o),den=V3.dot(cut.n,dir);const s=Math.abs(den)<1e-6?0:V3.dot(cut.n,V3.sub(cut.p,q))/den;return V3.add(q,V3.mul(dir,s));});
+  return {A:endPts(f.A,f.d,c.ea.cut),B:endPts(f.B,f.d,c.eb.cut)};}
 // группы: количество сборок (без группы — 1)
 const grpOf=id=>M.groups.find(g=>g.id===id);
 const grpQty=id=>{const g=grpOf(id);return g?(g.qty||1):1;};

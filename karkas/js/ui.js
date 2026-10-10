@@ -9,7 +9,7 @@ const grpOpts=sel=>`<option value="">— без сборки —</option>`+M.gro
 const endInfo=e=>e.type==='miter'?`скос ${Math.round(e.ang)}°`:e.type==='butt'?(Math.round(e.ang)===90?'встык':`встык, рез ${Math.round(e.ang)}°`):e.type==='cap'?'сквозная':'ровно';
 
 /* перерисовка всего: 3D, панели, таблицы; full=false — только 3D и панель выбора */
-function renderAll(full=true){build3D();selUI();drawUI();if(!full)return;grpUI();tables();dimList();stats();jsonUI();
+function renderAll(full=true){build3D();selUI();drawUI();if(!full)return;grpUI();tables();dimList();stats();jsonUI();sheetsUI();
   $('ttl').textContent=document.title=M.meta.name||'Каркас';if(document.activeElement!==$('mName'))$('mName').value=M.meta.name||'';
   store('kk-model',JSON.stringify(M));}
 function drawUI(){const n=nodeById([...SEL.n].pop()||''),mid=[...SEL.m].pop();
@@ -93,6 +93,17 @@ function tables(){const pos=positions(),maxL=Math.max(1,...pos.map(p=>p.L)),cs=c
 function dimList(){$('dimList').innerHTML='<div class="dg">'+dimRows().map(r=>r.h?`<h4>${r.h}</h4>`:`<label class="chk"><input type="checkbox" data-id="${r.id}"${DIMS.has(r.id)?' checked':''}><span>${r.name}<b>${r.val||us(dimVal(r.id))}</b></span></label>`).join('')+'</div>';}
 function jsonUI(){if(document.activeElement!==$('jsonTxt'))$('jsonTxt').value=JSON.stringify(M,null,1);}
 
+/* чертежи: листы строятся, только когда вкладка открыта; иначе — пометка «устарели» */
+let SHEETS_OLD=true;
+function sheetsUI(){if(typeof buildSheets!=='function')return;if($('tab-sheets').hidden){SHEETS_OLD=true;return;}SHEETS_OLD=false;
+  const sh=buildSheets();$('sheets').innerHTML=sh.length?sh.map((s,i)=>`<figure class="sheet" id="sheet${i+1}"><figcaption>Лист ${i+1} из ${sh.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join(''):'<p class="note">Труб пока нет — нарисуйте каркас или откройте пример</p>';
+  $('shGo').innerHTML=sh.map((s,i)=>`<option value="${i+1}">Лист ${i+1} · ${esc(s.title)}</option>`).join('');$('shPdf').disabled=!sh.length;}
+$('shGo').addEventListener('change',e=>{const el=$('sheet'+e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
+// PDF — через печать браузера: в печать идут только листы, по одному на страницу А3
+$('shPdf').addEventListener('click',()=>{const sh=buildSheets();if(!sh.length)return;$('printBox').innerHTML=sh.map(s=>s.svg).join('');
+  const t=document.title;document.title=(M.meta.name||'Каркас')+' — чертежи';const done=()=>{document.title=t;$('printBox').innerHTML='';removeEventListener('afterprint',done);};
+  addEventListener('afterprint',done);window.print();});
+
 /* ---------- события ---------- */
 $('dProf').innerHTML=profOpts('40x40x1.5');
 $('axes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=drawAlong(b.dataset.a,+$('dLen').value,$('dProf').value);if(r)msg(r);});
@@ -113,7 +124,7 @@ document.querySelectorAll('#unitSeg button').forEach(b=>b.addEventListener('clic
 document.querySelectorAll('#unitSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===UNIT));
 // вкладки
 const TABS=[...document.querySelectorAll('.tabbar button')];
-function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('kk-tab',k);if(k==='json')jsonUI();}
+function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('kk-tab',k);if(k==='json')jsonUI();if(k==='sheets')sheetsUI();}
 TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(store('kk-tab')||'dims');
 // сворачиваемые группы панели
 document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector('.gt');bt.addEventListener('click',()=>g.classList.toggle('shut'));});

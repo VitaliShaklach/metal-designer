@@ -18,10 +18,7 @@ if(ok){scene=new THREE.Scene();
   group=new THREE.Group();scene.add(group);dimGroup=new THREE.Group();scene.add(dimGroup);
   const grid=new THREE.GridHelper(20000,200,0xb9c0bd,0xd5dad7);grid.material.transparent=true;grid.material.opacity=.5;scene.add(grid);}
 // тело трубы: 4 угла сечения на каждом конце, каждый — пересечение ребра с плоскостью реза
-function memberGeo(c){const f=frame(c.m),p=prof(c.m.prof),hw=p.w/2,hh=p.h/2;
-  const corners=[[1,1],[-1,1],[-1,-1],[1,-1]].map(([s,t])=>V3.add(V3.mul(f.u,s*hw),V3.mul(f.v,t*hh)));
-  const endPts=(N,dir,cut)=>corners.map(o=>{const q=V3.add(N,o),den=V3.dot(cut.n,dir);const s=Math.abs(den)<1e-6?0:V3.dot(cut.n,V3.sub(cut.p,q))/den;return V3.add(q,V3.mul(dir,s));});
-  const A=endPts(f.A,f.d,c.ea.cut),B=endPts(f.B,f.d,c.eb.cut),pts=[...A,...B],idx=[];
+function memberGeo(c){const {A,B}=memberCorners(c),pts=[...A,...B],idx=[];
   for(let i=0;i<4;i++){const j=(i+1)%4;idx.push(i,j,4+j,i,4+j,4+i);}
   idx.push(0,2,1,0,3,2,4,5,6,4,6,7);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));g.setIndex(idx);g.computeVertexNormals();return g;}

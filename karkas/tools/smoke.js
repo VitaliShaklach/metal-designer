@@ -29,6 +29,10 @@ for(const [post,want,msg] of [['40x40x1.5','41,49','скосы 41° / 49°'],['6
 // 4. весь код страницы с пустышками (ловит ReferenceError)
 if(fs.existsSync(P+'/js/ui.js')){const mk=()=>{const U=new Proxy(function(){},{get:(t,k)=>{if(k===Symbol.toPrimitive)return()=>0;if(k===Symbol.iterator)return function*(){};if(k==='then')return undefined;return U;},apply:()=>U,construct:()=>U,set:()=>true});return U;};
  const U=mk(),c={THREE:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',search:'',href:'http://x/'},addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>0},navigator:U,URLSearchParams,TextEncoder,TextDecoder,console,Math,JSON,Set,Map,Object,Array,Number,String,Symbol,setTimeout,clearTimeout,Blob:function(){},URL:U,atob:U,btoa:U,localStorage:{getItem:()=>null,setItem:()=>{}},prompt:()=>{},Response:U,CompressionStream:undefined,fetch:()=>({then:()=>({catch:()=>{}})})};
- vm.createContext(c);const src=['profiles','model','dims','view3d','edit','examples','ui','help'].filter(f=>fs.existsSync(P+'/js/'+f+'.js')).map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n');
- try{vm.runInContext(src,c,{filename:'all.js'});vm.runInContext(`M=normModel(${fs.readFileSync(P+'/examples/mk16-1sb.json','utf8')});renderAll();`,c);ok(true,'страница собирается');}catch(e){ok(false,'страница: '+e.message+' '+(e.stack.split('\n')[1]||''));}}
+ vm.createContext(c);const src=['profiles','model','dims','view3d','edit','examples','ui','sheets','help'].filter(f=>fs.existsSync(P+'/js/'+f+'.js')).map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n');
+ try{vm.runInContext(src,c,{filename:'all.js'});vm.runInContext(`M=normModel(${fs.readFileSync(P+'/examples/mk16-1sb.json','utf8')});renderAll();`,c);ok(true,'страница собирается');
+   // листы: тумба — общий вид, сборка, 2 листа деталей; на листе деталей длины 790 и 685
+   const sh=vm.runInContext('buildSheets()',c);ok(sh.length===4&&sh[2].svg.includes('>790<')&&sh[2].svg.includes('>685<')&&sh.every(x=>x.svg.includes('vashaklach@gmail.com')&&!/NaN|undefined/.test(x.svg)),'чертежи тумбы: '+sh.map(x=>x.title).join(' | '));
+   vm.runInContext(`M=normModel(${fs.readFileSync(P+'/examples/naves-3x2.json','utf8')});`,c);const sn=vm.runInContext('buildSheets()',c);
+   ok(sn.length===5&&sn.every(x=>!/NaN|undefined|Infinity/.test(x.svg)),'чертежи навеса: '+sn.length+' листов');}catch(e){ok(false,'страница: '+e.message+' '+(e.stack.split('\n')[1]||''));}}
 process.exit(fails?1:0);
