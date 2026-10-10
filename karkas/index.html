@@ -41,7 +41,7 @@
         <div class="loading" id="loading"><i></i>Загружаю 3D…</div>
         <div class="vbar"><button data-v="iso" type="button">3D</button><button data-v="front" type="button">Спереди</button><button data-v="side" type="button">Сбоку</button><button data-v="top" type="button">Сверху</button><button id="bFit" type="button" title="Камера на всю модель (F)">Всё</button></div>
         <div class="hovtag" id="hovTag" hidden></div>
-        <div class="hint">Клик — выбрать трубу или узел · Shift+клик — добавить к выбору · ЛКМ — вращать · колесо — зум · ПКМ — двигать</div>
+        <div class="hint">Клик по трубе у нужного конца — выбрать · тянуть оранжевую стрелку — удлинить с этой стороны (Shift — шаг 1 мм) · ЛКМ — вращать · колесо — зум · ПКМ — двигать</div>
       </div>
       <button class="drawerbtn" id="drawerBtn" type="button" aria-expanded="false">Панель</button>
       <div class="controls" id="controls">
@@ -50,7 +50,7 @@
         <div class="grp" data-g="draw"><button type="button" class="gt">Рисовать</button>
           <p class="note" id="drawFrom">Выберите узел на модели — от него пойдёт труба. Или задайте первый узел:</p>
           <div class="xyz"><label>X<input class="inp" id="nx" type="number" value="0"></label><label>Y<input class="inp" id="ny" type="number" value="0"></label><label>Z<input class="inp" id="nz" type="number" value="0"></label><button id="bNode" type="button" title="Создать новый узел в этих координатах">Новый узел</button></div>
-          <button id="bNodeMv" type="button" class="wide" hidden>Перенести выбранный узел в эти координаты</button>
+          <button id="bNodeMv" type="button" class="wide" hidden>Перенести активный конец в эти координаты</button>
           <div class="row2"><label>Профиль<select id="dProf"></select></label><label>Длина новой трубы<input class="inp" id="dLen" type="number" value="1000" min="1"></label></div>
           <div class="axes" id="axes"><button data-a="+x">→ X</button><button data-a="-x">← X</button><button data-a="+y">↑ Y</button><button data-a="-y">↓ Y</button><button data-a="+z">↙ Z</button><button data-a="-z">↗ Z</button></div>
           <button id="bJoin" type="button" class="wide">Труба между двумя выбранными узлами</button>
@@ -74,7 +74,6 @@
         </div>
 
         <div class="grp" data-g="view"><button type="button" class="gt">Вид</button>
-          <label class="chk"><input type="checkbox" id="cNodes" checked><span>Показывать узлы</span></label>
           <label class="chk"><input type="checkbox" id="cWeld" checked><span>Места приварки (труба лежит на трубе) — оранжевые кольца; пересечения — красные</span></label>
           <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
         </div>

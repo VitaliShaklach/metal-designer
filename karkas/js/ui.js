@@ -12,8 +12,8 @@ const endInfo=e=>e.type==='miter'?`скос ${Math.round(e.ang)}°`:e.type==='bu
 function renderAll(full=true){build3D();selUI();drawUI();if(!full)return;grpUI();tables();dimList();stats();jsonUI();
   $('ttl').textContent=document.title=M.meta.name||'Каркас';if(document.activeElement!==$('mName'))$('mName').value=M.meta.name||'';
   store('kk-model',JSON.stringify(M));}
-function drawUI(){const n=nodeById([...SEL.n].pop()||'');
-  $('drawFrom').innerHTML=n?`<b>Узел ${n.id}</b> — координаты (мм), труба пойдёт от него. Направление — кнопками ниже`:'Выберите узел на модели (синяя точка) — от него пойдёт труба. Или задайте первый узел:';
+function drawUI(){const n=nodeById([...SEL.n].pop()||''),mid=[...SEL.m].pop();
+  $('drawFrom').innerHTML=n?`<b>${mid?`Конец ${activeEnd(mid).toUpperCase()} трубы ${mid}`:'Узел '+n.id}</b> — координаты (мм), новая труба пойдёт отсюда. Направление — кнопками ниже`:'Кликните трубу у того конца, от которого рисовать. Для нового каркаса задайте первый узел:';
   if(n)['x','y','z'].forEach(k=>{const i=$('n'+k);if(document.activeElement!==i)i.value=n[k];});
   $('bNodeMv').hidden=!n;}
 function stats(){const bb=bbox(),pos=positions(),L=pos.reduce((s,p)=>s+p.L*p.total,0);
@@ -25,10 +25,11 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
   let h='';
   if(ms.length===1){const m=ms[0],c=memberCuts().find(x=>x.m.id===m.id),f=frame(m);
     const tc=touching(m.id),cl=contacts().filter(x=>x.type==='clash'&&(x.a===m.id||x.b===m.id)).map(x=>x.a===m.id?x.b:x.a);
-    h+=`<p class="note"><b>Труба ${m.id}</b> · длина реза <b>${us(c.L)}</b> · концы: ${endInfo(c.ea)} / ${endInfo(c.eb)}${tc.length?`<br>Касается: ${tc.join(', ')} — приварить по месту касания`:''}${cl.length?`<br><b class="bad">Пересекается с ${cl.join(', ')} — проверьте модель</b>`:''}</p>
+    h+=`<div class="seg endseg" id="endSeg"><button data-e="a" aria-pressed="${activeEnd(m.id)==='a'}">Конец A</button><button data-e="b" aria-pressed="${activeEnd(m.id)==='b'}">Конец B</button></div>
+      <p class="note"><b>Труба ${m.id}</b> · длина реза <b>${us(c.L)}</b> · концы: ${endInfo(c.ea)} / ${endInfo(c.eb)}${tc.length?`<br>Касается: ${tc.join(', ')} — приварить по месту касания`:''}${cl.length?`<br><b class="bad">Пересекается с ${cl.join(', ')} — проверьте модель</b>`:''}</p>
       <div class="row2"><label>Профиль<select data-k="prof">${profOpts(m.prof)}</select></label><label>Поворот<select data-k="rot">${[0,90].map(r=>`<option value="${r}"${(+m.rot||0)===r?' selected':''}>${r}°</option>`).join('')}</select></label></div>
       <div class="row2"><label>Конец A (${m.a})<select data-k="endA">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endA===k?' selected':''}>${t}</option>`).join('')}</select></label><label>Конец B (${m.b})<select data-k="endB">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endB===k?' selected':''}>${t}</option>`).join('')}</select></label></div>
-      <div class="row2"><label>Длина реза, мм — впишите и Enter<input class="inp" id="sLen" type="number" value="${c.L}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
+      <div class="row2"><label>Длина реза — меняется активный конец<input class="inp" id="sLen" type="number" value="${c.L}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
   else if(ms.length>1){h+=`<p class="note"><b>Выбрано труб: ${ms.length}</b>${ns.length?`, узлов: ${ns.length}`:''}</p>
       <div class="row2"><label>Профиль всем<select data-k="prof"><option value="">—</option>${profOpts('')}</select></label><label>Сборка всем<select data-k="grp"><option value="__">—</option>${grpOpts('__')}</select></label></div>`;}
   if(ns.length===1&&!ms.length){const n=ns[0];h+=`<p class="note"><b>Узел ${n.id}</b> · труб в узле: ${M.members.filter(m=>m.a===n.id||m.b===n.id).length}</p>
@@ -37,7 +38,8 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
     <div class="btns"><button id="bDel" type="button" class="danger">Удалить</button><button id="bDesel" type="button">Снять выбор</button></div>`;
   box.innerHTML=h;
   box.querySelectorAll('select[data-k]').forEach(s=>s.addEventListener('change',()=>{const k=s.dataset.k;let v=s.value;if(k==='prof'&&!v)return;if(k==='grp'&&v==='__')return;if(k==='rot')v=+v;setMembers(k,v);}));
-  const sl=$('sLen');if(sl){sl.addEventListener('change',()=>setCutLen(ms[0].id,+sl.value));sl.addEventListener('keydown',e=>{if(e.key==='Enter')sl.blur();});}
+  box.querySelectorAll('#endSeg button').forEach(b=>b.addEventListener('click',()=>select({handle:{member:ms[0].id,end:b.dataset.e}})));
+  const sl=$('sLen');if(sl){sl.addEventListener('change',()=>setCutLen(ms[0].id,+sl.value,activeEnd(ms[0].id)));sl.addEventListener('keydown',e=>{if(e.key==='Enter')sl.blur();});}
   box.querySelectorAll('input[data-n]').forEach(i=>i.addEventListener('change',()=>{const n=ns[0];change(()=>{n[i.dataset.n]=Math.round(+i.value||0);});}));
   $('bMove').addEventListener('click',()=>moveSel(+$('mvx').value||0,+$('mvy').value||0,+$('mvz').value||0));
   $('bDel').addEventListener('click',delSel);$('bDesel').addEventListener('click',()=>select(null,false));}
@@ -85,13 +87,12 @@ function jsonUI(){if(document.activeElement!==$('jsonTxt'))$('jsonTxt').value=JS
 /* ---------- события ---------- */
 $('dProf').innerHTML=profOpts('40x40x1.5');
 $('axes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const r=drawAlong(b.dataset.a,+$('dLen').value,$('dProf').value);if(r)msg(r);});
-$('bNode').addEventListener('click',()=>{let id;change(()=>{id=addNode(+$('nx').value||0,+$('ny').value||0,+$('nz').value||0).id;});SEL.n.clear();SEL.m.clear();SEL.n.add(id);renderAll(false);msg('Узел '+id+' — теперь выберите направление трубы');});
+$('bNode').addEventListener('click',()=>{let id;change(()=>{id=addNode(+$('nx').value||0,+$('ny').value||0,+$('nz').value||0).id;});SEL.n.clear();SEL.m.clear();SEL.end.clear();SEL.n.add(id);renderAll(false);msg('Узел '+id+' — теперь выберите направление трубы');});
 $('bNodeMv').addEventListener('click',()=>{const n=nodeById([...SEL.n].pop()||'');if(!n)return;change(()=>{n.x=Math.round(+$('nx').value||0);n.y=Math.round(+$('ny').value||0);n.z=Math.round(+$('nz').value||0);});msg('Узел '+n.id+' перенесён');});
 $('bJoin').addEventListener('click',()=>{const r=joinNodes($('dProf').value);if(r)msg(r);});
 $('bCopy').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выберите трубы для копии');const ids=[...SEL.m];change(()=>copyMembers(ids,+$('cx').value||0,+$('cy').value||0,+$('cz').value||0,Math.max(1,+$('cn').value||1)));});
 $('bMirror').addEventListener('click',()=>{if(!SEL.m.size)return msg('Выберите трубы для зеркала');const ids=[...SEL.m];change(()=>mirrorMembers(ids,$('mAx').value,+$('mC').value||0));});
 $('bGrp').addEventListener('click',()=>{const r=makeGroup($('gName').value.trim());if(r)msg(r);else $('gName').value='';});
-$('cNodes').addEventListener('change',e=>{SHOW_NODES=e.target.checked;build3D();});
 $('cWeld').addEventListener('change',e=>{SHOW_WELD=e.target.checked;build3D();});
 $('bUndo').addEventListener('click',undo);$('bRedo').addEventListener('click',redo);
 $('mName').addEventListener('change',e=>change(()=>M.meta.name=e.target.value.trim()||'Каркас'));
@@ -109,12 +110,24 @@ TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(
 document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector('.gt');bt.addEventListener('click',()=>g.classList.toggle('shut'));});
 // клик по модели — выбрать; наведение — имя
 (()=>{if(!ok)return;const cv=renderer.domElement,tag=$('hovTag');let down=null,last=0;
-  cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};tag.hidden=true;});
+  cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};tag.hidden=true;
+    if(e.button!==0)return;const h=pickAt(e);if(!h||!h.handle)return;   // взяли стрелку на конце трубы — тянем вдоль оси
+    const m=M.members.find(x=>x.id===h.handle.member),k=h.handle.end,f=frame(m),fix=nodeById(k==='b'?m.a:m.b),mv=nodeById(m[k]);
+    SEL.end.set(m.id,k);syncEnds();DRAG={m,k,fix:P3(fix),dir:k==='b'?f.d:V3.mul(f.d,-1),mv,start:snap(),moved:false};controls.enabled=false;cv.setPointerCapture(e.pointerId);down=null;e.preventDefault();});
+  cv.addEventListener('pointermove',e=>{if(!DRAG)return;const r=renderer.domElement.getBoundingClientRect(),rc=new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
+    // точка на оси трубы, ближайшая к лучу мыши
+    const o=rc.ray.origin.toArray(),rd=rc.ray.direction.toArray(),w=V3.sub(DRAG.fix,o),b=V3.dot(DRAG.dir,rd),d=V3.dot(DRAG.dir,w),e2=V3.dot(rd,w),den=1-b*b;if(den<1e-6)return;
+    let s=(b*e2-d)/den;const step=e.shiftKey?1:10;s=Math.max(step,Math.round(s/step)*step);
+    const p=V3.add(DRAG.fix,V3.mul(DRAG.dir,s));DRAG.mv.x=Math.round(p[0]);DRAG.mv.y=Math.round(p[1]);DRAG.mv.z=Math.round(p[2]);DRAG.moved=true;build3D();
+    const c=memberCuts().find(x=>x.m.id===DRAG.m.id),rr=stage.getBoundingClientRect();tag.textContent=`L ${us(c.L)}`;tag.style.left=(e.clientX-rr.left)+'px';tag.style.top=(e.clientY-rr.top)+'px';tag.hidden=false;},true);
+  const endDrag=()=>{if(!DRAG)return;const d=DRAG;DRAG=null;controls.enabled=true;tag.hidden=true;if(d.moved){UNDO.push(d.start);REDO.length=0;renderAll();}else renderAll(false);};
+  cv.addEventListener('pointerup',endDrag,true);cv.addEventListener('pointercancel',endDrag);
   cv.addEventListener('pointerup',e=>{if(!down||e.button!==0)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y),dt=performance.now()-down.t;down=null;if(mv>5||dt>600)return;
     select(pickAt(e),e.shiftKey||e.ctrlKey||e.metaKey);});
-  cv.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch'){tag.hidden=true;return;}const now=performance.now();if(now-last<60)return;last=now;
+  cv.addEventListener('pointermove',e=>{if(DRAG)return;if(e.buttons||e.pointerType==='touch'){tag.hidden=true;return;}const now=performance.now();if(now-last<60)return;last=now;
     const h=pickAt(e);stage.classList.toggle('pickable',!!h);if(!h){tag.hidden=true;return;}
-    let t;if(h.node){const n=nodeById(h.node);t=`Узел ${n.id}: ${u(n.x)}; ${u(n.y)}; ${u(n.z)}`;}else{const c=memberCuts().find(x=>x.m.id===h.member),g=grpOf(c.m.grp);t=`${prof(c.m.prof).name} · L ${us(c.L)}${g?' · '+g.name:''}`;}
+    let t;if(h.handle){t='Тяните вдоль трубы — удлинить или укоротить с этой стороны';}else if(h.node){const n=nodeById(h.node);t=`Узел ${n.id}: ${u(n.x)}; ${u(n.y)}; ${u(n.z)}`;}else{const c=memberCuts().find(x=>x.m.id===h.member),g=grpOf(c.m.grp);t=`${prof(c.m.prof).name} · L ${us(c.L)}${g?' · '+g.name:''}`;}
     const r=stage.getBoundingClientRect();tag.textContent=t;tag.style.left=(e.clientX-r.left)+'px';tag.style.top=(e.clientY-r.top)+'px';tag.hidden=false;});
   cv.addEventListener('pointerleave',()=>tag.hidden=true);})();
 // клавиши
@@ -128,7 +141,7 @@ addEventListener('keydown',e=>{const a=document.activeElement;if(a&&(a.tagName==
 // клик по размеру выбранной трубы на 3D — поле для новой длины
 stage.addEventListener('click',e=>{const el=e.target.closest('.d3.edit');if(!el||el.querySelector('input'))return;e.stopPropagation();
   const id=el.dataset.member,c=memberCuts().find(x=>x.m.id===id);if(!c)return;el.innerHTML='';const i=document.createElement('input');i.type='number';i.value=c.L;el.appendChild(i);i.focus();i.select();
-  const done=ok=>{if(done.x)return;done.x=1;if(ok&&+i.value>0&&+i.value!==c.L)setCutLen(id,+i.value);else build3D();};
+  const done=ok=>{if(done.x)return;done.x=1;if(ok&&+i.value>0&&+i.value!==c.L)setCutLen(id,+i.value,activeEnd(id));else build3D();};
   i.addEventListener('keydown',ev=>{if(ev.key==='Enter')done(true);if(ev.key==='Escape')done(false);ev.stopPropagation();});i.addEventListener('blur',()=>done(true));});
 /* ---------- файл, ссылка, пример, JSON ---------- */
 function loadModel(o,quiet){UNDO.push(snap());M=normModel(o);SEL.m.clear();SEL.n.clear();ONLY_GRP=null;renderAll();fitAll(true);if(!quiet)msg('Открыто: '+M.meta.name);}

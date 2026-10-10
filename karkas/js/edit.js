@@ -1,32 +1,41 @@
 /* ---------- редактор: выбор, отмена, правки модели ---------- */
-const SEL={m:new Set(),n:new Set()};
+const SEL={m:new Set(),n:new Set(),end:new Map()};   // end: труба → активный конец 'a' | 'b'; n — узлы активных концов (от них рисуем)
 const UNDO=[],REDO=[];
 const snap=()=>JSON.stringify(M);
 // любая правка: change() — снимок для отмены, правка, перерисовка
 function change(fn){UNDO.push(snap());if(UNDO.length>200)UNDO.shift();REDO.length=0;fn();cleanSel();renderAll();}
 function undo(){if(!UNDO.length)return;REDO.push(snap());M=normModel(JSON.parse(UNDO.pop()));cleanSel();renderAll();}
 function redo(){if(!REDO.length)return;UNDO.push(snap());M=normModel(JSON.parse(REDO.pop()));cleanSel();renderAll();}
-function cleanSel(){[...SEL.m].forEach(id=>{if(!M.members.some(m=>m.id===id))SEL.m.delete(id);});[...SEL.n].forEach(id=>{if(!nodeById(id))SEL.n.delete(id);});}
-function select(hit,add){if(!add){SEL.m.clear();SEL.n.clear();}
-  if(hit&&hit.member){SEL.m.has(hit.member)&&add?SEL.m.delete(hit.member):SEL.m.add(hit.member);}
+function cleanSel(){[...SEL.end.keys()].forEach(id=>{if(!M.members.some(m=>m.id===id))SEL.end.delete(id);});[...SEL.m].forEach(id=>{if(!M.members.some(m=>m.id===id))SEL.m.delete(id);});[...SEL.n].forEach(id=>{if(!nodeById(id))SEL.n.delete(id);});}
+// клик по трубе: активным становится ближний к месту клика конец; клик по ручке — её конец; Shift — добавить к выбору
+function select(hit,add){
+  if(hit&&hit.handle){SEL.end.set(hit.handle.member,hit.handle.end);syncEnds();renderAll(false);return;}
+  if(!add){SEL.m.clear();SEL.n.clear();SEL.end.clear();}
+  if(hit&&hit.member){const id=hit.member;if(add&&SEL.m.has(id)){SEL.m.delete(id);SEL.end.delete(id);}
+    else{SEL.m.add(id);const m=M.members.find(x=>x.id===id),f=frame(m),P=hit.point?[hit.point.x,hit.point.y,hit.point.z]:f.B;
+      SEL.end.set(id,V3.len(V3.sub(P,f.A))<V3.len(V3.sub(P,f.B))?'a':'b');}}
   if(hit&&hit.node){SEL.n.has(hit.node)&&add?SEL.n.delete(hit.node):SEL.n.add(hit.node);}
-  renderAll(false);}
+  syncEnds();renderAll(false);}
+const activeEnd=id=>SEL.end.get(id)||'b';
+// узлы активных концов выбранных труб (одиночные узлы без труб — тоже)
+function syncEnds(){const keep=[...SEL.n].filter(id=>!M.members.some(m=>m.a===id||m.b===id));SEL.n=new Set(keep);
+  SEL.m.forEach(id=>{const m=M.members.find(x=>x.id===id);if(m)SEL.n.add(m[activeEnd(id)]);});}
 // нарисовать трубу от выбранного узла вдоль оси
 const AX={'+x':[1,0,0],'-x':[-1,0,0],'+y':[0,1,0],'-y':[0,-1,0],'+z':[0,0,1],'-z':[0,0,-1]};
-function drawAlong(ax,len,pr){const from=[...SEL.n].pop();if(!from)return 'Сначала выберите узел (клик по синей точке) или создайте первый узел';if(!(len>0))return 'Длина должна быть больше 0';
+function drawAlong(ax,len,pr){const from=[...SEL.n].pop();if(!from)return 'Сначала кликните трубу у нужного конца (или создайте первый узел)';if(!(len>0))return 'Длина должна быть больше 0';
   const n0=nodeById(from),d=AX[ax];let nid;
   change(()=>{const n1=addNode(n0.x+d[0]*len,n0.y+d[1]*len,n0.z+d[2]*len);nid=n1.id;addMember(n0.id,n1.id,pr,curGrp());});
-  SEL.n.clear();SEL.n.add(nid);renderAll(false);return '';}
-function joinNodes(pr){const ns=[...SEL.n];if(ns.length!==2)return 'Выберите ровно 2 узла (Shift+клик)';let r='';change(()=>{if(!addMember(ns[0],ns[1],pr,curGrp()))r='Такая труба уже есть';});return r;}
+  const nm=M.members[M.members.length-1];SEL.m.clear();SEL.end.clear();SEL.n.clear();if(nm){SEL.m.add(nm.id);SEL.end.set(nm.id,'b');}syncEnds();renderAll(false);return '';}   // новая труба выбрана, активен её дальний конец — можно продолжать
+function joinNodes(pr){const ns=[...SEL.n];if(ns.length!==2)return 'Выберите две трубы (вторую — Shift+клик) у тех концов, которые надо соединить';let r='';change(()=>{if(!addMember(ns[0],ns[1],pr,curGrp()))r='Такая труба уже есть';});return r;}
 // длина трубы по оси: двигаем конец b вдоль оси
 function setAxisLen(id,len){const m=M.members.find(x=>x.id===id);if(!m||!(len>0))return;change(()=>{const f=frame(m),a=nodeById(m.a),b=nodeById(m.b),others=M.members.filter(x=>x!==m&&(x.a===b.id||x.b===b.id));
   // если у конца b есть другие трубы — двигаем узел вместе с ними; иначе тоже двигаем (свободный конец)
   b.x=Math.round(a.x+f.d[0]*len);b.y=Math.round(a.y+f.d[1]*len);b.z=Math.round(a.z+f.d[2]*len);});}
 // длина реза трубы = L: двигаем один конец вдоль оси; трубы в этом узле растягиваются вместе с ним
-function setCutLen(id,L){const m=M.members.find(x=>x.id===id);if(!m||!(L>0))return;const c=memberCuts().find(x=>x.m.id===id),axis=L-c.ea.ext-c.eb.ext;if(!(axis>0))return;
+function setCutLen(id,L,end){const m=M.members.find(x=>x.id===id);if(!m||!(L>0))return;const c=memberCuts().find(x=>x.m.id===id),axis=L-c.ea.ext-c.eb.ext;if(!(axis>0))return;
   const deg=nid=>M.members.filter(x=>x!==m&&(x.a===nid||x.b===nid)).length,gy=Math.min(...M.nodes.map(n=>n.y)),onG=nid=>nodeById(nid).y<=gy+1;
   // конец на земле не трогаем (ножка удлиняется вверх); иначе двигаем конец, где меньше других труб
-  const moveB=onG(m.a)!==onG(m.b)?onG(m.a):deg(m.b)<=deg(m.a);
+  const moveB=end?end==='b':onG(m.a)!==onG(m.b)?onG(m.a):deg(m.b)<=deg(m.a);   // end — какой конец двигать (активный)
   change(()=>{const f=frame(m),fix=nodeById(moveB?m.a:m.b),mv=nodeById(moveB?m.b:m.a),d=moveB?f.d:V3.mul(f.d,-1);
     mv.x=Math.round(fix.x+d[0]*axis);mv.y=Math.round(fix.y+d[1]*axis);mv.z=Math.round(fix.z+d[2]*axis);});}
 function moveSel(dx,dy,dz){const ids=new Set(SEL.n);SEL.m.forEach(id=>{const m=M.members.find(x=>x.id===id);if(m){ids.add(m.a);ids.add(m.b);}});
