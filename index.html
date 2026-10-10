@@ -34,7 +34,8 @@ h1{font:600 clamp(36px,6vw,60px)/1.02 var(--f-display);text-transform:uppercase;
 a.card:hover{border-color:var(--accent)}
 a.card:hover h2{color:var(--accent)}
 .card.soon{opacity:.6}
-.card.soon .ph{aspect-ratio:1200/630;border-bottom:1px solid var(--line);display:grid;place-items:center;font:12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.card .ph{background:var(--bg)}
+.card .ph{aspect-ratio:1200/630;border-bottom:1px solid var(--line);display:grid;place-items:center;font:12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 footer a{color:var(--accent)}
 </style>
@@ -52,7 +53,10 @@ footer a{color:var(--accent)}
       <div class="b"><h2>Мангал и печь под казан</h2><p>Мангал, печь под казан или оба вместе: колосник, задвижки поддува, съёмные ножки на колёсах, крыша от дождя.</p><span class="go">Открыть конфигуратор →</span></div>
     </a>
     <div class="card soon"><div class="ph">скоро</div><div class="b"><h2>Печи</h2><p>В работе.</p></div></div>
-    <div class="card soon"><div class="ph">скоро</div><div class="b"><h2>Металлоконструкции</h2><p>В работе.</p></div></div>
+    <a class="card" href="karkas/index.html">
+      <div class="ph">каркас · 3D</div>
+      <div class="b"><h2>Каркасы из профтрубы</h2><p>Навесы, стеллажи, столы, рамы: нарисуйте по осям или откройте пример — длины реза со скосами, спецификация, раскрой хлыстов.</p><span class="go">Открыть →</span></div>
+    </a>
   </main>
   <footer>
         <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>

@@ -11,6 +11,8 @@ jobs:
         with:
           node-version: 20
       - name: Синтаксис
-        run: for f in mangal/js/*.js; do node --check "$f"; done
+        run: for f in mangal/js/*.js karkas/js/*.js; do node --check "$f"; done
       - name: Дымовой тест (3 режима × наборы галочек, все размеры, раскрой)
         run: node mangal/tools/smoke.js
+      - name: Каркас — дымовой тест
+        run: node karkas/tools/smoke.js
