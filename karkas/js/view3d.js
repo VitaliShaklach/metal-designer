@@ -35,6 +35,10 @@ function build3D(){if(!ok)return;
   const R=Math.max(25,Math.min(120,sceneSize()*.024));   // размер стрелок — от размера каркаса
   // одиночные узлы (без труб — например, первый узел нового каркаса)
   M.nodes.filter(n=>!M.members.some(m=>m.a===n.id||m.b===n.id)).forEach(n=>{const s=new THREE.Mesh(new THREE.SphereGeometry(R*.7,14,10),SEL.n.has(n.id)?MAT.nodeSel:MAT.node);s.position.set(n.x,n.y,n.z);s.userData.node=n.id;s.renderOrder=12;group.add(s);});
+  // выбран одиночный узел — зелёный «+» рядом: тянуть — первая труба из него
+  if(!SEL.m.size){const n=M.nodes.find(q=>SEL.n.has(q.id)&&!M.members.some(m=>m.a===q.id||m.b===q.id));if(n){const pl=new THREE.Group(),bar=(x,y)=>pl.add(new THREE.Mesh(new THREE.BoxGeometry(x,y,R*.25),MAT.add));
+    pl.add(new THREE.Mesh(new THREE.CircleGeometry(R*.75,24),MAT.addBg));bar(R*.95,R*.24);bar(R*.24,R*.95);pl.children.forEach(o=>o.renderOrder=14);
+    pl.position.set(n.x+R*1.8,n.y+R*1.2,n.z);pl.quaternion.copy(camera.quaternion);pl.userData.grow={member:null,end:null,node:n.id};group.add(pl);}}
   // ручки-стрелки на концах выбранных труб: активный конец — оранжевая, второй — серая; тянуть — удлинить с этой стороны
   cuts.filter(c=>SEL.m.has(c.m.id)).forEach(c=>{const f=frame(c.m);[['a',c.ea,V3.mul(f.d,-1),f.A],['b',c.eb,f.d,f.B]].forEach(([k,e,out,N])=>{
     const act=activeEnd(c.m.id)===k,g=new THREE.ConeGeometry(R*(act?.75:.55),R*(act?2:1.4),16);g.translate(0,R*(act?1:.7),0);
