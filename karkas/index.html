@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.1.0">
+<link rel="stylesheet" href="css/style.css?v=0.1.1">
 </head>
 <body>
 <div class="wrap">
@@ -47,17 +47,18 @@
       <div class="controls" id="controls">
         <div class="drawerhead"><b>Панель</b><button type="button" id="drawerClose" aria-label="Закрыть">✕</button></div>
 
-        <div class="grp" data-g="draw"><button type="button" class="gt">Рисовать</button>
+        <div class="grp" data-g="sel"><button type="button" class="gt">Выбрано</button>
+          <div id="selBox"><p class="note">Ничего не выбрано</p></div>
+        </div>
+
+        <div class="grp" data-g="draw"><button type="button" class="gt">Добавить трубу</button>
           <p class="note" id="drawFrom">Выберите узел на модели — от него пойдёт труба. Или задайте первый узел:</p>
           <div class="xyz"><label>X<input class="inp" id="nx" type="number" value="0"></label><label>Y<input class="inp" id="ny" type="number" value="0"></label><label>Z<input class="inp" id="nz" type="number" value="0"></label><button id="bNode" type="button" title="Создать новый узел в этих координатах">Новый узел</button></div>
           <button id="bNodeMv" type="button" class="wide" hidden>Перенести активный конец в эти координаты</button>
           <div class="row2"><label>Профиль<select id="dProf"></select></label><label>Длина новой трубы<input class="inp" id="dLen" type="number" value="1000" min="1"></label></div>
-          <div class="axes" id="axes"><button data-a="+x">→ X</button><button data-a="-x">← X</button><button data-a="+y">↑ Y</button><button data-a="-y">↓ Y</button><button data-a="+z">↙ Z</button><button data-a="-z">↗ Z</button></div>
+          <p class="note">Новая труба от активного конца — в какую сторону:</p>
+          <div class="axes" id="axes"><button data-a="+x">+ труба → X</button><button data-a="-x">+ труба ← X</button><button data-a="+y">+ труба ↑ Y</button><button data-a="-y">+ труба ↓ Y</button><button data-a="+z">+ труба ↙ Z</button><button data-a="-z">+ труба ↗ Z</button></div>
           <button id="bJoin" type="button" class="wide">Труба между двумя выбранными узлами</button>
-        </div>
-
-        <div class="grp" data-g="sel"><button type="button" class="gt">Выбрано</button>
-          <div id="selBox"><p class="note">Ничего не выбрано</p></div>
         </div>
 
         <div class="grp" data-g="copy"><button type="button" class="gt">Копировать и зеркалить</button>
@@ -115,7 +116,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.1.0</span>
+    <span class="ver">v0.1.1</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -123,12 +124,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/profiles.js?v=0.1.0"></script>
-<script src="js/model.js?v=0.1.0"></script>
-<script src="js/dims.js?v=0.1.0"></script>
-<script src="js/view3d.js?v=0.1.0"></script>
-<script src="js/edit.js?v=0.1.0"></script>
-<script src="js/examples.js?v=0.1.0"></script>
-<script src="js/ui.js?v=0.1.0"></script>
+<script src="js/profiles.js?v=0.1.1"></script>
+<script src="js/model.js?v=0.1.1"></script>
+<script src="js/dims.js?v=0.1.1"></script>
+<script src="js/view3d.js?v=0.1.1"></script>
+<script src="js/edit.js?v=0.1.1"></script>
+<script src="js/examples.js?v=0.1.1"></script>
+<script src="js/ui.js?v=0.1.1"></script>
 </body>
 </html>

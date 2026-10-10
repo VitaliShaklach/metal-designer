@@ -34,9 +34,9 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
       <div class="row2"><label>Профиль всем<select data-k="prof"><option value="">—</option>${profOpts('')}</select></label><label>Сборка всем<select data-k="grp"><option value="__">—</option>${grpOpts('__')}</select></label></div>`;}
   if(ns.length===1&&!ms.length){const n=ns[0];h+=`<p class="note"><b>Узел ${n.id}</b> · труб в узле: ${M.members.filter(m=>m.a===n.id||m.b===n.id).length}</p>
       <div class="xyz"><label>X<input class="inp" data-n="x" type="number" value="${n.x}"></label><label>Y<input class="inp" data-n="y" type="number" value="${n.y}"></label><label>Z<input class="inp" data-n="z" type="number" value="${n.z}"></label></div>`;}
-  h+=`<p class="note">Сдвинуть выбранное — кнопками с шагом или точно, мм:</p>
+  h+=`<p class="note"><b>Переместить выбранное</b> — стрелками на шаг или точно (впишите dX / dY / dZ и Enter), мм:</p>
     <div class="movebar"><label>шаг<input class="inp" id="mvStep" type="number" value="${store('kk-step')||100}" min="1"></label>${Object.entries({'+y':'↑','-y':'↓','-x':'←','+x':'→','+z':'↙','-z':'↗'}).map(([k,t])=>`<button type="button" data-mv="${k}" title="${t} ${k.slice(1).toUpperCase()}">${t} ${k.slice(1).toUpperCase()}</button>`).join('')}</div>
-    <div class="xyz"><label>dX<input class="inp" id="mvx" type="number" value="0"></label><label>dY<input class="inp" id="mvy" type="number" value="0"></label><label>dZ<input class="inp" id="mvz" type="number" value="0"></label><button id="bMove" type="button">Сдвинуть</button></div>
+    <div class="xyz"><label>dX<input class="inp" id="mvx" type="number" value="0"></label><label>dY<input class="inp" id="mvy" type="number" value="0"></label><label>dZ<input class="inp" id="mvz" type="number" value="0"></label><button id="bMove" type="button">Переместить</button></div>
     <div class="btns"><button id="bDel" type="button" class="danger">Удалить</button><button id="bDesel" type="button">Снять выбор</button></div>`;
   box.innerHTML=h;
   box.querySelectorAll('select[data-k]').forEach(s=>s.addEventListener('change',()=>{const k=s.dataset.k;let v=s.value;if(k==='prof'&&!v)return;if(k==='grp'&&v==='__')return;if(k==='rot')v=+v;setMembers(k,v);}));
@@ -44,6 +44,7 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
   const sl=$('sLen');if(sl){sl.addEventListener('change',()=>setCutLen(ms[0].id,+sl.value,activeEnd(ms[0].id)));sl.addEventListener('keydown',e=>{if(e.key==='Enter')sl.blur();});}
   box.querySelectorAll('input[data-n]').forEach(i=>i.addEventListener('change',()=>{const n=ns[0];change(()=>{n[i.dataset.n]=Math.round(+i.value||0);});}));
   $('bMove').addEventListener('click',()=>moveSel(+$('mvx').value||0,+$('mvy').value||0,+$('mvz').value||0));
+  ['mvx','mvy','mvz'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('bMove').click();}}));
   box.querySelectorAll('[data-mv]').forEach(b=>b.addEventListener('click',()=>{const st=Math.max(1,+$('mvStep').value||100),d=AX[b.dataset.mv];store('kk-step',String(st));moveSel(d[0]*st,d[1]*st,d[2]*st);}));
   $('bDel').addEventListener('click',delSel);$('bDesel').addEventListener('click',()=>select(null,false));}
 /* сборки */
