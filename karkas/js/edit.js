@@ -22,6 +22,13 @@ function joinNodes(pr){const ns=[...SEL.n];if(ns.length!==2)return 'Выбери
 function setAxisLen(id,len){const m=M.members.find(x=>x.id===id);if(!m||!(len>0))return;change(()=>{const f=frame(m),a=nodeById(m.a),b=nodeById(m.b),others=M.members.filter(x=>x!==m&&(x.a===b.id||x.b===b.id));
   // если у конца b есть другие трубы — двигаем узел вместе с ними; иначе тоже двигаем (свободный конец)
   b.x=Math.round(a.x+f.d[0]*len);b.y=Math.round(a.y+f.d[1]*len);b.z=Math.round(a.z+f.d[2]*len);});}
+// длина реза трубы = L: двигаем один конец вдоль оси; трубы в этом узле растягиваются вместе с ним
+function setCutLen(id,L){const m=M.members.find(x=>x.id===id);if(!m||!(L>0))return;const c=memberCuts().find(x=>x.m.id===id),axis=L-c.ea.ext-c.eb.ext;if(!(axis>0))return;
+  const deg=nid=>M.members.filter(x=>x!==m&&(x.a===nid||x.b===nid)).length,gy=Math.min(...M.nodes.map(n=>n.y)),onG=nid=>nodeById(nid).y<=gy+1;
+  // конец на земле не трогаем (ножка удлиняется вверх); иначе двигаем конец, где меньше других труб
+  const moveB=onG(m.a)!==onG(m.b)?onG(m.a):deg(m.b)<=deg(m.a);
+  change(()=>{const f=frame(m),fix=nodeById(moveB?m.a:m.b),mv=nodeById(moveB?m.b:m.a),d=moveB?f.d:V3.mul(f.d,-1);
+    mv.x=Math.round(fix.x+d[0]*axis);mv.y=Math.round(fix.y+d[1]*axis);mv.z=Math.round(fix.z+d[2]*axis);});}
 function moveSel(dx,dy,dz){const ids=new Set(SEL.n);SEL.m.forEach(id=>{const m=M.members.find(x=>x.id===id);if(m){ids.add(m.a);ids.add(m.b);}});
   if(!ids.size)return;change(()=>ids.forEach(id=>{const n=nodeById(id);n.x+=dx;n.y+=dy;n.z+=dz;}));}
 function delSel(){if(!SEL.m.size&&!SEL.n.size)return;change(()=>{SEL.m.forEach(id=>delMember(id));SEL.n.forEach(id=>delNode(id));gcNodes();});SEL.m.clear();SEL.n.clear();renderAll(false);}

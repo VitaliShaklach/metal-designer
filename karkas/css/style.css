@@ -257,3 +257,7 @@ svg.barsk{display:block;fill:var(--accent);fill-opacity:.18;stroke:var(--accent)
 textarea.json{width:100%;min-height:340px;font:12px/1.4 var(--f-mono);padding:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);resize:vertical}
 .dimgrid .dg{border-top:0;margin-top:0}
 @media (max-width:900px){.vbar{left:12px;right:12px;flex-wrap:wrap}.pick .inp{min-width:0}.xyz{grid-template-columns:repeat(3,1fr)}.xyz button{grid-column:1/-1}}
+
+.d3.edit{pointer-events:auto;cursor:text;font-size:13px;padding:3px 8px;border-width:2px;background:var(--accent);color:#fff}
+.d3.edit:hover{filter:brightness(1.1)}
+.d3.edit input{font:600 13px var(--f-mono);width:90px;border:0;padding:1px 3px;color:var(--ink);background:#fff}

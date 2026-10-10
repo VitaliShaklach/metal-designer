@@ -38,4 +38,8 @@ function dims3D(){if(!ok)return;const bb=bbox(),mn=bb.min,mx=bb.max,g=Math.max(m
     p.ids.forEach(id=>{const c=cuts.find(x=>x.m.id===id);if(!c)return;const f=frame(c.m),pr=prof(c.m.prof);
       // по длинной грани: от узла с учётом подрезки концов, со стороны +v (верх сечения)
       const off=V3.mul(f.v,pr.h/2+4*DK),A=V3.add(f.A,V3.mul(f.d,-c.ea.ext)),B=V3.add(f.B,V3.mul(f.d,c.eb.ext));
-      dim3(A,B,off,`${p.no}: ${u(p.L)}`);});});}
+      dim3(A,B,off,`${p.no}: ${u(p.L)}`);});});
+  // выбрана одна труба — её длина реза на модели; клик по числу — вписать новую длину
+  if(SEL.m.size===1){const c=cuts.find(x=>x.m.id===[...SEL.m][0]);if(c){const f=frame(c.m),pr=prof(c.m.prof),off=V3.mul(f.v,pr.h/2+9*DK);
+    const A=V3.add(f.A,V3.mul(f.d,-c.ea.ext)),B=V3.add(f.B,V3.mul(f.d,c.eb.ext));dim3(A,B,off,'');
+    const o=lab(`✎ ${us(c.L)}`,new THREE.Vector3(...V3.add(V3.mul(V3.add(A,B),.5),off)),'d3 edit');o.element.title='Кликните и впишите новую длину реза';o.element.dataset.member=c.m.id;}}}

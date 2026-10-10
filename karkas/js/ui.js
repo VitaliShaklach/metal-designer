@@ -27,7 +27,7 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
     h+=`<p class="note"><b>Труба ${m.id}</b> · длина реза <b>${us(c.L)}</b> · концы: ${endInfo(c.ea)} / ${endInfo(c.eb)}</p>
       <div class="row2"><label>Профиль<select data-k="prof">${profOpts(m.prof)}</select></label><label>Поворот<select data-k="rot">${[0,90].map(r=>`<option value="${r}"${(+m.rot||0)===r?' selected':''}>${r}°</option>`).join('')}</select></label></div>
       <div class="row2"><label>Конец A (${m.a})<select data-k="endA">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endA===k?' selected':''}>${t}</option>`).join('')}</select></label><label>Конец B (${m.b})<select data-k="endB">${Object.entries(END_T).map(([k,t])=>`<option value="${k}"${m.endB===k?' selected':''}>${t}</option>`).join('')}</select></label></div>
-      <div class="row2"><label>Длина по оси, мм<input class="inp" id="sLen" type="number" value="${Math.round(f.L)}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
+      <div class="row2"><label>Длина реза, мм — впишите и Enter<input class="inp" id="sLen" type="number" value="${c.L}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
   else if(ms.length>1){h+=`<p class="note"><b>Выбрано труб: ${ms.length}</b>${ns.length?`, узлов: ${ns.length}`:''}</p>
       <div class="row2"><label>Профиль всем<select data-k="prof"><option value="">—</option>${profOpts('')}</select></label><label>Сборка всем<select data-k="grp"><option value="__">—</option>${grpOpts('__')}</select></label></div>`;}
   if(ns.length===1&&!ms.length){const n=ns[0];h+=`<p class="note"><b>Узел ${n.id}</b> · труб в узле: ${M.members.filter(m=>m.a===n.id||m.b===n.id).length}</p>
@@ -36,7 +36,7 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
     <div class="btns"><button id="bDel" type="button" class="danger">Удалить</button><button id="bDesel" type="button">Снять выбор</button></div>`;
   box.innerHTML=h;
   box.querySelectorAll('select[data-k]').forEach(s=>s.addEventListener('change',()=>{const k=s.dataset.k;let v=s.value;if(k==='prof'&&!v)return;if(k==='grp'&&v==='__')return;if(k==='rot')v=+v;setMembers(k,v);}));
-  const sl=$('sLen');if(sl)sl.addEventListener('change',()=>setAxisLen(ms[0].id,+sl.value));
+  const sl=$('sLen');if(sl){sl.addEventListener('change',()=>setCutLen(ms[0].id,+sl.value));sl.addEventListener('keydown',e=>{if(e.key==='Enter')sl.blur();});}
   box.querySelectorAll('input[data-n]').forEach(i=>i.addEventListener('change',()=>{const n=ns[0];change(()=>{n[i.dataset.n]=Math.round(+i.value||0);});}));
   $('bMove').addEventListener('click',()=>moveSel(+$('mvx').value||0,+$('mvy').value||0,+$('mvz').value||0));
   $('bDel').addEventListener('click',delSel);$('bDesel').addEventListener('click',()=>select(null,false));}
@@ -119,6 +119,11 @@ addEventListener('keydown',e=>{const a=document.activeElement;if(a&&(a.tagName==
   if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSel();}
   else if(e.key==='Escape')select(null,false);
   else if(e.code==='KeyF')fitAll();});
+// клик по размеру выбранной трубы на 3D — поле для новой длины
+stage.addEventListener('click',e=>{const el=e.target.closest('.d3.edit');if(!el||el.querySelector('input'))return;e.stopPropagation();
+  const id=el.dataset.member,c=memberCuts().find(x=>x.m.id===id);if(!c)return;el.innerHTML='';const i=document.createElement('input');i.type='number';i.value=c.L;el.appendChild(i);i.focus();i.select();
+  const done=ok=>{if(done.x)return;done.x=1;if(ok&&+i.value>0&&+i.value!==c.L)setCutLen(id,+i.value);else build3D();};
+  i.addEventListener('keydown',ev=>{if(ev.key==='Enter')done(true);if(ev.key==='Escape')done(false);ev.stopPropagation();});i.addEventListener('blur',()=>done(true));});
 /* ---------- файл, ссылка, пример, JSON ---------- */
 function loadModel(o,quiet){UNDO.push(snap());M=normModel(o);SEL.m.clear();SEL.n.clear();ONLY_GRP=null;renderAll();fitAll(true);if(!quiet)msg('Открыто: '+M.meta.name);}
 $('exSel').addEventListener('change',e=>{const k=e.target.value;if(k&&typeof EXAMPLES!=='undefined'&&EXAMPLES[k])loadModel(JSON.parse(JSON.stringify(EXAMPLES[k])));e.target.value='';});
