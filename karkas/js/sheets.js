@@ -58,7 +58,7 @@ function textLines(x,y,lines,max=58,lh=5.5,cls=''){let s='',yy=y;lines.forEach(l
   const put=t=>{s+=`<text${cls?` class="${cls}"`:''} x="${x}" y="${r2(yy)}">${shEsc(t)}</text>`;yy+=lh;};
   w.forEach(q=>{if((cur+' '+q).trim().length>max){put(cur);cur=q;}else cur=(cur+' '+q).trim();});if(cur)put(cur);});return {s,y:yy};}
 const SPEC_COLS=[{t:'Поз.',w:13},{t:'Наименование',w:44},{t:'Материал',w:38},{t:'L, мм',w:16,r:1},{t:'Углы',w:20},{t:'На сб.',w:14,r:1},{t:'Всего',w:14,r:1},{t:'Масса, кг',w:20,r:1}];
-const specRow=p=>[p.no,prof(p.prof).name,M.meta.steel||'',p.L,p.ang.map(a=>a+'°').join(' / '),p.qty,p.total,fmt(p.kg,1)];
+const specRow=p=>[p.no,prof(p.prof).name,prof(p.prof).wood?'Лиственница':M.meta.steel||'',p.L,p.ang.map(a=>a+'°').join(' / '),p.qty,p.total,fmt(p.kg,1)];
 const fitIn=(b,k,x,y,w,h)=>[x+(w-(b[2]-b[0])*k)/2-b[0]*k,y+(h-(b[3]-b[1])*k)/2-b[1]*k];   // сдвиг, чтобы вид встал по центру области
 const asmLabel=a=>a.gid?a.no+'СБ':'';
 
@@ -149,7 +149,7 @@ function wrapSheet(b,o){const x=230,y=276,c=[95,30,30,30],cell=(i,row,lab,val)=>
 // весь комплект: [{title, svg}]
 function buildSheets(){const cuts=memberCuts();if(!cuts.length)return [];
   const pos=positions(),asm=[];
-  M.groups.forEach((g,i)=>{const cs=cuts.filter(c=>c.m.grp===g.id);if(cs.length)asm.push({no:String(i+1),name:g.name,qty:g.qty,mirror:g.mirror,gid:g.id,cuts:cs});});
+  M.groups.forEach((g,i)=>{const cs=cuts.filter(c=>c.m.grp===g.id&&!c.m.ci);if(cs.length)asm.push({no:String(g.no||i+1),name:g.name,qty:g.qty,mirror:g.mirror,gid:g.id,cuts:cs});});
   const free=cuts.filter(c=>!c.m.grp);if(free.length)asm.push({no:String(M.groups.length+1),name:M.groups.length?'Без сборки':(M.meta.name||'Каркас'),qty:1,mirror:false,gid:'',cuts:free});
   const pages=[()=>sheetGeneral(cuts,asm)];asm.forEach(a=>pages.push(()=>sheetAsm(a,pos.filter(p=>p.grp===a.gid))));
   for(let i=0;i<pos.length;i+=3){const ps=pos.slice(i,i+3);pages.push(()=>sheetParts(ps,cuts));}

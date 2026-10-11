@@ -32,6 +32,8 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
       <div class="row2"><label>Длина реза — меняется активный конец<input class="inp" id="sLen" type="number" value="${c.L}"></label><label>Сборка<select data-k="grp">${grpOpts(m.grp)}</select></label></div>`;}
   else if(ms.length>1){h+=`<p class="note"><b>Выбрано труб: ${ms.length}</b>${ns.length?`, узлов: ${ns.length}`:''}</p>
       <div class="row2"><label>Профиль всем<select data-k="prof"><option value="">—</option>${profOpts('')}</select></label><label>Сборка всем<select data-k="grp"><option value="__">—</option>${grpOpts('__')}</select></label></div>`;}
+  if(ms.length===2&&crossPoint(ms[0],ms[1]))h+=`<p class="note"><b>Трубы пересекаются крестом.</b> Крестовой стык — одна целая, другая режется на две и упирается в неё:</p>
+      <div class="btns"><button type="button" data-cross="${ms[0].id},${ms[1].id}">Целая ${ms[0].id}</button><button type="button" data-cross="${ms[1].id},${ms[0].id}">Целая ${ms[1].id}</button></div>`;
   if(ns.length===1&&!ms.length){const n=ns[0];h+=`<p class="note"><b>Узел ${n.id}</b> · труб в узле: ${M.members.filter(m=>m.a===n.id||m.b===n.id).length}</p>
       <div class="xyz"><label>X<input class="inp" data-n="x" type="number" value="${n.x}"></label><label>Y<input class="inp" data-n="y" type="number" value="${n.y}"></label><label>Z<input class="inp" data-n="z" type="number" value="${n.z}"></label></div>`;}
   if(ms.length===1)h+=`<p class="note"><b>Направить трубу</b> — повернуть вокруг серого конца строго по оси (длина та же):</p>
@@ -49,6 +51,7 @@ function selUI(){const box=$('selBox'),ms=[...SEL.m].map(id=>M.members.find(m=>m
   $('bMove').addEventListener('click',()=>moveSel(+$('mvx').value||0,+$('mvy').value||0,+$('mvz').value||0));
   ['mvx','mvy','mvz'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('bMove').click();}}));
   ['angEl','angAz'].forEach(id=>{const i=$(id);if(!i)return;const go=()=>setAngles(ms[0].id,+$('angEl').value||0,+$('angAz').value||0);i.addEventListener('change',go);i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur();});});
+  box.querySelectorAll('[data-cross]').forEach(b=>b.addEventListener('click',()=>{const [k,c]=b.dataset.cross.split(',');msg(crossJoint(k,c));}));
   box.querySelectorAll('[data-aim]').forEach(b=>b.addEventListener('click',()=>aimMember(ms[0].id,b.dataset.aim)));
   box.querySelectorAll('[data-mv]').forEach(b=>b.addEventListener('click',()=>{const st=Math.max(1,+$('mvStep').value||100),d=AX[b.dataset.mv];store('kk-step',String(st));moveSel(d[0]*st,d[1]*st,d[2]*st);}));
   $('bDel').addEventListener('click',delSel);$('bDesel').addEventListener('click',()=>select(null,false));}
@@ -73,7 +76,7 @@ function tables(){const pos=positions(),maxL=Math.max(1,...pos.map(p=>p.L)),cs=c
   // примечание: на чём лежит позиция (по месту касания — приварить)
   const restNote=p=>{const on=new Set();p.ids.forEach(id=>cs.filter(c=>c.type==='rest'&&(c.a===id||c.b===id)).forEach(c=>on.add(noOf(c.a===id?c.b:c.a))));return on.size?`касается поз. ${[...on].join(', ')} — приварить по месту`:'';};
   const clashes=cs.filter(c=>c.type==='clash');$('warn').hidden=!clashes.length;
-  $('warn').innerHTML=clashes.length?`<b>Проверьте модель:</b> трубы пересекаются насквозь — ${clashes.map(c=>`${c.a} и ${c.b} (на ${-c.gap} мм)`).join('; ')}. На 3D — красные кольца`:'';
+  $('warn').innerHTML=clashes.length?`<b>Проверьте модель:</b> трубы пересекаются насквозь — ${clashes.map(c=>`${c.a} и ${c.b}`+(c.cross?' (крестом — выберите обе, Shift+клик, и нажмите «Целая …»: крестовой стык)':` (на ${-c.gap} мм)`)).join('; ')}. На 3D — красные кольца`:'';
   let h='<thead><tr><th>Поз.</th><th>Эскиз</th><th>Профиль</th><th class="r">Длина, мм</th><th>Концы</th><th class="r">На сборку</th><th class="r">Всего</th><th class="r">Масса, кг</th></tr></thead><tbody>';
   let gcur=null;pos.forEach(p=>{if(p.grp!==gcur){gcur=p.grp;const g=grpOf(p.grp);h+=`<tr class="grp"><td colspan="8">${g?esc(g.name)+(g.qty>1?` · ×${g.qty}`:'')+(g.mirror?' · зеркальные':''):'Без сборки'}</td></tr>`;}
     const rn=restNote(p);h+=`<tr><td class="n">${p.no}</td><td>${barSketch(p.L,p.ang[0],p.ang[1],maxL)}</td><td>${prof(p.prof).name}${rn?`<small>${rn}</small>`:''}</td><td class="n r">${p.L}</td><td class="n">${p.ang.map(a=>a===90?'90°':a+'°').join(' / ')}</td><td class="n r">${p.qty}</td><td class="n r">${p.total}</td><td class="n r">${fmt(p.kg,2)}</td></tr>`;});
@@ -83,7 +86,7 @@ function tables(){const pos=positions(),maxL=Math.max(1,...pos.map(p=>p.L)),cs=c
   let s='<thead><tr><th>Поз.</th><th>Наименование</th><th>Материал</th><th class="r">L, мм</th><th class="r">Кол. на сб.</th><th class="r">Всего</th></tr></thead><tbody>';
   [...M.groups.map(g=>g.id),''].forEach((gid,gi)=>{const ps=pos.filter(p=>p.grp===gid);if(!ps.length)return;const g=grpOf(gid);
     s+=`<tr class="grp"><td colspan="6">${g?`${gi+1} · ${esc(g.name)} — ${g.qty} шт${g.mirror?' (зеркальные)':''}`:`${M.groups.length+1} · Без сборки`}</td></tr>`;
-    ps.forEach(p=>{s+=`<tr><td class="n">${p.no}</td><td>${prof(p.prof).kind==='tube'?'Труба':prof(p.prof).kind==='angle'?'Уголок':'Полоса'} · ${p.ang.map(a=>a===90?'90°':a+'°').join('/')}</td><td>${prof(p.prof).name} ${esc(M.meta.steel||'')}</td><td class="n r">${p.L}</td><td class="n r">${p.qty}</td><td class="n r">${p.total}</td></tr>`;});});
+    ps.forEach(p=>{s+=`<tr><td class="n">${p.no}</td><td>${({tube:'Труба',angle:'Уголок',wood:'Брус'})[prof(p.prof).kind]||'Полоса'} · ${p.ang.map(a=>a===90?'90°':a+'°').join('/')}</td><td>${prof(p.prof).name} ${prof(p.prof).wood?'лиственница':esc(M.meta.steel||'')}</td><td class="n r">${p.L}</td><td class="n r">${p.qty}</td><td class="n r">${p.total}</td></tr>`;});});
   $('spec').innerHTML=pos.length?s+'</tbody>':'<tbody><tr><td>—</td></tr></tbody>';
   // металл и хлысты
   const nest=nesting();let t='<thead><tr><th>Профиль</th><th class="r">Нужно, м</th><th class="r">Хлыстов по 6 м</th><th class="r">Остаток, м</th><th class="r">Масса, кг</th><th>Как резать</th></tr></thead><tbody>';

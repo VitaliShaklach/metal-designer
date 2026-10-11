@@ -24,6 +24,12 @@ for(const [post,want,msg] of [['40x40x1.5','41,49','скосы 41° / 49°'],['6
  const pos=vm.runInContext('positions()',c),g=(L,a)=>pos.find(p=>p.L===L&&p.ang.join()===a);
  ok(g(2036,'41,49')?.total===4&&g(232,'41,49')?.total===4&&g(150,'90,90')?.total===6&&g(2100,'90,90')?.total===2&&g(2394,'90,90')?.total===2,'ферма МК-16: '+pos.map(p=>`${p.L} ${p.ang.join('/')}° ×${p.total}`).join(', '));
  ok(vm.runInContext('contacts().filter(x=>x.type==="rest").length',c)===2,'ферма приваривается к столбам по месту — 2 касания');}
+// МК-16 целиком (tools/make-mk16.js): 308 деталей без пересечений; ключевые позиции совпадают со спецификацией PDF
+{const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/mk16.json','utf8')));vm.runInContext('M=this.M',c);
+ const pos=vm.runInContext('positions()',c),tot=(L,pr)=>pos.filter(p=>p.L===L&&(!pr||p.prof===pr)).reduce((s,p)=>s+p.total,0),cl=vm.runInContext('contacts().filter(x=>x.type==="clash").length',c);
+ const want=[[2036,4],[232,4],[2996,5],[1335,24],[946,22],[529,8],[1488,4],[2660,1],[863,2],[214,2],[726,4],[480,24]];
+ const bad=want.filter(([L,q])=>tot(L)!==q).map(([L,q])=>`${L}: нужно ${q}, есть ${tot(L)}`);
+ ok(c.M.members.length===308&&!cl&&!bad.length,`МК-16 целиком: ${c.M.members.length} деталей, пересечений ${cl}${bad.length?' · '+bad.join('; '):''}`);}
 // касания: прогоны навеса лежат на двух стропилах (по 2 касания), пересечений нет
 {const c=ctxCore();c.M=c.normModel(JSON.parse(fs.readFileSync(P+'/examples/naves-3x2.json','utf8')));vm.runInContext('M=this.M',c);
  const cs=vm.runInContext('contacts()',c),rest=cs.filter(x=>x.type==='rest'),clash=cs.filter(x=>x.type==='clash');

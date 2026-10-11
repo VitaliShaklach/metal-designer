@@ -11,7 +11,8 @@ if(ok){scene=new THREE.Scene();
   const d=new THREE.DirectionalLight(0xffffff,.9);d.position.set(1500,3000,2200);scene.add(d);
   const d2=new THREE.DirectionalLight(0xbfd0e0,.4);d2.position.set(-2000,900,-1500);scene.add(d2);
   const std=(c,x={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,metalness:.5,roughness:.55,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1},x));
-  MAT.steel=std(0x59616a);MAT.sel=std(0xd0561f);MAT.dim=std(0x59616a,{transparent:true,opacity:.18,depthWrite:false});
+  MAT.steel=std(0x59616a);MAT.wood=std(0x9a7650,{metalness:.05,roughness:.85});   // брус — цвет дерева
+  MAT.sel=std(0xd0561f);MAT.dim=std(0x59616a,{transparent:true,opacity:.18,depthWrite:false});
   MAT.weld=new THREE.MeshBasicMaterial({color:0xe08a1f,depthTest:false,transparent:true,opacity:.95});MAT.clash=new THREE.MeshBasicMaterial({color:0xd01f1f,depthTest:false,transparent:true});
   MAT.edge=new THREE.LineBasicMaterial({color:0x1b2124,transparent:true,opacity:.55});
   MAT.node=new THREE.MeshBasicMaterial({color:0x1f8fe0,depthTest:false,transparent:true,opacity:.9});MAT.handle=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});MAT.handle2=new THREE.MeshBasicMaterial({color:0x7d878c,depthTest:false,transparent:true,opacity:.85});MAT.add=new THREE.MeshBasicMaterial({color:0xffffff,depthTest:false,transparent:true});MAT.addBg=new THREE.MeshBasicMaterial({color:0x1e9e5a,depthTest:false,transparent:true,side:THREE.DoubleSide});MAT.nodeSel=new THREE.MeshBasicMaterial({color:0xd0561f,depthTest:false,transparent:true});
@@ -27,7 +28,7 @@ function build3D(){if(!ok)return;
   [group,dimGroup].forEach(G=>{G.traverse(o=>{if(o.element&&o.element.parentNode)o.element.parentNode.removeChild(o.element);});G.clear();});
   const cuts=memberCuts();
   cuts.forEach(c=>{const dimmed=ONLY_GRP!==null&&(c.m.grp||'')!==ONLY_GRP,sel=SEL.m.has(c.m.id);
-    const g=memberGeo(c),mesh=new THREE.Mesh(g,sel?MAT.sel:dimmed?MAT.dim:MAT.steel);mesh.userData.member=c.m.id;group.add(mesh);
+    const g=memberGeo(c),mesh=new THREE.Mesh(g,sel?MAT.sel:dimmed?MAT.dim:prof(c.m.prof).wood?MAT.wood:MAT.steel);mesh.userData.member=c.m.id;group.add(mesh);
     if(!dimmed){const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,20),MAT.edge);e.userData.member=c.m.id;group.add(e);}});
   const R=Math.max(25,Math.min(120,sceneSize()*.024));   // размер стрелок — от размера каркаса
   // одиночные узлы (без труб — например, первый узел нового каркаса)

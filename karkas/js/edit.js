@@ -57,6 +57,14 @@ function aimMember(id,ax){const m=M.members.find(x=>x.id===id);if(!m)return;cons
     if(M.members.some(o=>o!==m&&(o.a===mv.id||o.b===mv.id))){const n={id:nextId(M.nodes,'n'),x:0,y:0,z:0};M.nodes.push(n);m[k]=n.id;mv=n;}
     Object.assign(mv,{x:Math.round(fix.x+d[0]*f.L),y:Math.round(fix.y+d[1]*f.L),z:Math.round(fix.z+d[2]*f.L)});mergeNode(mv);gcNodes();});
   syncEnds();renderAll(false);}
+// крестовой стык: оси двух труб пересекаются посередине — keep остаётся целой, cut режется в точке пересечения на две, обе половины встык к keep
+function crossPoint(keep,cut){const fa=frame(keep),fb=frame(cut),c=segClosest(fa.A,fa.d,fa.L,fb.A,fb.d,fb.L);
+  if(c.dist>1||c.s<1||c.s>fa.L-1||c.t<1||c.t>fb.L-1)return null;return c.P.map(v=>Math.round(v*100)/100);}   // точка на оси целой трубы (сотые мм — чтобы узел лёг точно на ось)
+function splitAt(m,P){const n={id:nextId(M.nodes,'n'),x:P[0],y:P[1],z:P[2]};M.nodes.push(n);
+  const m2=Object.assign({},m,{id:nextId(M.members,'m'),a:n.id,endA:'auto'});m.b=n.id;m.endB='auto';M.members.push(m2);return m2;}
+function crossJoint(keepId,cutId){const k=M.members.find(x=>x.id===keepId),c=M.members.find(x=>x.id===cutId);if(!k||!c)return 'Выберите две трубы';
+  const P=crossPoint(k,c);if(!P)return 'Эти трубы не пересекаются осями посередине';let m2;change(()=>{m2=splitAt(c,P);});
+  return `Крестовой стык: ${keepId} целая, ${cutId} и ${m2.id} — встык к ней`;}
 // углы трубы от неактивного конца к активному: наклон к горизонту (−90…90) и поворот в плане (0 — вдоль +X, 90 — вдоль +Z), градусы
 function memberAngles(id){const m=M.members.find(x=>x.id===id),f=frame(m),d=activeEnd(id)==='b'?f.d:V3.mul(f.d,-1);
   return {el:Math.round(Math.asin(Math.max(-1,Math.min(1,d[1])))*180/Math.PI*10)/10,az:Math.round(((Math.atan2(d[2],d[0])*180/Math.PI)+360)%360*10)/10};}
