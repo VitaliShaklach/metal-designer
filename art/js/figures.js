@@ -12,7 +12,7 @@ const SDF={
 const sym=(f)=>p=>Math.min(f(p),f([-p[0],p[1],p[2]]));
 
 const FIGURES={
-  dog:{name:'Голова собаки (на стену)',H:600,faces:260,back:-150,
+  dog:{name:'Доберман 1',H:600,faces:260,back:-150,
     sdf:p=>{const ear=sym(q=>SDF.ellR(q,[125,545,-25],[62,150,26],-18,-8))(p);
       return SDF.U(45,
         SDF.ell(p,[0,360,0],[175,185,170]),          // череп
@@ -39,7 +39,7 @@ const FIGURES={
 function figureMesh(id,cell=12){const f=FIGURES[id];if(f.poly)return f.build();const sd=p=>Math.max(f.sdf(p),f.back-p[2],-p[1]);   // срез стеной сзади и снизу
   let m=sdfMesh(sd,f.box[0],f.box[1],cell);m=openCut(m,2,f.back,-1,cell*.8);return m;}
 
-/* ---------- Доберман: модель руками, как у мастеров — крупные плоские грани ----------
+/* ---------- Доберман 2: модель руками, как у мастеров — крупные плоские грани ----------
    Голова и шея — 6 сечений от стены (z=0) к носу; между соседними — четырёхугольные грани.
    Уши — острые пирамиды, глаза — впадина. Точки задаём справа (x ≥ 0), левая половина — зеркало. */
 function buildDoberman(){
@@ -72,9 +72,9 @@ function buildDoberman(){
   const fix=(i,q)=>{const f=fixd[i];if(f.mid)q[0]=0;if(f.wall)q[2]=0;if(f.cap!==undefined)q[2]=f.cap;return q;};
   const or=orientPolys(V,polys,[0,300,120]);
   return polyBase(planarize(V,or,fix),or);}
-FIGURES.doberman={name:'Доберман (на стену)',H:620,poly:true,build:buildDoberman};
+FIGURES.doberman={name:'Доберман 2',H:620,poly:true,build:buildDoberman};
 
-/* ---------- Доберман 2 — по снимкам модели Meshy ----------
+/* ---------- Доберман 3 — по снимкам модели Meshy ----------
    Не кольцами, а явными плитами, как на фото. Спина — закрытая пластина крепления (z=0).
    Точки правой половины (x ≥ 0), мм при высоте 600; имя с «'» — зеркальная точка слева. */
 function buildNamed(pts,faces,o={}){const V=[],idx={},fixd=[];
@@ -106,4 +106,4 @@ function buildDoberman2(){
     ['EA','ED','ET'],['EG','EA','ET'],['EG','ED','ET']];
   const plate=['B0','B1','B2','B3','B4','B5',"B4'","B3'","B2'","B1'"];
   return buildNamed(P,F,{wall:true,whole:[plate],pits:[[['SM','Q','CK','BR'],18],[['EG','ED','ET'],.5,'EA']]});}
-FIGURES.doberman2={name:'Доберман 2',H:600,poly:true,build:buildDoberman2};
+FIGURES.doberman2={name:'Доберман 3',H:600,poly:true,build:buildDoberman2};
