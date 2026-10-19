@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.1.1">
+<link rel="stylesheet" href="css/style.css?v=0.2.0">
 </head>
 <body>
 <div class="wrap">
@@ -39,7 +39,7 @@
         <div class="loading" id="loading"><i></i><span id="loadTxt">Строю фигуру…</span></div>
         <div class="vbar"><button data-v="iso" type="button">3D</button><button data-v="front" type="button">Спереди</button><button data-v="side" type="button">Сбоку</button><button data-v="top" type="button">Сверху</button><button id="bFit" type="button">Всё</button></div>
         <div class="hovtag" id="hovTag" hidden></div>
-        <div class="hint">Клик по грани — деталь · колесо — масштаб · правая кнопка — сдвиг</div>
+        <div class="hint" id="hint">Клик по грани — деталь · колесо — масштаб · правая кнопка — сдвиг</div>
       </div>
       <button class="drawerbtn" id="drawerBtn" type="button" aria-expanded="false">Панель</button>
       <div class="controls" id="controls">
@@ -49,6 +49,20 @@
           <div class="xyz3"><label>Высота<input class="inp" id="dH" type="number" min="50" step="10"></label><label>Ширина<input class="inp" id="dW" type="number" min="50" step="10"></label><label>Глубина<input class="inp" id="dD" type="number" min="50" step="10"></label></div>
           <label class="chk"><input type="checkbox" id="cProp" checked><span>Пропорционально<small>Меняете одно — остальные тянутся следом. Снимите галочку, чтобы растянуть только по одной оси</small></span></label>
           <button id="bReset" type="button" class="wide">Пропорции как в модели</button>
+        </div>
+
+        <div class="grp" data-g="edit"><button type="button" class="gt">Редактор</button>
+          <label class="chk"><input type="checkbox" id="cEdit"><span>Править фигуру<small>На модели появятся точки: клик по точке — выбрать, тянуть мышкой — двигать. Клик по грани — выбрать грань</small></span></label>
+          <div id="edBox" hidden>
+            <label class="chk"><input type="checkbox" id="cSym" checked><span>Симметрия<small>Левая половина повторяет правую — для животных удобно</small></span></label>
+            <div id="edSel" class="edsel"></div>
+            <div class="row2"><label>На сколько, мм<input class="inp" id="edD" type="number" value="30" min="1" step="5"></label><span></span></div>
+            <div class="edbtns" id="edOps"><button type="button" data-op="extrude">Выдавить</button><button type="button" data-op="inset">Вдавить</button><button type="button" data-op="bump">Бугор</button><button type="button" data-op="pit">Впадина</button><button type="button" data-op="split">Разрезать пополам</button><button type="button" data-op="del">Удалить грань</button></div>
+            <p class="note" id="edPlan"></p>
+            <div class="btns" id="edFix"><button id="bFlat" type="button">Выровнять грани</button><button id="bTri" type="button">Разбить на треугольники</button></div>
+            <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
+            <div class="row2"><label>Заготовка<select id="blank"><option value="box">Куб</option><option value="sphere">Шар (80 граней)</option></select></label><button id="bBlank" type="button">Начать с заготовки</button></div>
+          </div>
         </div>
 
         <div class="grp" data-g="faces"><button type="button" class="gt">Грани</button>
@@ -95,7 +109,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.1.1</span>
+    <span class="ver">v0.2.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -103,9 +117,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.1.1"></script>
-<script src="js/figures.js?v=0.1.1"></script>
-<script src="js/view3d.js?v=0.1.1"></script>
-<script src="js/ui.js?v=0.1.1"></script>
+<script src="js/mesh.js?v=0.2.0"></script>
+<script src="js/figures.js?v=0.2.0"></script>
+<script src="js/edit.js?v=0.2.0"></script>
+<script src="js/view3d.js?v=0.2.0"></script>
+<script src="js/ui.js?v=0.2.0"></script>
 </body>
 </html>

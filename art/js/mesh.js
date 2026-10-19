@@ -115,8 +115,8 @@ function simplify(m,target){
 
 /* ---------- растяжение: высота / ширина / глубина в мм; плоское остаётся плоским ---------- */
 function fitMesh(m,dims){const b=meshBox(m.V),s=[dims.W/(b.size[0]||1),dims.H/(b.size[1]||1),dims.D/(b.size[2]||1)];
-  const cx=(b.min[0]+b.max[0])/2,cz=(b.min[2]+b.max[2])/2;
-  return {V:m.V.map(p=>[(p[0]-cx)*s[0],(p[1]-b.min[1])*s[1],(p[2]-cz)*s[2]]),F:m.F};}
+  const cx=(b.min[0]+b.max[0])/2;   // по x — центр (ось симметрии), снизу y=0, стена z=0
+  return {V:m.V.map(p=>[(p[0]-cx)*s[0],(p[1]-b.min[1])*s[1],(p[2]-b.min[2])*s[2]]),F:m.F};}
 
 /* ---------- детали: соседние треугольники в одной плоскости ---------- */
 const DENS={steel:7850,inox:7900,corten:7850,alu:2700};

@@ -71,5 +71,5 @@ function buildDoberman(){
   const seen=new Set(),polys=[];all.forEach(Q=>{const k=[...Q].sort((a,b)=>a-b).join();if(seen.has(k))return;seen.add(k);polys.push(Q);});
   const fix=(i,q)=>{const f=fixd[i];if(f.mid)q[0]=0;if(f.wall)q[2]=0;if(f.cap!==undefined)q[2]=f.cap;return q;};
   const or=orientPolys(V,polys,[0,300,120]);
-  return polyMesh(planarize(V,or,fix),or);}
+  return polyBase(planarize(V,or,fix),or);}
 FIGURES.doberman={name:'Доберман (на стену)',H:620,poly:true,build:buildDoberman};
