@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Искусство — фигуры из листового металла</title>
+<meta name="description" content="Полигональные фигуры из листа: голова собаки, бык и другие. Растягивайте фигуру — детали, масса, длина реза и швов пересчитываются.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Искусство — фигуры из листа · Metal Designer">
+<meta property="og:image" content="https://vitalishaklach.github.io/metal-designer/art/og.png">
+<meta property="og:description" content="Фигура из плоских деталей листа: растяжение, детали, масса, рез и швы.">
+<link rel="icon" href="../mangal/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css?v=0.1.0">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow"><a href="../index.html">Metal Designer</a> · искусство · фигуры из листа · размеры в мм</div>
+      <h1 id="ttl">Фигура</h1>
+      <p class="lede">Гранёная фигура из плоских деталей листа. Задайте высоту, ширину и глубину — детали, масса, длина реза и швов пересчитываются сами. Можно открыть свою модель OBJ, STL или GLB.</p>
+    </div>
+    <div class="hside"><div class="stats" id="stats"></div></div>
+  </header>
+
+  <section>
+    <div class="pick">
+      <label><span class="t">Название</span><input id="mName" class="inp" value=""></label>
+      <label><span class="t">Фигура</span><select id="figSel"><option value="" hidden>— своя модель —</option><option value="dog">Голова собаки (на стену)</option><option value="bull">Голова быка (на стену)</option></select></label>
+      <div class="btns"><button id="bOpen" type="button">Открыть модель</button><button id="bSave" type="button">Сохранить</button></div>
+      <input type="file" id="fileIn" accept=".obj,.stl,.glb,.json" hidden>
+      <span class="pickhint" id="msg"></span>
+    </div>
+    <div class="studio">
+      <div id="stage">
+        <div class="loading" id="loading"><i></i><span id="loadTxt">Строю фигуру…</span></div>
+        <div class="vbar"><button data-v="iso" type="button">3D</button><button data-v="front" type="button">Спереди</button><button data-v="side" type="button">Сбоку</button><button data-v="top" type="button">Сверху</button><button id="bFit" type="button">Всё</button></div>
+        <div class="hovtag" id="hovTag" hidden></div>
+        <div class="hint">Клик по грани — деталь · колесо — масштаб · правая кнопка — сдвиг</div>
+      </div>
+      <button class="drawerbtn" id="drawerBtn" type="button" aria-expanded="false">Панель</button>
+      <div class="controls" id="controls">
+        <div class="drawerhead"><b>Панель</b><button type="button" id="drawerClose" aria-label="Закрыть">✕</button></div>
+
+        <div class="grp" data-g="size"><button type="button" class="gt">Размер фигуры</button>
+          <div class="xyz3"><label>Высота<input class="inp" id="dH" type="number" min="50" step="10"></label><label>Ширина<input class="inp" id="dW" type="number" min="50" step="10"></label><label>Глубина<input class="inp" id="dD" type="number" min="50" step="10"></label></div>
+          <label class="chk"><input type="checkbox" id="cProp" checked><span>Пропорционально<small>Меняете одно — остальные тянутся следом. Снимите галочку, чтобы растянуть только по одной оси</small></span></label>
+          <button id="bReset" type="button" class="wide">Пропорции как в модели</button>
+        </div>
+
+        <div class="grp" data-g="faces"><button type="button" class="gt">Грани</button>
+          <label class="rng"><span>Граней (треугольников): <b id="fVal"></b></span><input type="range" id="fRng" min="40" max="800" step="10"></label>
+          <p class="note" id="fNote"></p>
+          <div class="row2"><label>Мин. ширина детали, мм<input class="inp" id="minW" type="number" min="0" step="5"></label><label class="chk lone"><input type="checkbox" id="cSmall" checked><span>Подсветить узкие</span></label></div>
+          <p class="note">Узкие треугольники программа сама стягивает или перекладывает диагональ. Что осталось уже — подсвечено красным</p>
+          <div class="rot"><span>Повернуть модель на 90°:</span><button data-r="x" type="button">↻ X</button><button data-r="y" type="button">↻ Y</button><button data-r="z" type="button">↻ Z</button></div>
+        </div>
+
+        <div class="grp" data-g="metal"><button type="button" class="gt">Металл</button>
+          <div class="row2"><label>Толщина<select id="sT"><option value="1">1 мм</option><option value="1.5">1,5 мм</option><option value="2" selected>2 мм</option><option value="3">3 мм</option></select></label>
+            <label>Материал<select id="sMat"><option value="steel">Сталь</option><option value="inox">Нержавейка</option><option value="corten">Кортен</option><option value="alu">Алюминий</option></select></label></div>
+          <div class="row2"><label>Лист<select id="sSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option><option value="1500x6000">1500 × 6000</option><option value="own">Свой размер</option></select></label>
+            <label>Резка<select id="sCut"><option value="plasma">Плазма</option><option value="laser">Лазер</option></select></label></div>
+          <div class="row2" id="ownSheet" hidden><label>Лист, ширина<input class="inp" id="sW" type="number" value="1250" min="100"></label><label>длина<input class="inp" id="sL" type="number" value="2500" min="100"></label></div>
+        </div>
+
+        <div class="grp" data-g="sel"><button type="button" class="gt">Деталь</button>
+          <div id="selBox"><p class="note">Кликните грань на модели или строку в таблице</p></div>
+        </div>
+
+        <div class="grp" data-g="view"><button type="button" class="gt">Вид</button>
+          <label class="chk"><input type="checkbox" id="cNums" checked><span>Номера деталей</span></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tabs">
+    <div class="tabbar" role="tablist">
+      <button role="tab" data-tab="parts" aria-selected="true">Детали</button>
+      <button role="tab" data-tab="sum" aria-selected="false">Итого</button>
+    </div>
+    <div class="tabpane" id="tab-parts" role="tabpanel">
+      <p class="tabnote">Каждая деталь — плоский кусок листа. Размер — по габариту развёртки, ширина — самая узкая. Соседи — с кем деталь сваривается</p>
+      <div class="tbl"><table id="parts"></table></div>
+    </div>
+    <div class="tabpane" id="tab-sum" role="tabpanel" hidden>
+      <div class="warnbox" id="warn" hidden></div>
+      <div class="tbl"><table id="sum"></table></div>
+      <p class="tabnote">Листов — оценка при заполнении 70%. Точная раскладка деталей на лист и DXF — следующий этап</p>
+    </div>
+  </section>
+
+  <footer>
+    <span class="ver">v0.1.0</span>
+    <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script src="js/mesh.js?v=0.1.0"></script>
+<script src="js/figures.js?v=0.1.0"></script>
+<script src="js/view3d.js?v=0.1.0"></script>
+<script src="js/ui.js?v=0.1.0"></script>
+</body>
+</html>
