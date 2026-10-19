@@ -50,5 +50,5 @@ console.log("     доберман 3: вырожденных "+run("C3.filter(c=
 ok(run("C3.filter(c=>!c.bad).reduce((a,c)=>a+Math.abs(area2(c.pts)),0)")<run("R3.parts.reduce((a,p)=>a+p.area,0)"),"доберман 3: контуры реза меньше поверхности");
 ok(run(`N3.sheets.every(sh=>sh.items.every((a,i)=>a.x>=10-1e-6&&a.y>=10-1e-6&&a.x+a.w<=2490+1e-6&&a.y+a.h<=1240+1e-6&&sh.items.every((b,j)=>j<=i||a.x+a.w+8-1e-6<=b.x||b.x+b.w+8-1e-6<=a.x||a.y+a.h+8-1e-6<=b.y||b.y+b.h+8-1e-6<=a.y)))`)&&run("N3.too.length")===0,"доберман 3: раскладка без наложений, всё внутри листа");
 run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);dxfMarks(DE,{no:i+1},c.pts,i*300,0,c.pts.map(()=>5));});DX=dxfDoc(DE)`);
-ok(run("(DX.match(/\r\nLINE\r\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("DX.startsWith('0\r\nSECTION')&&DX.trimEnd().endsWith('EOF')&&/\r\nTEXT\r\n/.test(DX)"),"DXF: все стороны контуров реза — линии, есть номера, файл замкнут");
+ok(run("(DX.match(/\\r\\nLINE\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')&&/\\r\\nTEXT\\r\\n/.test(DX)"),"DXF: все стороны контуров реза — линии, есть номера, файл замкнут");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
