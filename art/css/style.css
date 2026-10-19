@@ -357,3 +357,20 @@ body.og #stage{position:fixed!important;inset:0;width:100vw!important;height:100
 #edPlan.warn{color:#b0700a}
 #stage.editing canvas{cursor:crosshair}
 .controls button:disabled{opacity:.45;cursor:default}
+/* чертежи и раскрой */
+.sheets{display:flex;flex-direction:column;gap:18px;margin-top:10px}
+.sheet{margin:0}
+.sheet figcaption{font-size:13px;color:var(--muted);margin-bottom:6px}
+.sheet svg{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+#shGo{max-width:100%;font:inherit;font-size:13px;padding:5px 6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#printBox{display:none}
+@media print{
+  @page{size:A3 landscape;margin:0}
+  html,body{background:#fff!important;padding:0!important}
+  body>*:not(#printBox){display:none!important}
+  #printBox{display:block!important}
+  #printBox svg{display:block;width:420mm;height:296mm;break-after:page;page-break-after:always}
+  #printBox svg:last-child{break-after:auto;page-break-after:auto}
+}
+.dimbar{flex-wrap:wrap;align-items:center}
+.dxfmsg{font-size:12px;color:var(--muted)}

@@ -6,8 +6,8 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'plasma',minW:30,sel:-1,nums:true,small:true};
-let SIMP={key:'',m:null},CUR=null;   // CUR = {M3,R,T,small}
+const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'plasma',minW:30,gap:1,useT:true,sel:-1,nums:true,small:true};
+let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
 const isPoly=()=>!!ST.base.P;   // модель из граней-многоугольников (руками / в редакторе) — живёт в мм как есть
@@ -23,7 +23,12 @@ function loading(on,t){$('loading').hidden=!on;if(t)$('loadTxt').textContent=t;}
 // тяжёлое — после отрисовки «Строю…»
 function later(fn,t){loading(true,t||'Считаю…');setTimeout(()=>{try{fn();}catch(e){console.error(e);msg('Ошибка: '+e.message);}loading(false);},30);}
 
-function compute(){const b=ST.base;let S=b;
+// производство: контуры реза под толщину и шов, раскладка на лист
+function prodCalc(){const R=CUR.R;CUR.C=R.parts.map(p=>cutContour(p,ST.t,ST.gap,ST.useT));
+  const [W,H]=sheetWL();CUR.N=nest(R.parts.map(p=>({id:p.id,no:p.no,pts:CUR.C[p.id].pts})).filter((o,i)=>!CUR.C[i].bad),W,H,ST.cut==='laser'?3:8,10);
+  CUR.cutLen=CUR.C.reduce((a,c)=>a+c.pts.reduce((s,q,i)=>{const z=c.pts[(i+1)%c.pts.length];return s+Math.hypot(z[0]-q[0],z[1]-q[1]);},0),0);CUR.degen=CUR.C.filter(c=>c.bad).length;SHEETS_OLD=true;}
+function compute(){compute0();prodCalc();}
+function compute0(){const b=ST.base;let S=b;
   if(isPoly()){const M3={V:b.V,F:b.F},R=buildParts(M3,1.5,1.5),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
     CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5))};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
@@ -36,7 +41,7 @@ function compute(){const b=ST.base;let S=b;
 
 function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
   build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp])):null,warn:isPoly()?tri(CUR.bad):null});edUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
-  stats();sizeUI();facesUI();selUI();partsTable();sumTable();$('ttl').textContent=ST.name||'Фигура';}
+  stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
   $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],[`${T.n}`,'деталей'],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(T.weld/1000,1)} м`,'швов']]
     .map(([b,s])=>`<div class="stat"><b>${b}</b><span>${esc(s)}</span></div>`).join('');}
@@ -72,10 +77,12 @@ function partsTable(){const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),dens=DENS
 function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
   if(CUR.small.size)warn.push(`${CUR.small.size} дет. уже ${ST.minW} мм — подсвечены красным. Уменьшите число граней или увеличьте фигуру`);
   const H=ST.dims.H;if(ST.t<=1&&H>350||ST.t<1.5&&H>700)warn.push(`Лист ${ST.t} мм на фигуре ${H} мм — поведёт от сварки. Варите короткими прихватками вразбежку или возьмите толще`);
+  if(CUR.degen)warn.push(`${CUR.degen} дет. после учёта толщины и шва выродились (слишком узкие) — уменьшите число граней, увеличьте фигуру или снимите «Учитывать толщину»`);
+  if(CUR.N.too.length)warn.push(`Не влезают в лист: ${CUR.N.too.map(o=>'№'+o.no).join(', ')} — выберите лист больше`);
   const holes=CUR.R.parts.filter(p=>p.holes).length;if(holes)warn.push(`У ${holes} дет. внутри дыра — проверьте модель`);
   $('warn').hidden=!warn.length;$('warn').innerHTML=warn.map(esc).join('<br>');
-  const rows=[['Деталей',T.n],['Площадь металла',fmt(T.area/1e6,2)+' м²'],[`Масса (${ST.t} мм, ${MATN[ST.mat]})`,'≈ '+fmt(T.mass,1)+' кг'],['Длина реза',fmt(T.cut/1000,1)+' м'],
-    ['Длина швов',fmt(T.weld/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,'≈ '+T.sheets]];
+  const rows=[['Деталей',T.n],['Площадь металла',fmt(T.area/1e6,2)+' м²'],[`Масса (${ST.t} мм, ${MATN[ST.mat]})`,'≈ '+fmt(T.mass,1)+' кг'],['Длина реза (с учётом толщины)',fmt(CUR.cutLen/1000,1)+' м'],
+    ['Длина швов',fmt(T.weld/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,`${CUR.N.sheets.length} (заполнение ${Math.round(CUR.N.used*100)}%)`]];
   $('sum').innerHTML='<tbody>'+rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('')+'</tbody>';}
 
 /* ---------- загрузка фигур и файлов ---------- */
@@ -93,7 +100,7 @@ function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=
 function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,
     V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly())j.P=ST.base.P;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
-function metalUI(){$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
+function metalUI(){$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
 
 /* ---------- события ---------- */
 let RT=0;const recalc=(fit,heavy)=>{clearTimeout(RT);RT=setTimeout(()=>heavy?later(()=>{compute();renderAll(fit);}):(compute(),renderAll(fit)),heavy?150:60);};
@@ -122,11 +129,28 @@ document.querySelectorAll('.vbar [data-v]').forEach(b=>b.addEventListener('click
 $('bFit').addEventListener('click',()=>CUR&&fitBox(meshBox(CUR.M3.V)));
 // вкладки и группы панели
 const TABS=[...document.querySelectorAll('.tabbar button')];
-function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('art-tab',k);}
-TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(store('art-tab')==='sum'?'sum':'parts');
+function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('art-tab',k);if(k==='sheets'||k==='nest')sheetsUI(true);}
+TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(['sum','nest','sheets'].includes(store('art-tab'))?store('art-tab'):'parts');
 document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').addEventListener('click',()=>g.classList.toggle('shut')));
 (()=>{const pn=$('controls'),bt=$('drawerBtn'),set=o=>{pn.classList.toggle('open',o);bt.setAttribute('aria-expanded',String(o));bt.textContent=o?'Готово':'Панель';};
   bt.addEventListener('click',()=>set(!pn.classList.contains('open')));$('drawerClose').addEventListener('click',()=>set(false));})();
+/* ---------- раскрой и чертежи: строим только открытую вкладку, через 0,5 с после правки ---------- */
+function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden;if(!vis||!CUR)return;
+  if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}SHEETS_OLD=false;
+  if(!$('tab-nest').hidden){const L=sheetsNest(),d=new Date(),date=d.toLocaleDateString('ru-RU');$('nestBox').innerHTML=L.map((b,i)=>`<figure class="sheet"><figcaption>Раскрой ${i+1} из ${L.length}</figcaption>${wrapSheet(b,{n:i+1,N:L.length,date})}</figure>`).join('');
+    $('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · заполнение ${Math.round(CUR.N.used*100)}% · деталей ${CUR.N.sheets.reduce((a,s)=>a+s.items.length,0)}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
+  if(!$('tab-sheets').hidden){const sh=buildSheets();$('sheets').innerHTML=sh.map((s,i)=>`<figure class="sheet" id="sheet${i+1}"><figcaption>Лист ${i+1} из ${sh.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
+    $('shGo').innerHTML=sh.map((s,i)=>`<option value="${i+1}">Лист ${i+1} · ${esc(s.title)}</option>`).join('');}}
+$('shGo').addEventListener('change',e=>{const el=$('sheet'+e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
+$('shPdf').addEventListener('click',()=>{const sh=buildSheets();if(!sh.length)return;$('printBox').innerHTML=sh.map(s=>s.svg).join('');
+  const t=document.title;document.title=(ST.name||'Фигура')+' — чертежи';const done=()=>{document.title=t;$('printBox').innerHTML='';removeEventListener('afterprint',done);};addEventListener('afterprint',done);window.print();});
+function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/dxf'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+const fname=()=>(ST.name||'figura').replace(/[\/:*?"<>|]+/g,'').trim()+`_${ST.t}mm`;
+$('bDxfNest').addEventListener('click',()=>CUR&&dl(fname()+'_raskroy.dxf',dxfNest()));
+$('bDxfParts').addEventListener('click',()=>CUR&&dl(fname()+'_detali.dxf',dxfParts()));
+$('sGap').addEventListener('change',e=>{ST.gap=Math.max(0,+e.target.value||0);recalc();});
+$('cUseT').addEventListener('change',e=>{ST.useT=e.target.checked;recalc();});
+
 /* ---------- редактор ---------- */
 const UNDO=[],REDO=[];
 function snapE(){return JSON.stringify({V:ST.base.V,P:ST.base.P});}

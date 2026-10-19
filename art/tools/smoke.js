@@ -1,6 +1,6 @@
 // проверка ядра «Искусства»: node art/tools/smoke.js
 const fs=require('fs'),vm=require('vm'),P=__dirname+'/../js/';const c={console,TextDecoder,Math};vm.createContext(c);
-vm.runInContext(['mesh','edit','figures'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
+vm.runInContext(['mesh','edit','figures','prod'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
 const run=s=>vm.runInContext(s,c);let bad=0;const ok=(b,t)=>{console.log((b?'ok  ':'FAIL')+' '+t);if(!b)bad++;};
 // куб из OBJ: 12 треугольников → 6 деталей-квадратов
 run(`cube=parseOBJ("v 0 0 0\\nv 100 0 0\\nv 100 100 0\\nv 0 100 0\\nv 0 0 100\\nv 100 0 100\\nv 100 100 100\\nv 0 100 100\\nf 1 4 3 2\\nf 5 6 7 8\\nf 1 2 6 5\\nf 2 3 7 6\\nf 3 4 8 7\\nf 4 1 5 8")`);
@@ -39,4 +39,16 @@ ok(run("R2d.parts.length")>=55&&run("R2d.parts.length")<=120&&run("nonPlanar({V:
 ok(run("[...E2d.values()].every(n=>n===2)")&&run("mirrorMap(D2.V).every(j=>j!==-1)"),"доберман 2: сетка замкнута (спина — пластина), симметричен");
 ok(run("R2d.parts.filter(p=>p.tris.every(t=>D2.F[t].every(i=>Math.abs(D2.V[i][2])<.01))).length")===1,"доберман 2: пластина крепления — одна деталь на стене");
 ok(run("buildParts(fitMesh(D2,{W:400,H:700,D:300}),1.5,1.5).parts.length")===run("R2d.parts.length"),"доберман 2 растянут 400×700×300 — деталей столько же");
+// производство
+run(`RC=buildParts(polyBase(blankBox(100,100,100).V,blankBox(100,100,100).P));CC=RC.parts.map(p=>cutContour(p,2,1,true))`);
+ok(run("CC.every(c=>!c.bad&&Math.abs(Math.abs(area2(c.pts))-95*95)<1e-6)"),"куб 100, t=2, шов 1: каждая деталь 95×95");
+run(`RO=buildParts(polyBase(delPoly(blankBox(100,100,100),0,false).V,delPoly(blankBox(100,100,100),0,false).P));CO=RO.parts.map(p=>cutContour(p,2,1,true))`);
+ok(run("CO.some(c=>c.s.includes(0))&&CO.every(c=>!c.bad)"),"открытый край — без сдвига");
+ok(Math.abs(run("edgeSetback({nb:1,dih:225},2,1,true)")-0.5)<1e-9,"вогнутый шов — сдвиг только на полшва");
+run(`D3=figureMesh("doberman2");R3=buildParts(D3,1.5,1.5);C3=R3.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,2,1,true)}));N3=nest(C3.filter(c=>!c.bad),2500,1250,8,10)`);
+console.log("     доберман 3: вырожденных "+run("C3.filter(c=>c.bad).length")+", листов "+run("N3.sheets.length")+", заполнение "+Math.round(run("N3.used")*100)+"%");
+ok(run("C3.filter(c=>!c.bad).reduce((a,c)=>a+Math.abs(area2(c.pts)),0)")<run("R3.parts.reduce((a,p)=>a+p.area,0)"),"доберман 3: контуры реза меньше поверхности");
+ok(run(`N3.sheets.every(sh=>sh.items.every((a,i)=>a.x>=10-1e-6&&a.y>=10-1e-6&&a.x+a.w<=2490+1e-6&&a.y+a.h<=1240+1e-6&&sh.items.every((b,j)=>j<=i||a.x+a.w+8-1e-6<=b.x||b.x+b.w+8-1e-6<=a.x||a.y+a.h+8-1e-6<=b.y||b.y+b.h+8-1e-6<=a.y)))`)&&run("N3.too.length")===0,"доберман 3: раскладка без наложений, всё внутри листа");
+run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);dxfMarks(DE,{no:i+1},c.pts,i*300,0,c.pts.map(()=>5));});DX=dxfDoc(DE)`);
+ok(run("(DX.match(/\r\nLINE\r\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("DX.startsWith('0\r\nSECTION')&&DX.trimEnd().endsWith('EOF')&&/\r\nTEXT\r\n/.test(DX)"),"DXF: все стороны контуров реза — линии, есть номера, файл замкнут");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
