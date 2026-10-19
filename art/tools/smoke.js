@@ -33,4 +33,10 @@ ok(run("np.length")>0&&run("np2.length")===0&&Math.abs(run("E5.V[mmB[vi]][0]")+r
 run(`E7=delPoly(E0,top,true)`);ok(run("E7.P.length")===5,"удалили грань");
 run(`S0=blankSphere();mS=mirrorMap(S0.V)`);ok(run("S0.P.length")===80&&run("mS.every(j=>j!==-1)"),"шар: 80 граней, симметричный");
 run(`DBb=figureMesh("doberman");EDB={V:DBb.V,P:DBb.P};ED2=extrude(EDB,0,10,true)`);ok(run("mirrorMap(EDB.V).filter(j=>j===-1).length")===0,"доберман симметричный — редактор видит пары точек");
+run(`D2=figureMesh("doberman2");R2d=buildParts(D2,1.5,1.5);E2d=new Map();D2.F.forEach(f=>{for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+"_"+b:b+"_"+a;E2d.set(key,(E2d.get(key)||0)+1);}})`);
+console.log("     доберман 2: деталей "+run("R2d.parts.length")+", габарит "+run("meshBox(D2.V).size.map(Math.round).join('×')"));
+ok(run("R2d.parts.length")>=55&&run("R2d.parts.length")<=120&&run("nonPlanar({V:D2.V,P:D2.P},1.5).length")===0,"доберман 2: 55–120 деталей, все плоские");
+ok(run("[...E2d.values()].every(n=>n===2)")&&run("mirrorMap(D2.V).every(j=>j!==-1)"),"доберман 2: сетка замкнута (спина — пластина), симметричен");
+ok(run("R2d.parts.filter(p=>p.tris.every(t=>D2.F[t].every(i=>Math.abs(D2.V[i][2])<.01))).length")===1,"доберман 2: пластина крепления — одна деталь на стене");
+ok(run("buildParts(fitMesh(D2,{W:400,H:700,D:300}),1.5,1.5).parts.length")===run("R2d.parts.length"),"доберман 2 растянут 400×700×300 — деталей столько же");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

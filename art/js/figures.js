@@ -73,3 +73,37 @@ function buildDoberman(){
   const or=orientPolys(V,polys,[0,300,120]);
   return polyBase(planarize(V,or,fix),or);}
 FIGURES.doberman={name:'Доберман (на стену)',H:620,poly:true,build:buildDoberman};
+
+/* ---------- Доберман 2 — по снимкам модели Meshy ----------
+   Не кольцами, а явными плитами, как на фото. Спина — закрытая пластина крепления (z=0).
+   Точки правой половины (x ≥ 0), мм при высоте 600; имя с «'» — зеркальная точка слева. */
+function buildNamed(pts,faces,o={}){const V=[],idx={},fixd=[];
+  const get=nm=>{const m=nm.endsWith("'"),b=m?nm.slice(0,-1):nm,p=pts[b];if(!p)throw new Error('нет точки '+b);const key=m&&p[0]!==0?nm:b;
+    if(idx[key]===undefined){idx[key]=V.length;V.push(m?[-p[0],p[1],p[2]]:p.slice());fixd.push({mid:p[0]===0,wall:o.wall&&p[2]===0});}return idx[key];};
+  const mirF=f=>f.map(n=>n.endsWith("'")?n.slice(0,-1):n+"'").reverse();
+  let polys=[];faces.forEach(f=>{polys.push(f.map(get));if(!f.every(n=>pts[n.replace("'","")][0]===0))polys.push(mirF(f).map(get));});
+  (o.whole||[]).forEach(f=>polys.push(f.map(get)));
+  // впадины (глаз, ушная раковина): грань → воронка к точке, утопленной внутрь
+  (o.pits||[]).forEach(([f,depth,toward])=>[f,mirF(f)].forEach((g,k)=>{const Q=g.map(get),i=polys.findIndex(P=>P.length===Q.length&&[...P].sort().join()===[...Q].sort().join());
+    const c=V3.mul(Q.reduce((s,j)=>V3.add(s,V[j]),[0,0,0]),1/Q.length);let p;
+    if(toward){const t=V[get(k?toward+"'":toward)];p=V3.add(V3.mul(c,1-depth),V3.mul(t,depth));}else{const n=polyNorm(V,Q),c0=[0,300,150];p=V3.add(c,V3.mul(n,V3.dot(n,V3.sub(c,c0))>0?-depth:depth));}
+    V.push(p);fixd.push({});const K=V.length-1;polys.splice(i,1);Q.forEach((a,m)=>polys.push([a,Q[(m+1)%Q.length],K]));}));
+  const fix=(i,q)=>{const f=fixd[i]||{};if(f.mid)q[0]=0;if(f.wall)q[2]=0;return q;};
+  const or=orientPolys(V,polys,o.center||[0,300,150]);return polyBase(planarize(V,or,fix),or);}
+
+function buildDoberman2(){
+  const P={B0:[0,0,0],B1:[95,0,0],B2:[128,45,0],B3:[132,300,0],B4:[105,350,0],B5:[0,356,0],          // пластина на стене
+    C0:[0,0,45],C1:[62,0,45],K0:[0,105,100],N1:[90,150,125],N2:[130,195,45],                       // низ, грудь, шея
+    J0:[0,160,150],JA:[100,175,165],J1:[40,150,255],CH:[0,145,330],CH1:[32,148,325],L1:[46,186,328],LF:[0,182,352], // челюсть
+    NB:[0,186,380],NSb:[36,188,372],NS:[40,212,378],NT:[0,216,390],                                 // нос
+    MT:[0,242,368],MS:[46,238,358],SM:[56,300,222],ST:[0,322,212],Q:[84,248,215],                   // морда, стоп
+    BR:[92,352,192],FM:[0,370,190],CK:[136,300,128],SK:[0,415,75],                                  // надбровье, скула, макушка
+    EG:[62,414,92],ED:[128,392,142],EA:[146,372,32],ET:[100,600,135]};                               // ухо
+  const F=[['B0','B1','C1','C0'],['C0','C1','K0'],['K0','C1','N1','J0'],['C1','B1','B2','N2'],['C1','N2','N1'],['B2','B3','N2'],['N2','B3','CK','JA'],['N1','N2','JA'],
+    ['J0','N1','JA','J1'],['J0','J1','CH1','CH'],['J1','JA','L1','CH1'],['CH','CH1','L1','LF'],['LF','L1','NSb','NB'],['NB','NSb','NS','NT'],['NT','NS','MS','MT'],
+    ['L1','JA','Q'],['L1','Q','MS','NS','NSb'],['Q','SM','MS'],['MT','MS','SM','ST'],['ST','SM','BR','FM'],['SM','Q','CK','BR'],['JA','CK','Q'],
+    ['FM','BR','ED','EG','SK'],['BR','CK','ED'],['CK','B3','B4','EA','ED'],['SK','EG','EA','B4','B5'],
+    ['EA','ED','ET'],['EG','EA','ET'],['EG','ED','ET']];
+  const plate=['B0','B1','B2','B3','B4','B5',"B4'","B3'","B2'","B1'"];
+  return buildNamed(P,F,{wall:true,whole:[plate],pits:[[['SM','Q','CK','BR'],18],[['EG','ED','ET'],.5,'EA']]});}
+FIGURES.doberman2={name:'Доберман 2 (по Meshy)',H:600,poly:true,build:buildDoberman2};
