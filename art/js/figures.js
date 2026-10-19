@@ -106,4 +106,4 @@ function buildDoberman2(){
     ['EA','ED','ET'],['EG','EA','ET'],['EG','ED','ET']];
   const plate=['B0','B1','B2','B3','B4','B5',"B4'","B3'","B2'","B1'"];
   return buildNamed(P,F,{wall:true,whole:[plate],pits:[[['SM','Q','CK','BR'],18],[['EG','ED','ET'],.5,'EA']]});}
-FIGURES.doberman2={name:'Доберман 2 (по Meshy)',H:600,poly:true,build:buildDoberman2};
+FIGURES.doberman2={name:'Доберман 2',H:600,poly:true,build:buildDoberman2};
