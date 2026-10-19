@@ -98,7 +98,10 @@ function jsonUI(){if(document.activeElement!==$('jsonTxt'))$('jsonTxt').value=JS
 
 /* чертежи: листы строятся, только когда вкладка открыта; иначе — пометка «устарели» */
 let SHEETS_OLD=true;
-function sheetsUI(){if(typeof buildSheets!=='function')return;if($('tab-sheets').hidden){SHEETS_OLD=true;return;}SHEETS_OLD=false;
+let SHEETS_T=0;
+// листы пересобираем через 0,5 с после последней правки, а не на каждую
+function sheetsUI(now){if(typeof buildSheets!=='function')return;clearTimeout(SHEETS_T);if($('tab-sheets').hidden){SHEETS_OLD=true;return;}
+  if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}SHEETS_OLD=false;
   const sh=buildSheets();$('sheets').innerHTML=sh.length?sh.map((s,i)=>`<figure class="sheet" id="sheet${i+1}"><figcaption>Лист ${i+1} из ${sh.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join(''):'<p class="note">Труб пока нет — нарисуйте каркас или откройте пример</p>';
   $('shGo').innerHTML=sh.map((s,i)=>`<option value="${i+1}">Лист ${i+1} · ${esc(s.title)}</option>`).join('');$('shPdf').disabled=!sh.length;}
 $('shGo').addEventListener('change',e=>{const el=$('sheet'+e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
@@ -127,7 +130,7 @@ document.querySelectorAll('#unitSeg button').forEach(b=>b.addEventListener('clic
 document.querySelectorAll('#unitSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===UNIT));
 // вкладки
 const TABS=[...document.querySelectorAll('.tabbar button')];
-function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('kk-tab',k);if(k==='json')jsonUI();if(k==='sheets')sheetsUI();}
+function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('kk-tab',k);if(k==='json')jsonUI();if(k==='sheets'&&SHEETS_OLD)sheetsUI(true);}
 TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(store('kk-tab')||'dims');
 // сворачиваемые группы панели
 document.querySelectorAll('.controls .grp').forEach(g=>{const bt=g.querySelector('.gt');bt.addEventListener('click',()=>g.classList.toggle('shut'));});

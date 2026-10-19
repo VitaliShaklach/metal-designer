@@ -1,6 +1,7 @@
 /* ---------- 3D: трубы с настоящими скосами и подрезкой, узлы, выделение ---------- */
 const stage=document.getElementById('stage');
-let renderer,scene,camera,controls,labels,group,dimGroup,ok=true,camAnim=null;
+let renderer,scene,camera,controls,labels,group,dimGroup,ok=true,camAnim=null,need=3;
+function req3D(){need=Math.max(need,3);}
 try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);}catch(e){ok=false;}
 const MAT={};
 if(ok){scene=new THREE.Scene();
@@ -24,7 +25,7 @@ function memberGeo(c){const {A,B}=memberCorners(c),pts=[...A,...B],idx=[];
   idx.push(0,2,1,0,3,2,4,5,6,4,6,7);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));g.setIndex(idx);g.computeVertexNormals();return g;}
 let SHOW_WELD=true,ONLY_GRP=null,DRAG=null,GROW=null;
-function build3D(){if(!ok)return;
+function build3D(){if(!ok)return;req3D();
   [group,dimGroup].forEach(G=>{G.traverse(o=>{if(o.element&&o.element.parentNode)o.element.parentNode.removeChild(o.element);});G.clear();});
   const cuts=memberCuts();
   cuts.forEach(c=>{const dimmed=ONLY_GRP!==null&&(c.m.grp||'')!==ONLY_GRP,sel=SEL.m.has(c.m.id);
@@ -52,7 +53,7 @@ function build3D(){if(!ok)return;
       if(c.n){const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(...c.n));mk.quaternion.copy(q);}mk.renderOrder=11;mk.userData.weld=1;group.add(mk);});}
   dims3D();}
 const sceneSize=()=>{const bb=bbox();return Math.max(400,bb.max[0]-bb.min[0],bb.max[1]-bb.min[1],bb.max[2]-bb.min[2]);};
-function flyTo(p,t){camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now()};}
+function flyTo(p,t){req3D();camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now()};}
 function fitAll(instant){if(!ok)return;const bb=bbox(),c=new THREE.Vector3((bb.min[0]+bb.max[0])/2,(bb.min[1]+bb.max[1])/2,(bb.min[2]+bb.max[2])/2);
   const r=Math.max(300,new THREE.Vector3(bb.max[0]-bb.min[0],bb.max[1]-bb.min[1],bb.max[2]-bb.min[2]).length()/2);
   const vf=camera.fov*Math.PI/360,hf=Math.atan(Math.tan(vf)*camera.aspect),dist=r/Math.sin(Math.min(vf,hf))*1.05;
@@ -70,9 +71,11 @@ function pickAt(ev){if(!ok)return null;const r=renderer.domElement.getBoundingCl
     const sx=(p.x+1)/2*r.width,sy=(1-p.y)/2*r.height,d=Math.hypot(sx-(ev.clientX-r.left),sy-(ev.clientY-r.top));if(d<bd){bd=d;best=n.id;}});if(best)return {node:best};}
   const hits=rc.intersectObjects(group.children,false).filter(h=>h.object.isMesh);
   const mb=hits.find(h=>h.object.userData.member);return mb?{member:mb.object.userData.member,point:mb.point}:null;}
-function sizeStage(){if(!ok)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);labels.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+function sizeStage(){if(!ok)return;req3D();const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);labels.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 if(ok){new ResizeObserver(sizeStage).observe(stage);sizeStage();
   (function loop(){requestAnimationFrame(loop);if(camAnim){const k=Math.min(1,(performance.now()-camAnim.s)/600),e=k<.5?2*k*k:1-(-2*k+2)**2/2;camera.position.lerpVectors(camAnim.p0,camAnim.p1,e);controls.target.lerpVectors(camAnim.t0,camAnim.t1,e);if(k>=1)camAnim=null;}
-    controls.update();group.children.forEach(o=>{if(o.userData.grow)o.quaternion.copy(camera.quaternion);});renderer.render(scene,camera);labels.render(scene,camera);})();}
+    controls.update();if(!camAnim&&need<=0)return;need--;group.children.forEach(o=>{if(o.userData.grow)o.quaternion.copy(camera.quaternion);});renderer.render(scene,camera);labels.render(scene,camera);})();
+  // рисуем только когда что-то изменилось: камера, правка, курсор, клавиши
+  controls.addEventListener("change",req3D);["pointermove","pointerdown","pointerup","wheel","keydown","input","change","click"].forEach(e=>addEventListener(e,req3D,{passive:true,capture:true}));}
 // виды: спереди / сбоку / сверху / изометрия
 function viewDir(k){if(!ok)return;const D={front:[0,0,1],side:[1,0,0],top:[0,1,.0001],iso:[.55,.45,.7]}[k];camera.position.copy(controls.target.clone().add(new THREE.Vector3(...D).normalize().multiplyScalar(camera.position.distanceTo(controls.target))));fitAll();}
