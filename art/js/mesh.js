@@ -120,12 +120,12 @@ function fitMesh(m,dims){const b=meshBox(m.V),s=[dims.W/(b.size[0]||1),dims.H/(b
 
 /* ---------- детали: соседние треугольники в одной плоскости ---------- */
 const DENS={steel:7850,inox:7900,corten:7850,alu:2700};
-function buildParts(m,tolDeg=.5){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),cos=Math.cos(tolDeg*Math.PI/180);
+function buildParts(m,tolDeg=.5,tolMm=.3){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),cos=Math.cos(tolDeg*Math.PI/180);
   const E=new Map(),ek=(a,b)=>a<b?a+'_'+b:b+'_'+a;F.forEach((f,fi)=>{for(let k=0;k<3;k++){const key=ek(f[k],f[(k+1)%3]);(E.get(key)||E.set(key,[]).get(key)).push(fi);}});
   const part=new Int32Array(F.length).fill(-1),groups=[];
   F.forEach((f,s)=>{if(part[s]>=0)return;const g=[s],pl=V3.dot(N[s],V[f[0]]);part[s]=groups.length;
     for(let q=0;q<g.length;q++){const fi=g[q],ff=F[fi];for(let k=0;k<3;k++)(E.get(ek(ff[k],ff[(k+1)%3]))||[]).forEach(o=>{
-      if(part[o]>=0)return;if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>.3))return;part[o]=groups.length;g.push(o);});}
+      if(part[o]>=0)return;if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>tolMm))return;part[o]=groups.length;g.push(o);});}
     groups.push(g);});
   // контур детали: рёбра, которые не делятся с треугольником той же детали
   const parts=groups.map((g,pi)=>{const n=V3.norm(g.reduce((s,fi)=>V3.add(s,triN(V,F[fi])),[0,0,0]));let area=0;g.forEach(fi=>area+=V3.len(triN(V,F[fi]))/2);
@@ -198,3 +198,22 @@ function fixSlivers(m,thr,maxIt=400){let V=m.V.map(p=>p.slice()),F=m.F.map(f=>f.
       if(ok){V[a]=mid;F=F.filter(g=>!(g.includes(a)&&g.includes(b))).map(g=>g.map(i=>i===b?a:i));done=true;}}
     if(!done)skip.add(f.join());}
   return cleanMesh({V,F});}
+
+/* ---------- ручная гранёная модель: многоугольники → в плоскость → треугольники ----------
+   polys — грани-многоугольники; fix(i,p) — держит точку на своём месте (середина x=0, стена z=0…) */
+function planarize(V,polys,fix,it=400){V=V.map(p=>p.slice());
+  for(let k=0;k<it;k++){const acc=V.map(()=>[0,0,0]),cnt=V.map(()=>0);
+    polys.forEach(P=>{if(P.length<4)return;const c=V3.mul(P.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/P.length);let n=[0,0,0];
+      P.forEach((i,j)=>{const a=V[i],b=V[P[(j+1)%P.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});n=V3.norm(n);
+      P.forEach(i=>{const d=V3.dot(V3.sub(V[i],c),n);acc[i]=V3.add(acc[i],V3.sub(V[i],V3.mul(n,d)));cnt[i]++;});});
+    V=V.map((p,i)=>{const q=cnt[i]?V3.mul(acc[i],1/cnt[i]):p;return fix?fix(i,q):q;});}
+  return V;}
+// грани наружу: соседние грани — согласованно, а в целом — от центра фигуры
+function orientPolys(V,polys,center){const ek=(a,b)=>a<b?a+'_'+b:b+'_'+a,E=new Map();polys.forEach((P,pi)=>P.forEach((a,j)=>{const k=ek(a,P[(j+1)%P.length]);(E.get(k)||E.set(k,[]).get(k)).push(pi);}));
+  const done=new Set(),out=polys.map(P=>P.slice());
+  polys.forEach((_,s)=>{if(done.has(s))return;const q=[s],comp=[s];done.add(s);
+    while(q.length){const pi=q.shift(),P=out[pi];P.forEach((a,j)=>{const b=P[(j+1)%P.length];(E.get(ek(a,b))||[]).forEach(o=>{if(done.has(o))return;const Q=out[o],k=Q.indexOf(a);if(Q[(k+1)%Q.length]===b)Q.reverse();done.add(o);q.push(o);comp.push(o);});});}
+    let vote=0;comp.forEach(pi=>{const P=out[pi],c=V3.mul(P.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/P.length),n=V3.cross(V3.sub(V[P[1]],V[P[0]]),V3.sub(V[P[2]],V[P[0]]));vote+=Math.sign(V3.dot(n,V3.sub(c,center)));});
+    if(vote<0)comp.forEach(pi=>out[pi].reverse());});
+  return out;}
+function polyMesh(V,polys){const F=[];polys.forEach(P=>{for(let k=1;k+1<P.length;k++)F.push([P[0],P[k],P[k+1]]);});return {V,F};}

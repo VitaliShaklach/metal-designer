@@ -36,5 +36,38 @@ const FIGURES={
     box:[[-460,-20,-150],[460,720,360]]}};
 
 // построить фигуру: формула → плотная сетка → открытая спина
-function figureMesh(id,cell=12){const f=FIGURES[id];const sd=p=>Math.max(f.sdf(p),f.back-p[2],-p[1]);   // срез стеной сзади и снизу
+function figureMesh(id,cell=12){const f=FIGURES[id];if(f.poly)return f.build();const sd=p=>Math.max(f.sdf(p),f.back-p[2],-p[1]);   // срез стеной сзади и снизу
   let m=sdfMesh(sd,f.box[0],f.box[1],cell);m=openCut(m,2,f.back,-1,cell*.8);return m;}
+
+/* ---------- Доберман: модель руками, как у мастеров — крупные плоские грани ----------
+   Голова и шея — 6 сечений от стены (z=0) к носу; между соседними — четырёхугольные грани.
+   Уши — острые пирамиды, глаза — впадина. Точки задаём справа (x ≥ 0), левая половина — зеркало. */
+function buildDoberman(){
+  const R=[[0,[[0,0],[80,15],[135,190],[138,335],[118,415],[0,435]]],
+    [110,[[0,60],[85,60],[130,195],[135,340],[110,428],[0,450]]],
+    [210,[[0,232],[85,238],[118,285],[122,345],[88,410],[0,428]]],
+    [290,[[0,228],[60,234],[76,270],[74,322],[50,358],[0,372]]],
+    [370,[[0,238],[48,242],[56,272],[52,308],[34,328],[0,338]]],
+    [405,[[0,250],[34,254],[40,276],[38,296],[26,312],[0,318]]]];
+  const V=[],fixd=[],mir=[];const add=(p,f)=>{V.push(p);fixd.push(f||{});return V.length-1;};
+  // вершина справа и её зеркало (на середине — одна)
+  const pt=(p,f)=>{const i=add(p,Object.assign({mid:p[0]===0},f));mir[i]=p[0]===0?i:add([-p[0],p[1],p[2]],f);if(p[0]!==0)mir[mir[i]]=i;return i;};
+  const ring=R.map(([z,ps],ri)=>ps.map(([x,y])=>pt([x,y,z],ri===0?{wall:1}:ri===R.length-1?{cap:z}:{})));
+  const P=[];const quad=(i,j)=>[ring[i][j],ring[i][j+1],ring[i+1][j+1],ring[i+1][j]];
+  for(let i=0;i<R.length-1;i++)for(let j=0;j<5;j++){
+    if(i===0&&j===4){ // макушка у стены — тут стоит ухо
+      const A=ring[0][4],B=ring[0][5],C=ring[1][5],D=ring[1][4],G=pt([48,450,55]),T=pt([145,650,55]);
+      P.push([G,A,B],[G,B,C],[G,C,D],[D,G,T],[A,D,T],[G,A,T]);continue;}
+    if(i===2&&j===3){ // глаз — впадина посреди грани
+      const q=quad(i,j),c=V3.mul(q.reduce((s,k)=>V3.add(s,V[k]),[0,0,0]),.25),n=V3.norm(V3.cross(V3.sub(V[q[2]],V[q[0]]),V3.sub(V[q[3]],V[q[1]])));
+      const E=pt(V3.add(c,V3.mul(n,V3.dot(n,V3.sub(c,[0,300,120]))>0?-18:18)));q.forEach((k,m)=>P.push([k,q[(m+1)%4],E]));continue;}
+    P.push(quad(i,j));}
+  const cap=ring[R.length-1];P.push([...cap,...cap.slice(1,5).reverse().map(k=>mir[k])]);
+  // левая половина
+  const all=P.concat(P.filter(Q=>!(Q.length>4)).map(Q=>Q.map(k=>mir[k]).reverse()).filter(Q=>Q.some((k,m)=>k!==P[0][m])));
+  // убираем повторы (грани на середине у зеркала совпадают с исходными)
+  const seen=new Set(),polys=[];all.forEach(Q=>{const k=[...Q].sort((a,b)=>a-b).join();if(seen.has(k))return;seen.add(k);polys.push(Q);});
+  const fix=(i,q)=>{const f=fixd[i];if(f.mid)q[0]=0;if(f.wall)q[2]=0;if(f.cap!==undefined)q[2]=f.cap;return q;};
+  const or=orientPolys(V,polys,[0,300,120]);
+  return polyMesh(planarize(V,or,fix),or);}
+FIGURES.doberman={name:'Доберман (на стену)',H:620,poly:true,build:buildDoberman};

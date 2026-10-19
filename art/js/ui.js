@@ -21,8 +21,9 @@ function later(fn,t){loading(true,t||'Считаю…');setTimeout(()=>{try{fn()
 function compute(){const b=ST.base;let S=b;
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
-  let M3=fitMesh(S,ST.dims);if(ST.minW>0)M3=fitMesh(fixSlivers(M3,ST.minW),ST.dims);   // после чистки — снова точно в размер
-  const R=buildParts(M3),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
+  const asIs=!isDense()&&ST.faces>=b.F.length;   // гранёная как есть: грани уже плоские, не трогаем
+  let M3=fitMesh(S,ST.dims);if(ST.minW>0&&!asIs)M3=fitMesh(fixSlivers(M3,ST.minW),ST.dims);   // после чистки — снова точно в размер
+  const R=asIs?buildParts(M3,1.5,1.5):buildParts(M3),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
   const small=new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id));
   CUR={M3,R,T,small};if(ST.sel>=R.parts.length)ST.sel=-1;}
 
@@ -131,4 +132,4 @@ document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').ad
 if(/og/.test(location.hash)){document.body.classList.add('og');ST.nums=false;ST.small=false;$('cNums').checked=false;}
 metalUI();
 if(typeof THREE==='undefined'){loading(true,'Не загрузилась 3D-библиотека — проверьте интернет');}
-else{const hf=/f=([a-z]+)/.exec(location.hash),f=hf&&FIGURES[hf[1]]?hf[1]:FIGURES[store('art-fig')]?store('art-fig'):'dog';$('figSel').value=f;loadFigure(f);}
+else{const hf=/f=([a-z]+)/.exec(location.hash),f=hf&&FIGURES[hf[1]]?hf[1]:FIGURES[store('art-fig')]?store('art-fig'):'doberman';$('figSel').value=f;loadFigure(f);}

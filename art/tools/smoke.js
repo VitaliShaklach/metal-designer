@@ -17,4 +17,8 @@ for(const id of ['dog','bull']){const t0=Date.now();run(`D=figureMesh('${id}')`)
   // манифолд: каждое внутреннее ребро — ровно 2 грани
   ok(run(`(()=>{const m=new Map();S.F.forEach(f=>{for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+'_'+b:b+'_'+a;m.set(key,(m.get(key)||0)+1);}});return [...m.values()].every(n=>n<=2);})()`),id+': сетка без «лишних» рёбер');}
 run(`B0=meshBox(F.V).size;FX=fitMesh(fixSlivers(F,30),{W:B0[0],H:B0[1],D:B0[2]});RX=buildParts(FX)`);console.log("     узких после чистки: "+run(`RX.parts.filter(p=>p.minW<29.5).length`)+", деталей "+run(`RX.parts.length`));ok(run('RX.parts.filter(p=>p.minW<29.5).length')<=5&&Math.abs(run('meshBox(FX.V).size[1]')-620)<1e-6,"бык после чистки иголок: узких ≤5, высота ровно 620");
+run(`DB=figureMesh("doberman");FD=fitMesh(DB,(b=>({W:b.size[0]*620/b.size[1],H:620,D:b.size[2]*620/b.size[1]}))(meshBox(DB.V)));RD=buildParts(FD,1.5,1.5);TD=totals(RD,{t:2,mat:"steel",sheet:[2500,1250]})`);
+console.log("     доберман: треугольников "+run("DB.F.length")+", деталей "+run("RD.parts.length")+", четырёхугольников "+run("RD.parts.filter(p=>p.loop.length===4).length")+", габарит "+run("meshBox(FD.V).size.map(Math.round).join('×')")+", масса "+run("TD.mass").toFixed(1)+" кг, швы "+(run("TD.weld")/1000).toFixed(1)+" м");
+ok(run("RD.parts.length")>=55&&run("RD.parts.length")<=100&&run("RD.parts.filter(p=>p.loop.length===4).length")>30,"доберман: 55–100 деталей, грани — плоские четырёхугольники");
+run(`FD2=fitMesh(DB,{W:400,H:700,D:300});RD2=buildParts(FD2,1.5,1.5)`);ok(run("RD2.parts.length")===run("RD.parts.length"),"доберман растянут 400×700×300 — деталей столько же, грани остались плоскими");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
