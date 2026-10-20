@@ -76,8 +76,8 @@ function clusterMesh(m,cell){const map=new Map(),V=[],cnt=[];const vi=m.V.map(p=
     if(i===undefined){i=V.length;V.push([0,0,0]);cnt.push(0);map.set(k,i);}V[i][0]+=p[0];V[i][1]+=p[1];V[i][2]+=p[2];cnt[i]++;return i;});
   V.forEach((p,i)=>{p[0]/=cnt[i];p[1]/=cnt[i];p[2]/=cnt[i];});const seen=new Set(),F=[];
   m.F.forEach(f=>{const g=f.map(i=>vi[i]);if(g[0]===g[1]||g[1]===g[2]||g[0]===g[2])return;const k=[...g].sort((a,b)=>a-b).join();if(seen.has(k))return;seen.add(k);F.push(g);});return cleanMesh({V,F});}
-function simplify(m,target){
-  let mesh=m;if(mesh.F.length>60000){const b=meshBox(mesh.V),d=V3.len(b.size);let c=d/400;do{mesh=clusterMesh(m,c);c*=1.25;}while(mesh.F.length>60000);}
+function simplify(m,target,o={}){
+  let mesh=m;if(mesh.F.length>60000&&!o.noCluster){const b=meshBox(mesh.V),d=V3.len(b.size);let c=d/400;do{mesh=clusterMesh(m,c);c*=1.25;}while(mesh.F.length>60000);}
   if(mesh.F.length<=target)return cleanMesh(mesh);
   const V=mesh.V.map(p=>p.slice()),F=mesh.F.map(f=>f.slice()),alive=F.map(()=>true),VF=V.map(()=>new Set());F.forEach((f,i)=>f.forEach(v=>VF[v].add(i)));
   const Q=V.map(()=>new Float64Array(10)),addQ=(q,a,b,c,d,w)=>{q[0]+=w*a*a;q[1]+=w*a*b;q[2]+=w*a*c;q[3]+=w*a*d;q[4]+=w*b*b;q[5]+=w*b*c;q[6]+=w*b*d;q[7]+=w*c*c;q[8]+=w*c*d;q[9]+=w*d*d;};

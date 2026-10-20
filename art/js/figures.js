@@ -36,7 +36,7 @@ const FIGURES={
     box:[[-460,-20,-150],[460,720,360]]}};
 
 // построить фигуру: формула → плотная сетка → открытая спина
-function figureMesh(id,cell=12){const f=FIGURES[id];if(f.poly)return f.build();const sd=p=>Math.max(f.sdf(p),f.back-p[2],-p[1]);   // срез стеной сзади и снизу
+function figureMesh(id,cell=12){const f=FIGURES[id];if(f.poly)return f.build();if(f.mesh)return f.mesh();const sd=p=>Math.max(f.sdf(p),f.back-p[2],-p[1]);   // срез стеной сзади и снизу
   let m=sdfMesh(sd,f.box[0],f.box[1],cell);m=openCut(m,2,f.back,-1,cell*.8);return m;}
 
 /* ---------- Доберман 2: модель руками, как у мастеров — крупные плоские грани ----------
@@ -107,3 +107,7 @@ function buildDoberman2(){
   const plate=['B0','B1','B2','B3','B4','B5',"B4'","B3'","B2'","B1'"];
   return buildNamed(P,F,{wall:true,whole:[plate],pits:[[['SM','Q','CK','BR'],18],[['EG','ED','ET'],.5,'EA']]});}
 FIGURES.doberman2={name:'Доберман 3',H:600,poly:true,build:buildDoberman2};
+
+/* ---------- Доберман 4 — модель Meshy, которую сделал Виталий (art/js/models.js, 5000 треугольников запаса) ----------
+   Гладкая: ползунок «Граней» упрощает до нужного числа, по умолчанию 200. */
+FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh('doberman4')};

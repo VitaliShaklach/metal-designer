@@ -1,6 +1,6 @@
 // проверка ядра «Искусства»: node art/tools/smoke.js
 const fs=require('fs'),vm=require('vm'),P=__dirname+'/../js/';const c={console,TextDecoder,Math};vm.createContext(c);
-vm.runInContext(['mesh','edit','figures','prod'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
+vm.runInContext(['mesh','edit','models','figures','prod'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
 const run=s=>vm.runInContext(s,c);let bad=0;const ok=(b,t)=>{console.log((b?'ok  ':'FAIL')+' '+t);if(!b)bad++;};
 // куб из OBJ: 12 треугольников → 6 деталей-квадратов
 run(`cube=parseOBJ("v 0 0 0\\nv 100 0 0\\nv 100 100 0\\nv 0 100 0\\nv 0 0 100\\nv 100 0 100\\nv 100 100 100\\nv 0 100 100\\nf 1 4 3 2\\nf 5 6 7 8\\nf 1 2 6 5\\nf 2 3 7 6\\nf 3 4 8 7\\nf 4 1 5 8")`);
@@ -51,4 +51,7 @@ ok(run("C3.filter(c=>!c.bad).reduce((a,c)=>a+Math.abs(area2(c.pts)),0)")<run("R3
 ok(run(`N3.sheets.every(sh=>sh.items.every((a,i)=>a.x>=10-1e-6&&a.y>=10-1e-6&&a.x+a.w<=2490+1e-6&&a.y+a.h<=1240+1e-6&&sh.items.every((b,j)=>j<=i||a.x+a.w+8-1e-6<=b.x||b.x+b.w+8-1e-6<=a.x||a.y+a.h+8-1e-6<=b.y||b.y+b.h+8-1e-6<=a.y)))`)&&run("N3.too.length")===0,"доберман 3: раскладка без наложений, всё внутри листа");
 run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);dxfMarks(DE,{no:i+1},c.pts,i*300,0,c.pts.map(()=>5));});DX=dxfDoc(DE)`);
 ok(run("(DX.match(/\\r\\nLINE\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')&&/\\r\\nTEXT\\r\\n/.test(DX)"),"DXF: все стороны контуров реза — линии, есть номера, файл замкнут");
+{const t0=Date.now();run(`D4=figureMesh("doberman4");S4=simplify(D4,200);F4=fitMesh(S4,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S4.V)));F4=fixSlivers(F4,30);R4=buildParts(F4);T4=totals(R4,{t:2,mat:"steel",sheet:[2500,1250]})`);
+console.log("     доберман 4 (Meshy): запас "+run("D4.F.length")+" тр → 200 за "+(Date.now()-t0)+" мс → деталей "+run("R4.parts.length")+", габарит "+run("meshBox(F4.V).size.map(Math.round).join('×')")+", масса "+run("T4.mass").toFixed(1)+" кг, швы "+(run("T4.weld")/1000).toFixed(1)+" м, открытый край "+Math.round(run("T4.open"))+" мм");
+ok(run("R4.parts.length")>=90&&run("R4.parts.length")<=200&&run("T4.open")===0,"доберман 4: 90–200 деталей, сетка замкнута");}
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
