@@ -54,4 +54,7 @@ ok(run("(DX.match(/\\r\\nLINE\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c
 {const t0=Date.now();run(`D4=figureMesh("doberman4");S4=simplify(D4,200);F4=fitMesh(S4,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S4.V)));F4=fixSlivers(F4,30);R4=buildParts(F4);T4=totals(R4,{t:2,mat:"steel",sheet:[2500,1250]})`);
 console.log("     доберман 4 (Meshy): запас "+run("D4.F.length")+" тр → 200 за "+(Date.now()-t0)+" мс → деталей "+run("R4.parts.length")+", габарит "+run("meshBox(F4.V).size.map(Math.round).join('×')")+", масса "+run("T4.mass").toFixed(1)+" кг, швы "+(run("T4.weld")/1000).toFixed(1)+" м, открытый край "+Math.round(run("T4.open"))+" мм");
 ok(run("R4.parts.length")>=90&&run("R4.parts.length")<=200&&run("T4.open")===0,"доберман 4: 90–200 деталей, сетка замкнута");}
+run(`D5=figureMesh("doberman5");S5=simplify(D5,200);F5=fitMesh(S5,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S5.V)));R5=buildParts(fixSlivers(F5,30));T5=totals(R5,{t:2,mat:"steel",sheet:[2500,1250]})`);
+console.log("     доберман 5 (Meshy Smart Topology): "+run("D5.F.length")+" тр → 200 → деталей "+run("R5.parts.length")+", масса "+run("T5.mass").toFixed(1)+" кг, швы "+(run("T5.weld")/1000).toFixed(1)+" м");
+ok(run("D5.F.length")===508&&run("R5.parts.length")>=90&&run("R5.parts.length")<=200&&run("T5.open")===0,"доберман 5: 508 треугольников, после упрощения 90–200 деталей, сетка замкнута");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

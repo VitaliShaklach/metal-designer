@@ -111,3 +111,5 @@ FIGURES.doberman2={name:'Доберман 3',H:600,poly:true,build:buildDoberman
 /* ---------- Доберман 4 — модель Meshy, которую сделал Виталий (art/js/models.js, 5000 треугольников запаса) ----------
    Гладкая: ползунок «Граней» упрощает до нужного числа, по умолчанию 200. */
 FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh('doberman4')};
+// Доберман 5 — Meshy Smart Topology (T2.5, 500 полигонов) по оригинальному фото: 508 треугольников, ползунок упрощает дальше
+FIGURES.doberman5={name:'Доберман 5',H:600,faces:200,mesh:()=>modelMesh('doberman5')};
