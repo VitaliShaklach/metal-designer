@@ -112,6 +112,6 @@ FIGURES.doberman2={name:'Доберман 3',H:600,poly:true,build:buildDoberman
    Гладкая: ползунок «Граней» упрощает до нужного числа, по умолчанию 200. */
 FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh('doberman4')};
 // Доберман 5 — Meshy Smart Topology (T2.5, 500 полигонов) по оригинальному фото: 508 треугольников, ползунок упрощает дальше
-FIGURES.doberman5={name:'Доберман 5',H:600,faces:200,mesh:()=>modelMesh('doberman5')};
+FIGURES.doberman5={name:'Доберман 5',H:600,faces:130,mesh:()=>modelMesh('doberman5')};
 // Доберман 6 — агент Meshy: фото на белом фоне → Meshy 7.1 → ремеш в четырёхугольники (516 граней, 1028 треугольников)
 FIGURES.doberman6={name:'Доберман 6',H:600,faces:200,mesh:()=>modelMesh('doberman6')};
