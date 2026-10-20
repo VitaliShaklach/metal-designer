@@ -6,6 +6,7 @@ dxf/
 shots/
 mangal/tools/*.png
 node_modules/
-.claude/
+.claude/*
+!.claude/skills/
 Thumbs.db
 .DS_Store
