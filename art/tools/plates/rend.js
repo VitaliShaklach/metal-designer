@@ -1,7 +1,7 @@
-// растеризатор: треугольники с цветом → PNG; view: front | side | iso | left
+// растеризатор: треугольники с цветом → PNG; view: front | side | iso | left | bottom
 const {writePNG}=require('./png.js');
 function render(out,V,F,colorFn,view,opt={}){const S=opt.S||800,zb=new Float32Array(S*S).fill(-1e9),px=Buffer.alloc(S*S*3,40),id=new Int32Array(S*S).fill(-1);const ca=Math.cos(.6),sa=Math.sin(.6);
-  const pr=p=>view==='front'?[p[0],p[1],p[2]]:view==='side'?[p[2],p[1],-p[0]]:view==='left'?[-p[2],p[1],p[0]]:[ca*p[0]+sa*p[2],p[1],-sa*p[0]+ca*p[2]];const P=V.map(pr);
+  const pr=p=>view==='front'?[p[0],p[1],p[2]]:view==='side'?[p[2],p[1],-p[0]]:view==='left'?[-p[2],p[1],p[0]]:view==='bottom'?[p[0],p[2],-p[1]]:[ca*p[0]+sa*p[2],p[1],-sa*p[0]+ca*p[2]];const P=V.map(pr);
   let mn=[1e9,1e9],mx=[-1e9,-1e9];P.forEach(p=>{for(let i=0;i<2;i++){mn[i]=Math.min(mn[i],p[i]);mx[i]=Math.max(mx[i],p[i]);}});
   const k=S*.9/Math.max(mx[0]-mn[0],mx[1]-mn[1]),cx=(mn[0]+mx[0])/2,cy=(mn[1]+mx[1])/2,sp=p=>[S/2+(p[0]-cx)*k,S/2-(p[1]-cy)*k,p[2]];
   F.forEach((f,fi)=>{const a=sp(P[f[0]]),b=sp(P[f[1]]),cc=sp(P[f[2]]);let cl=colorFn(fi);if(opt.shade){const u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],w=[cc[0]-a[0],cc[1]-a[1],cc[2]-a[2]];const n=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]];const l=Math.hypot(...n)||1;

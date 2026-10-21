@@ -15,3 +15,7 @@ function writePNG(f,W,H,px){const ch=(t,d)=>{const l=Buffer.alloc(4);l.writeUInt
 module.exports={readPNG,writePNG};
 if(require.main===module){const [src,dst,sz,x0,y0,w0]=process.argv.slice(2);const I=readPNG(src),S=+sz||1024,X=+x0||0,Y=+y0||0,Wc=+w0||I.W,k=Wc/S,o=Buffer.alloc(S*S*3);
   for(let y=0;y<S;y++)for(let x=0;x<S;x++){const s=((Math.floor(Y+y*k))*I.W+Math.floor(X+x*k))*3;o[(y*S+x)*3]=I.px[s];o[(y*S+x)*3+1]=I.px[s+1];o[(y*S+x)*3+2]=I.px[s+2];}writePNG(dst,S,S,o);console.log(I.W,I.H);}
+// склеить картинки одной высоты в ряд
+function hcat(out,files){const {readPNG:rp}=module.exports;const I=files.map(f=>rp(f)),H=Math.max(...I.map(i=>i.H)),W=I.reduce((a,i)=>a+i.W,0),px=Buffer.alloc(W*H*3,40);let x0=0;
+  I.forEach(im=>{for(let y=0;y<im.H;y++)im.px.copy(px,(y*W+x0)*3,y*im.W*3,(y+1)*im.W*3);x0+=im.W;});writePNG(out,W,H,px);}
+module.exports.hcat=hcat;

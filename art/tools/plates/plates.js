@@ -41,12 +41,12 @@ const flood=()=>{const seed=P.map(()=>-1),se=P.map(()=>1e18);F.forEach((_,t)=>{i
   while(H.size){const x=H.pop();if(nl[x.t]>=0||x.e>=1e9)continue;nl[x.t]=x.l;NB[x.t].forEach(o=>{if(nl[o]<0&&R(o))H.push({e:cost(o,P[x.l]),t:o,l:x.l});});}
   lab=nl;};
 // метки: правые 0..K-1, левые зеркальные K..2K-1, средние — сами себе
-const mirrorLab=()=>{const K=P.length;F.forEach((_,t)=>{if(R(t))return;const m=MT[t],l=m>=0?lab[m]:-1;lab[t]=l<0?-1:P[l].mid?l:l+K;});};
+const mirrorLab=()=>{const K=P.length;F.forEach((_,t)=>{if(Cn[t][0]>=0||lab[t]===-2)return;const m=MT[t],l=m>=0?lab[m]:-1;lab[t]=l<0?l:l>=K?l-K:P[l].mid?l:l+K;});};
 const fillUn=()=>{let ch=true;while(ch){ch=false;F.forEach((_,t)=>{if(lab[t]>=0||!R(t))return;const o=NB[t].find(x=>lab[x]>=0&&R(x)&&(!!eye[x]===!!eye[t]));if(o!==undefined){lab[t]=lab[o];ch=true;}});}};
 for(let it=0;it<6;it++){if(it)refit();flood();fillUn();}
 // ---------- 3. чистка: сглаживание краёв, куски, крохотные, слияние почти копланарных ----------
 const modeF=k=>{for(let r=0;r<k;r++){const nl=lab.slice();F.forEach((_,t)=>{if(!R(t))return;const m=new Map();NB[t].forEach(o=>{if(R(o))m.set(lab[o],(m.get(lab[o])||0)+1);});m.forEach((n,l)=>{if(n>=2&&l!==lab[t]&&l>=0&&isEye(l)===!!eye[t])nl[t]=l;});});lab=nl;}};
-const comps=()=>{const seen=new Int32Array(NT).fill(-1),cs=[];F.forEach((_,s)=>{if(!R(s)||seen[s]>=0)return;const q=[s];seen[s]=cs.length;let a=0;for(let i=0;i<q.length;i++){a+=A[q[i]];NB[q[i]].forEach(o=>{if(R(o)&&seen[o]<0&&lab[o]===lab[s]){seen[o]=cs.length;q.push(o);}});}cs.push({l:lab[s],a,q});});
+const comps=()=>{const seen=new Int32Array(NT).fill(-1),cs=[];F.forEach((_,s)=>{if(!R(s)||seen[s]>=0||lab[s]<-1)return;const q=[s];seen[s]=cs.length;let a=0;for(let i=0;i<q.length;i++){a+=A[q[i]];NB[q[i]].forEach(o=>{if(R(o)&&seen[o]<0&&lab[o]===lab[s]){seen[o]=cs.length;q.push(o);}});}cs.push({l:lab[s],a,q});});
   const best=new Map();cs.forEach((cp,i)=>{const b=best.get(cp.l);if(b===undefined||cs[b].a<cp.a)best.set(cp.l,i);});cs.forEach((cp,i)=>{if(best.get(cp.l)!==i)cp.q.forEach(t=>lab[t]=-1);});fillUn();};
 modeF(6);comps();
 for(let r=0;r<3;r++){refit();P.forEach((p,l)=>{if(p.a<tot*MINA/2&&!(p.eye&&p.a>40))F.forEach((_,t)=>{if(lab[t]===l)lab[t]=-1;});});fillUn();comps();}
@@ -59,60 +59,121 @@ modeF(3);comps();refit();
 // средние плиты: та, что заметно заходит за середину с обеих сторон
 mirrorLab();ALL=true;modeF(4);comps();modeF(2);comps();
 const K=P.length;console.log('плит справа+середина',K,'средних',P.filter(p=>p.mid).length,'всего',K+P.filter(p=>!p.mid).length);
-// отладка: соседи глаз
-{const nb=new Map();E.forEach(fs=>{if(fs.length!==2)return;const a=lab[fs[0]],b=lab[fs[1]];if(a===b||a<0||b<0)return;[[a,b],[b,a]].forEach(([x,y])=>{if(!nb.has(x))nb.set(x,new Set());nb.get(x).add(y);});});
-  [...new Set(lab)].filter(l=>l>=0&&isEye(l)).forEach(l=>{let a=0;F.forEach((_,t)=>{if(lab[t]===l)a+=A[t];});console.log('глаз-плита',l,'площадь',Math.round(a),'соседи',[...(nb.get(l)||[])].join(','));});}
 // ---------- 4. углы и многоугольники ----------
 const allP=l=>l<K?P[l]:{...P[l-K],n:[-P[l-K].n[0],P[l-K].n[1],P[l-K].n[2]],c:[-P[l-K].c[0],P[l-K].c[1],P[l-K].c[2]]};
 const ML=l=>l<K?(P[l].mid?l:l+K):l-K;
 // глаз — прорезь: его треугольники убираем (-2), края прорези ложатся в плоскости соседних плит
 F.forEach((_,t)=>{if(lab[t]>=0&&isEye(lab[t]))lab[t]=-2;});
-const VL=V.map(()=>new Set());F.forEach((f,t)=>{if(lab[t]>=0)f.forEach(v=>VL[v].add(lab[t]));});
-const HV=new Set();F.forEach((f,t)=>{if(lab[t]===-2)f.forEach(v=>HV.add(v));});
-// край прорези: цепочки между стыками плит упрощаем (Дуглас–Пекер, 1,5 мм) — оставшиеся точки тоже углы
-const extra=new Set();{const nx=new Map();F.forEach((f,t)=>{if(lab[t]<0)return;for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],o=E.get(ek(a,b)).find(x=>x!==t);if(o!==undefined&&lab[o]===-2)nx.set(a,b);}});
-  const used=new Set();nx.forEach((_,s0)=>{if(used.has(s0))return;const L=[];let v=s0;while(v!==undefined&&!used.has(v)){used.add(v);L.push(v);v=nx.get(v);}
-    const brk=L.map((v,i)=>i).filter(i=>VL[L[i]].size>=2);if(brk.length<2){brk.length=0;brk.push(0,Math.floor(L.length/3),Math.floor(2*L.length/3));}
-    brk.forEach(i=>extra.add(L[i]));
-    const W=k=>L[k%L.length],dp=(i,j)=>{if(j-i<2)return;const a=V[W(i)],b=V[W(j)];let bd=0,bk=-1;for(let k=i+1;k<j;k++){const p=V[W(k)],ab=V3.sub(b,a),t2=Math.max(0,Math.min(1,V3.dot(V3.sub(p,a),ab)/(V3.dot(ab,ab)||1))),d=V3.len(V3.sub(p,V3.add(a,V3.mul(ab,t2))));if(d>bd){bd=d;bk=k;}}
-      if(bd>1.5){extra.add(W(bk));dp(i,bk);dp(bk,j);}};
-    brk.forEach((i,k)=>{const j=k+1<brk.length?brk[k+1]:brk[0]+L.length;dp(i,j);});});}
-console.log('точек на краях глаз',extra.size);
-const VN=V.map(()=>new Set());F.forEach(f=>{for(let k=0;k<3;k++){VN[f[k]].add(f[(k+1)%3]);VN[f[(k+1)%3]].add(f[k]);}});
-const jun=[];VL.forEach((s,v)=>{if(s.size>=3||extra.has(v)&&s.size>=1)jun.push(v);});const isJ=new Set(jun),cl=new Map(),CLU=[];
-jun.forEach(s=>{if(cl.has(s))return;const id=CLU.length,q=[s];cl.set(s,id);for(let i=0;i<q.length;i++)VN[q[i]].forEach(o=>{if(isJ.has(o)&&!cl.has(o)&&V3.len(V3.sub(V[o],V[s]))<CL){cl.set(o,id);q.push(o);}});
-  const L=new Set();q.forEach(v=>VL[v].forEach(l=>L.add(l)));CLU.push({vs:q,L:[...L]});});
-const solve=(u,w)=>{const c0=V3.mul(u.vs.reduce((s,v)=>V3.add(s,V[v]),[0,0,0]),1/u.vs.length),Am=[[w,0,0],[0,w,0],[0,0,w]],b=V3.mul(c0,w);
-  u.L.forEach(l=>{const p=allP(l),n=p.n,d=V3.dot(n,p.c);for(let i=0;i<3;i++){for(let j=0;j<3;j++)Am[i][j]+=n[i]*n[j];b[i]+=n[i]*d;}});
-  const det=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]),D=det(Am),col=i=>Am.map((r,k)=>r.map((x,j)=>j===i?b[k]:x));
-  return {p:[det(col(0))/D,det(col(1))/D,det(col(2))/D],c0};};
-CLU.forEach(u=>{let w=.02,r;do{r=solve(u,w);w*=4;}while(V3.len(V3.sub(r.p,r.c0))>8&&w<50);u.p=r.p;u.mv=V3.len(V3.sub(r.p,r.c0));});
-console.log('углов',CLU.length,'сдвиг: макс',Math.max(...CLU.map(u=>u.mv)).toFixed(1),'мм, средн',(CLU.reduce((a,u)=>a+u.mv,0)/CLU.length).toFixed(1));
-const ids=[...new Set(lab)].filter(l=>l>=0),polys=[],bad=[];
-ids.forEach(l=>{const nxt=new Map();F.forEach((f,t)=>{if(lab[t]!==l)return;for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],o=E.get(ek(a,b)).find(x=>x!==t);if(o===undefined||lab[o]!==l)nxt.set(a,b);}});
-  const loops=[],used=new Set();nxt.forEach((_,s)=>{if(used.has(s))return;const L=[];let v=s;while(v!==undefined&&!used.has(v)){used.add(v);L.push(v);v=nxt.get(v);}loops.push(L);});loops.sort((a,b)=>b.length-a.length);
-  const Q=[];loops[0].forEach(v=>{if(cl.has(v)){const id=cl.get(v);if(Q[Q.length-1]!==id)Q.push(id);}});while(Q.length>1&&Q[0]===Q[Q.length-1])Q.pop();
-  if(loops.length>1)bad.push('дыр у '+l);if(Q.length<3){bad.push('углов '+Q.length+' у '+l);return;}if(new Set(Q).size!==Q.length)bad.push('угол дважды у '+l);polys.push({l,Q});});
-console.log('многоугольников',polys.length,'замечаний',bad.length,bad.slice(0,10).join('; '));
-// симметрия углов: пара по зеркальному набору плит
-const key=L=>[...L].sort((a,b)=>a-b).join(','),byKey=new Map();CLU.forEach((u,i)=>{const k=key(u.L);(byKey.get(k)||byKey.set(k,[]).get(k)).push(i);});
-let paired=0;CLU.forEach((u,i)=>{if(u.done)return;const mk=key(u.L.map(ML));if(mk===key(u.L)){u.p=[0,u.p[1],u.p[2]];u.done=true;u.mid=true;paired++;return;}
-  const cand=(byKey.get(mk)||[]).filter(j=>!CLU[j].done);if(!cand.length)return;let bj=cand[0],bd=1e9;cand.forEach(j=>{const q=CLU[j].p,d=Math.hypot(q[0]+u.p[0],q[1]-u.p[1],q[2]-u.p[2]);if(d<bd){bd=d;bj=j;}});
-  const m=CLU[bj],avg=[(u.p[0]-m.p[0])/2,(u.p[1]+m.p[1])/2,(u.p[2]+m.p[2])/2];u.p=avg;m.p=[-avg[0],avg[1],avg[2]];u.done=m.done=true;u.mate=bj;m.mate=i;paired+=2;});
-console.log('углов в паре/на середине',paired,'из',CLU.length);
-// выровнять грани (симметрия сохраняется), проверить
-const ec=new Map();polys.forEach(({Q})=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length],kk=a<b?a+'_'+b:b+'_'+a;ec.set(kk,(ec.get(kk)||0)+1);}));const hist={};ec.forEach(n=>hist[n]=(hist[n]||0)+1);console.log('рёбер по числу граней',JSON.stringify(hist));
-c.EP={V:CLU.map(u=>u.p),P:polys.map(p=>p.Q)};{const d0=c.EP.P.map((Q,i)=>({i,d:g('polyDev')(c.EP.V,Q),n:Q.length,l:polys[i].l}));d0.sort((a,b)=>b.d-a.d);console.log('до выравнивания: худшие',d0.slice(0,8).map(x=>x.d.toFixed(1)+'мм/'+x.n+'уг/пл'+x.l).join(' '),'; >2мм:',d0.filter(x=>x.d>2).length);}// выравнивание: точка — среднее проекций на плоскости её граней; пары — зеркально, средние — на x=0
-const E2=(()=>{let W=c.EP.V.map(p=>p.slice());const PP=c.EP.P,pn=g('polyNorm'),pc=g('polyC');for(let it=0;it<500;it++){const acc=W.map(()=>[0,0,0]),cnt=W.map(()=>0);
-  PP.forEach(Q=>{const n=pn(W,Q),cc=pc(W,Q);Q.forEach(i=>{const d=V3.dot(V3.sub(W[i],cc),n);acc[i]=V3.add(acc[i],V3.sub(W[i],V3.mul(n,d)));cnt[i]++;});});
-  W=W.map((p,i)=>cnt[i]?V3.mul(acc[i],1/cnt[i]):p);CLU.forEach((u,i)=>{if(u.mid)W[i][0]=0;else if(u.mate!==undefined&&u.mate>i){const a=W[i],b=W[u.mate],m=[(a[0]-b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];W[i]=m;W[u.mate]=[-m[0],m[1],m[2]];}});}
-  return {V:W,P:PP.map(Q=>Q.slice())};})();c.E2=E2;
-const dev=g(`Math.max(...E2.P.map(Q=>polyDev(E2.V,Q)))`),npl=g(`nonPlanar(E2,1).length`),mov=Math.max(...E2.V.map((p,i)=>V3.len(V3.sub(p,c.EP.V[i])))),asym=g(`mirrorMap(E2.V,1).filter(j=>j===-1).length`);
-console.log('после выравнивания: неплоскость макс',dev.toFixed(2),'мм, неплоских >1мм',npl,', точки сдвинулись до',mov.toFixed(1),'мм, без пары',asym);
+// плоскости правой половины заново (после слияний)
+const refitR=()=>{const S=P.map(()=>({n:[0,0,0],c:[0,0,0],a:0}));F.forEach((_,t)=>{const l=lab[t];if(l<0||l>=K||Cn[t][0]<0)return;const s=S[l];s.n=V3.add(s.n,V3.mul(N[t],A[t]));s.c=V3.add(s.c,V3.mul(Cn[t],A[t]));s.a+=A[t];});
+  S.forEach((s,i)=>{if(!s.a)return;let n=V3.norm(s.n),cc=V3.mul(s.c,1/s.a);if(P[i].mid){n=V3.norm([0,n[1],n[2]]);cc=[0,cc[1],cc[2]];}P[i]={...P[i],n,c:cc,a:s.a};});};
+const rv=l=>l<K?l:l-K;
+// прямые границы: треугольник у границы — той плите, к чьей плоскости он ближе (по расстоянию); граница ложится по линии пересечения плоскостей
+const nearEye=new Uint8Array(NT);{let fr=[];F.forEach((_,t)=>{if(eye[t]){nearEye[t]=1;fr.push(t);}});for(let r=0;r<(ARG.eyering??6);r++){const nx=[];fr.forEach(t=>NB[t].forEach(o=>{if(!nearEye[o]){nearEye[o]=1;nx.push(o);}}));fr=nx;}}
+const straighten=(sweeps)=>{let ch=0;for(let sw=0;sw<sweeps;sw++){let c1=0;const nl=lab.slice();F.forEach((_,t)=>{const l=lab[t];if(l<0||Cn[t][0]<0||nearEye[t])return;const cand=new Set();NB[t].forEach(o=>{const m=lab[o];if(m>=0&&m!==l)cand.add(m);});if(!cand.size)return;
+    const d=m=>{const p=allP(m);return Math.max(...F[t].map(v=>Math.abs(V3.dot(V3.sub(V[v],p.c),p.n))));};let best=l,bd=d(l);cand.forEach(m=>{if(isEye(m)!==isEye(l))return;const x=d(m);if(x<bd-.05){bd=x;best=m;}});if(best!==l){nl[t]=best;c1++;}});
+  lab=nl;ch+=c1;if(!c1)break;}mirrorLab();comps();return ch;};
+// многогранник из текущих меток: углы → многоугольники → симметрия → выравнивание
+function build(loud){const say=(...a)=>{if(loud)console.log(...a);};
+  const VL=V.map(()=>new Set());F.forEach((f,t)=>{if(lab[t]>=0)f.forEach(v=>VL[v].add(lab[t]));});
+  const HV=new Set();F.forEach((f,t)=>{if(lab[t]===-2)f.forEach(v=>HV.add(v));});
+  // край прорези: цепочки между стыками плит упрощаем (Дуглас–Пекер, 1,5 мм) — оставшиеся точки тоже углы
+  const extra=new Set();{const nx=new Map();F.forEach((f,t)=>{if(lab[t]<0)return;for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],o=E.get(ek(a,b)).find(x=>x!==t);if(o!==undefined&&lab[o]===-2)nx.set(a,b);}});
+    const used=new Set();nx.forEach((_,s0)=>{if(used.has(s0))return;const L=[];let v=s0;while(v!==undefined&&!used.has(v)){used.add(v);L.push(v);v=nx.get(v);}
+      const brk=L.map((v,i)=>i).filter(i=>VL[L[i]].size>=2);if(brk.length<2){brk.length=0;brk.push(0,Math.floor(L.length/3),Math.floor(2*L.length/3));}
+      brk.forEach(i=>extra.add(L[i]));
+      const W=k=>L[k%L.length],dp=(i,j)=>{if(j-i<2)return;const a=V[W(i)],b=V[W(j)];let bd=0,bk=-1;for(let k=i+1;k<j;k++){const p=V[W(k)],ab=V3.sub(b,a),t2=Math.max(0,Math.min(1,V3.dot(V3.sub(p,a),ab)/(V3.dot(ab,ab)||1))),d=V3.len(V3.sub(p,V3.add(a,V3.mul(ab,t2))));if(d>bd){bd=d;bk=k;}}
+        if(bd>1.5){extra.add(W(bk));dp(i,bk);dp(bk,j);}};
+      brk.forEach((i,k)=>{const j=k+1<brk.length?brk[k+1]:brk[0]+L.length;dp(i,j);});});}
+  say('точек на краях глаз',extra.size);{const nl=new Set();F.forEach((_,t)=>{if(lab[t]!==-2)return;NB[t].forEach(o=>{if(lab[o]>=0)nl.add(lab[o]+(Cn[o][0]>0?'R':'L'));});});say('соседи глаз:',[...nl].join(' '));}
+  const VN=V.map(()=>new Set());F.forEach(f=>{for(let k=0;k<3;k++){VN[f[k]].add(f[(k+1)%3]);VN[f[(k+1)%3]].add(f[k]);}});
+  const jun=[];VL.forEach((s,v)=>{if(s.size>=3||extra.has(v)&&s.size>=1)jun.push(v);});const isJ=new Set(jun),cl=new Map(),CLU=[];
+  jun.forEach(s=>{if(cl.has(s))return;const id=CLU.length,q=[s];cl.set(s,id);for(let i=0;i<q.length;i++)VN[q[i]].forEach(o=>{if(isJ.has(o)&&!cl.has(o)&&V3.len(V3.sub(V[o],V[s]))<CL){cl.set(o,id);q.push(o);}});
+    const L=new Set();q.forEach(v=>VL[v].forEach(l=>L.add(l)));CLU.push({vs:q,L:[...L]});});
+  const solve=(u,w)=>{const c0=V3.mul(u.vs.reduce((s,v)=>V3.add(s,V[v]),[0,0,0]),1/u.vs.length),Am=[[w,0,0],[0,w,0],[0,0,w]],b=V3.mul(c0,w);
+    u.L.forEach(l=>{const p=allP(l),n=p.n,d=V3.dot(n,p.c);for(let i=0;i<3;i++){for(let j=0;j<3;j++)Am[i][j]+=n[i]*n[j];b[i]+=n[i]*d;}});
+    const det=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]),D=det(Am),col=i=>Am.map((r,k)=>r.map((x,j)=>j===i?b[k]:x));
+    return {p:[det(col(0))/D,det(col(1))/D,det(col(2))/D],c0};};
+  CLU.forEach(u=>{let w=.02,r;do{r=solve(u,w);w*=4;}while(V3.len(V3.sub(r.p,r.c0))>8&&w<50);u.p=r.p;u.mv=V3.len(V3.sub(r.p,r.c0));});
+  say('углов',CLU.length,'сдвиг: макс',Math.max(...CLU.map(u=>u.mv)).toFixed(1),'мм, средн',(CLU.reduce((a,u)=>a+u.mv,0)/CLU.length).toFixed(1));
+  const ids=[...new Set(lab)].filter(l=>l>=0),polys=[],bad=[];
+  ids.forEach(l=>{const nxt=new Map();F.forEach((f,t)=>{if(lab[t]!==l)return;for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],o=E.get(ek(a,b)).find(x=>x!==t);if(o===undefined||lab[o]!==l)nxt.set(a,b);}});
+    const loops=[],used=new Set();nxt.forEach((_,s)=>{if(used.has(s))return;const L=[];let v=s;while(v!==undefined&&!used.has(v)){used.add(v);L.push(v);v=nxt.get(v);}loops.push(L);});loops.sort((a,b)=>b.length-a.length);
+    const Q=[];loops[0].forEach(v=>{if(cl.has(v)){const id=cl.get(v);if(Q[Q.length-1]!==id)Q.push(id);}});while(Q.length>1&&Q[0]===Q[Q.length-1])Q.pop();
+    if(loops.length>1)bad.push('дыр у '+l);if(Q.length<3){bad.push('углов '+Q.length+' у '+l);return;}if(new Set(Q).size!==Q.length)bad.push('угол дважды у '+l);polys.push({l,Q});});
+  say('многоугольников',polys.length,'замечаний',bad.length,bad.slice(0,10).join('; '));
+  // симметрия по построению: берём правую половину и плиты по середине, левую — зеркалом
+  const key=L=>[...L].sort((a,b)=>a-b).join(',');
+  const side=CLU.map(u=>{if(key(u.L.map(ML))===key(u.L))return 'M';const r=u.L.some(l=>l<K&&!P[l].mid),lf=u.L.some(l=>l>=K);return r&&lf?'M':lf?'L':'R';});
+  CLU.forEach((u,i)=>{if(side[i]==='M')u.p=[0,u.p[1],u.p[2]];});
+  const byKey=new Map();CLU.forEach((u,i)=>{if(side[i]==='L')return;const k=key(u.L);(byKey.get(k)||byKey.set(k,[]).get(k)).push(i);});
+  const toR=i=>{if(side[i]!=='L')return i;const u=CLU[i],mp=[-u.p[0],u.p[1],u.p[2]];let cs=byKey.get(key(u.L.map(ML)))||[];if(!cs.length)cs=CLU.map((_,j)=>j).filter(j=>side[j]!=='L');let bj=-1,bd=1e9;cs.forEach(j=>{const d=V3.len(V3.sub(CLU[j].p,mp));if(d<bd){bd=d;bj=j;}});return bj;};
+  const NC=[],ri=new Map(),mi=new Map();CLU.forEach((u,i)=>{if(side[i]==='L')return;ri.set(i,NC.length);NC.push({p:u.p.slice(),vs:u.vs,L:u.L,mid:side[i]==='M',eye:u.vs.some(v=>HV.has(v))});});
+  CLU.forEach((u,i)=>{if(side[i]!=='R')return;const j=NC.length;mi.set(i,j);NC.push({p:[-u.p[0],u.p[1],u.p[2]],vs:[],L:u.L.map(ML),mate:ri.get(i),eye:u.vs.some(v=>HV.has(v))});NC[ri.get(i)].mate=j;});
+  const mir=i=>side[i]==='M'?ri.get(i):mi.get(i);
+  const dedupe=Q=>{const R2=[];Q.forEach(x=>{if(x!==undefined&&R2[R2.length-1]!==x)R2.push(x);});while(R2.length>1&&R2[0]===R2[R2.length-1])R2.pop();return R2;};
+  const NP=[];let skipped=0;polys.forEach(p=>{const l=p.l;if(l>=K)return;const Q0=p.Q.map(toR);
+    if(!P[l].mid){const Q=dedupe(Q0.map(i=>ri.get(i))),M2=dedupe(Q0.map(mir)).reverse();if(Q.length>=3&&new Set(Q).size===Q.length){NP.push({l,Q});NP.push({l:ML(l),Q:M2});}else skipped++;return;}
+    const n=p.Q.length,S=p.Q.map(i=>side[i]);let st=-1;for(let k=0;k<n;k++)if(S[k]==='M'&&S[(k+1)%n]==='R'){st=k;break;}
+    if(st<0){const Q=dedupe(p.Q.filter(i=>side[i]!=='L').map(i=>ri.get(i)));if(Q.length>=3)NP.push({l,Q});else skipped++;return;}
+    const ch=[p.Q[st]];for(let k=1;k<n;k++){const i=p.Q[(st+k)%n];if(side[i]==='L')continue;ch.push(i);if(side[i]==='M')break;}
+    const Q=dedupe([...ch.map(i=>ri.get(i)),...ch.slice(1,-1).reverse().map(mir)]);if(Q.length>=3&&new Set(Q).size===Q.length)NP.push({l,Q});else skipped++;});
+  say('симметрично: точек',NC.length,'(было',CLU.length+'), граней',NP.length,'пропущено',skipped);
+  CLU.length=0;NC.forEach(u=>CLU.push(u));polys.length=0;NP.forEach(p=>polys.push(p));const paired=CLU.filter(u=>u.mid||u.mate!==undefined).length;
+  say('углов в паре/на середине',paired,'из',CLU.length);
+  // выровнять грани (симметрия сохраняется), проверить
+  const ec=new Map();polys.forEach(({Q})=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length],kk=a<b?a+'_'+b:b+'_'+a;ec.set(kk,(ec.get(kk)||0)+1);}));const hist={};ec.forEach(n=>hist[n]=(hist[n]||0)+1);say('рёбер по числу граней',JSON.stringify(hist));
+  // близкие углы (короче SHORT мм по ребру) — в один, вместе с зеркальными; иначе после выравнивания «бантики»
+  {const SHORT=ARG.short??6,par=CLU.map((_,i)=>i),fd=i=>par[i]===i?i:(par[i]=fd(par[i])),un=(a,b)=>{a=fd(a);b=fd(b);if(a!==b)par[b]=a;};
+    for(let it=0;it<3;it++)polys.forEach(({Q})=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length];if(!CLU[a].eye&&!CLU[b].eye&&V3.len(V3.sub(CLU[a].p,CLU[b].p))<SHORT){un(a,b);const ma=CLU[a].mate,mb=CLU[b].mate;
+      if(ma!==undefined&&mb!==undefined)un(ma,mb);else if(CLU[a].mid&&mb!==undefined)un(a,mb);else if(CLU[b].mid&&ma!==undefined)un(b,ma);}}));
+    const grp=new Map();CLU.forEach((_,i)=>{const r=fd(i);(grp.get(r)||grp.set(r,[]).get(r)).push(i);});
+    const NC=[],idx=new Map();grp.forEach((ms,r)=>{const p=V3.mul(ms.reduce((a,i)=>V3.add(a,CLU[i].p),[0,0,0]),1/ms.length),mid=ms.some(i=>CLU[i].mid)||ms.some(i=>ms.includes(CLU[i].mate));if(mid)p[0]=0;idx.set(r,NC.length);NC.push({p,mid,vs:[].concat(...ms.map(i=>CLU[i].vs)),L:[...new Set([].concat(...ms.map(i=>CLU[i].L)))],m0:ms});});
+    NC.forEach(u=>{if(u.mid)return;const m=u.m0.map(i=>CLU[i].mate).find(x=>x!==undefined);if(m!==undefined){const j=idx.get(fd(m));if(j!==undefined&&!NC[j].mid)u.mate=j;}});
+    // средняя точка пары — точно зеркальна
+    NC.forEach((u,i)=>{if(u.mate!==undefined&&u.mate>i){const a=u.p,b=NC[u.mate].p,m=[(a[0]-b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];u.p=m;NC[u.mate].p=[-m[0],m[1],m[2]];}});
+    const before=CLU.length;polys.forEach(p=>{const Q=[];p.Q.forEach(a=>{const j=idx.get(fd(a));if(Q[Q.length-1]!==j)Q.push(j);});while(Q.length>1&&Q[0]===Q[Q.length-1])Q.pop();p.Q=Q;});
+    for(let i=polys.length-1;i>=0;i--)if(polys[i].Q.length<3||new Set(polys[i].Q).size!==polys[i].Q.length)polys.splice(i,1);
+    CLU.length=0;NC.forEach(u=>CLU.push(u));say('близкие углы слиты:',before,'→',CLU.length,', граней',polys.length);}
+  c.EP={V:CLU.map(u=>u.p),P:polys.map(p=>p.Q)};{const d0=c.EP.P.map((Q,i)=>({i,d:g('polyDev')(c.EP.V,Q),n:Q.length,l:polys[i].l}));d0.sort((a,b)=>b.d-a.d);say('до выравнивания: худшие',d0.slice(0,8).map(x=>x.d.toFixed(1)+'мм/'+x.n+'уг/пл'+x.l).join(' '),'; >2мм:',d0.filter(x=>x.d>2).length);}// выравнивание: точка — среднее проекций на плоскости её граней; пары — зеркально, средние — на x=0
+  const E2=(()=>{let W=c.EP.V.map(p=>p.slice());const PP=c.EP.P,pn=g('polyNorm'),pc=g('polyC');const W0=W.map(p=>p.slice()),IT=ARG.it??800;for(let it=0;it<IT;it++){const lam=(ARG.anchor??.6)*Math.max(0,1-it/(IT*.8)),acc=W.map((p,i)=>V3.mul(W0[i],lam)),cnt=W.map(()=>lam);
+    PP.forEach((Q,qi)=>{const n=ARG.fixn?allP(polys[qi].l).n:pn(W,Q),cc=pc(W,Q);Q.forEach(i=>{const d=V3.dot(V3.sub(W[i],cc),n);acc[i]=V3.add(acc[i],V3.sub(W[i],V3.mul(n,d)));cnt[i]++;});});
+    W=W.map((p,i)=>cnt[i]?V3.mul(acc[i],1/cnt[i]):p);CLU.forEach((u,i)=>{if(u.mid)W[i][0]=0;else if(u.mate!==undefined&&u.mate>i){const a=W[i],b=W[u.mate],m=[(a[0]-b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];W[i]=m;W[u.mate]=[-m[0],m[1],m[2]];}});}
+    return {V:W,P:PP.map(Q=>Q.slice())};})();c.E2=E2;
+  const dev=g(`Math.max(...E2.P.map(Q=>polyDev(E2.V,Q)))`),npl=g(`nonPlanar(E2,1).length`),mov=Math.max(...E2.V.map((p,i)=>V3.len(V3.sub(p,c.EP.V[i])))),asym=g(`mirrorMap(E2.V,1).filter(j=>j===-1).length`);
+  say('после выравнивания: неплоскость макс',dev.toFixed(2),'мм, неплоских >1мм',npl,', точки сдвинулись до',mov.toFixed(1),'мм, без пары',asym);
+  return {CLU,polys,E2,EP:c.EP};}
+for(let r=0;r<(ARG.str??3);r++){const n=straighten(15);refitR();console.log('прямые границы: перекрашено',n);}
+// узкие плиты (уже 15 мм) вливаем в соседа с ближайшей нормалью — сразу с зеркальной; повторяем
+const MINW=ARG.minw??15;let B;
+for(let round=0;round<(ARG.rounds??4);round++){B=build(false);const PB=g('polyBase')(B.E2.V,B.E2.P),R=g('buildParts')(PB,1.5,1.5);
+  const nar=new Set();R.parts.forEach(p=>{if(p.minW<MINW){const l=B.polys[PB.T[p.tris[0]]].l;nar.add(rv(l));}});
+  console.log('круг',round,'плит',B.polys.length,'узких',nar.size);if(!nar.size)break;
+  const nbs=new Map();E.forEach(fs=>{if(fs.length!==2)return;const a=lab[fs[0]],b=lab[fs[1]];if(a===b||a<0||b<0)return;[[a,b],[b,a]].forEach(([x,y])=>{const k=rv(x);if(!nar.has(k))return;if(!nbs.has(k))nbs.set(k,new Map());const m=nbs.get(k),ry=x<K===y<K||P[rv(y)].mid||P[k].mid?rv(y):rv(y);m.set(ry,(m.get(ry)||0)+1);});});
+  const tgt=new Map();nar.forEach(k=>{const m=nbs.get(k);if(!m)return;let best=-1,bd=-2;m.forEach((cnt,y)=>{if(y===k||nar.has(y))return;const d=V3.dot(P[k].n,P[y].n);if(d>bd){bd=d;best=y;}});if(best>=0&&bd>Math.cos((ARG.mang??30)*Math.PI/180))tgt.set(k,best);});
+  console.log('   сливаю',tgt.size,'из',nar.size);if(!tgt.size)break;
+  // цепочки: цель сама уходит — идём до конца
+  const fin=k=>{let x=k,s=0;while(tgt.has(x)&&s++<20)x=tgt.get(x);return x;};
+  F.forEach((_,t)=>{const l=lab[t];if(l<0)return;const k=rv(l);if(!tgt.has(k))return;const m=fin(k);lab[t]=Cn[t][0]>=0||P[m].mid?m:ML(m);if(P[k].mid&&!P[m].mid&&Cn[t][0]<0)lab[t]=ML(m);});
+  tgt.forEach((m,k)=>{if(P[k].mid)P[fin(k)].mid=P[fin(k)].mid;});refitR();}
+B=build(true);const {CLU,polys,E2}=B;c.E2=E2;
+// где выравнивание сильно двигает точки
+{const mv=E2.V.map((p,i)=>V3.len(V3.sub(p,B.EP.V[i])));const bad2=polys.map((p,i)=>({l:p.l,m:Math.max(...p.Q.map(q=>mv[q])),c:g('polyC')(E2.V,p.Q)})).filter(x=>x.m>10).sort((a,b)=>b.m-a.m);
+  console.log('плиты, где точки сдвинулись >10 мм:',bad2.length,bad2.slice(0,10).map(x=>'пл'+x.l+' '+x.m.toFixed(0)+'мм @'+x.c.map(Math.round).join(',')).join('; '));}
 fs.writeFileSync(O('plates'+TAG+'.json'),JSON.stringify({V:E2.V.map(p=>p.map(x=>Math.round(x*100)/100)),P:E2.P,lab:[...lab],eye:polys.map(p=>allP(p.l).eye)}));
 // картинки: разбивка на сетке модели и готовый многогранник
 const rnd=i=>{let x=Math.sin(i*12.9898+1)*43758.5453;x-=Math.floor(x);return x;};
 const T=[],TG=[];E2.P.forEach((Q,i)=>g('earClip')(E2.V,Q).forEach(t=>{T.push(t);TG.push(i);}));
 const EYE=polys.map(p=>allP(p.l).eye);
-for(const v of ['front','side','iso'])render(O('pl'+TAG+'_'+v+'.png'),E2.V,T,i=>EYE[TG[i]]?[40,40,40]:[175,165,155],v,{shade:true,group:i=>TG[i]});
+// каждая грань в своей плоскости: самопересечение контура и ширина (по выпуклой оболочке)
+const flat2=(W,Q)=>{const n=g('polyNorm')(W,Q),o=W[Q[0]];let u=V3.sub(W[Q[1]],o);u=V3.norm(V3.sub(u,V3.mul(n,V3.dot(u,n))));const w=V3.cross(n,u);return Q.map(i=>{const d=V3.sub(W[i],o);return [V3.dot(d,u),V3.dot(d,w)];});};
+const segX=(a,b,c2,d)=>{const cr=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);const d1=cr(c2,d,a),d2=cr(c2,d,b),d3=cr(a,b,c2),d4=cr(a,b,d);return (d1>0)!==(d2>0)&&(d3>0)!==(d4>0);};
+const selfX=pts=>{const n=pts.length;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(segX(pts[i],pts[(i+1)%n],pts[j],pts[(j+1)%n]))return true;}return false;};
+const widthOf=pts=>{const h=g('convexHull')(pts);let bw=Infinity;h.forEach((p,i)=>{const q=h[(i+1)%h.length],a=Math.atan2(q[1]-p[1],q[0]-p[0]),c3=Math.cos(a),s3=Math.sin(a);let mn=1e9,mx=-1e9;h.forEach(z=>{const y=-s3*z[0]+c3*z[1];mn=Math.min(mn,y);mx=Math.max(mx,y);});bw=Math.min(bw,mx-mn);});return bw;};
+{const mv=E2.V.map((p,i)=>V3.len(V3.sub(p,B.EP.V[i])));const h=[0,0,0,0,0];mv.forEach(m=>h[m<2?0:m<5?1:m<10?2:m<20?3:4]++);console.log('сдвиг точек при выравнивании <2/2-5/5-10/10-20/>20 мм:',h.join('/'));
+  console.log('самые большие:',mv.map((m,i)=>[m,i]).sort((a,b)=>b[0]-a[0]).slice(0,8).map(([m,i])=>m.toFixed(0)+'@'+B.EP.V[i].map(Math.round).join(',')+' пл'+CLU[i].L.join('/')).join('  '));}
+const XS=new Set();E2.P.forEach((Q,i)=>{if(selfX(flat2(E2.V,Q)))XS.add(i);});console.log('самопересекающихся граней',XS.size);
+const NAR=new Set();{E2.P.forEach((Q,i)=>{if(widthOf(flat2(E2.V,Q))<MINW)NAR.add(i);});
+  console.log('узких плит (<'+MINW+' мм):',NAR.size,[...NAR].slice(0,40).map(i=>{const c2=g('polyC')(E2.V,E2.P[i]);return c2.map(Math.round).join(',');}).join(' | '));}
+for(const v of ['front','side','iso','bottom'])render(O('pl'+TAG+'_'+v+'.png'),E2.V,T,i=>XS.has(TG[i])?[60,90,220]:NAR.has(TG[i])?[220,60,50]:[175,165,155],v,{shade:true,group:i=>TG[i]});
 render(O('pl'+TAG+'_lab.png'),V,F,t=>lab[t]<0?[255,255,255]:eye[t]?[20,20,20]:[50+rnd(ML(lab[t])<lab[t]?ML(lab[t]):lab[t])*200|0,50+rnd((ML(lab[t])<lab[t]?ML(lab[t]):lab[t])+.31)*200|0,50+rnd((ML(lab[t])<lab[t]?ML(lab[t]):lab[t])+.77)*200|0],'front');
