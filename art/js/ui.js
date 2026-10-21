@@ -188,21 +188,21 @@ function edUI(){const on=ST.edit&&isPoly();$('hint').textContent=on?(ST.seam?'П
   if(ST.sv>=0&&B.V[ST.sv]){const p=B.V[ST.sv];h=`<b>Точка</b> — тяните мышкой или введите координаты, мм<div class="xyz3"><label>X<input class="inp" id="vX" type="number" value="${Math.round(p[0])}"></label><label>Y<input class="inp" id="vY" type="number" value="${Math.round(p[1])}"></label><label>Z<input class="inp" id="vZ" type="number" value="${Math.round(p[2])}"></label></div>`;}
   else if(ST.sp>=0&&ST.sp2>=0&&B.P[ST.sp2])h=polysAdjacent(B,ST.sp,ST.sp2)?'<b>Две грани</b> — «Убрать шов» сольёт их в одну':'<b>Две грани</b> — они не соседние, слить нельзя';
   else if(ST.sp>=0&&B.P[ST.sp]){const Q=B.P[ST.sp],dev=polyDev(B.V,Q);h=`<b>Грань</b> — ${Q.length} угла${Q.length>4?' (многоугольник)':''}${dev>1.5?', <span class="bad">неплоская на '+Math.round(dev)+' мм</span>':''}`;}
-  if(ST.seam)h=`<b>Провести шов</b> — выбрано точек: ${ST.seam.length} из 2`;$('edSel').innerHTML=h;$('edOps').querySelectorAll('button').forEach(b=>b.disabled=ST.sp<0);
-  $('edOps').querySelector('[data-op=merge]').disabled=!(ST.sp>=0&&ST.sp2>=0&&polysAdjacent(B,ST.sp,ST.sp2));$('edOps').querySelector('[data-op=cut]').classList.toggle('on',!!ST.seam);
+  if(ST.seam)h=`<b>Провести шов</b> — выбрано точек: ${ST.seam.length} из 2`;$('edSel').innerHTML=h;$('edOps').querySelectorAll('button').forEach(b=>b.classList.toggle('off',ST.sp<0));
+  $('edOps').querySelector('[data-op=merge]').classList.toggle('off',!(ST.sp>=0&&ST.sp2>=0&&polysAdjacent(B,ST.sp,ST.sp2)));$('edOps').querySelector('[data-op=cut]').classList.toggle('on',!!ST.seam);
   const n=CUR&&CUR.bad?CUR.bad.size:0,nx=CUR&&CUR.selfx?CUR.selfx.size:0,nw=CUR&&CUR.small?CUR.small.size:0;$('edPlan').className='note'+(n||nx||nw?' warn':'');$('edPlan').textContent=(nx?`Самопересекающихся граней: ${nx} — синие, разрежьте их «Провести шов». `:'')+(nw?`Узких деталей: ${nw} — красные. `:'')+(n?`Неплоских граней: ${n} — подсвечены жёлтым. Плоский лист так не согнёшь: выровняйте (точки сдвинутся на миллиметры) или разбейте на треугольники`:'Все грани плоские — каждая режется одним куском');
-  $('bFlat').disabled=$('bTri').disabled=!n;$('bUndo').disabled=!UNDO.length;$('bRedo').disabled=!REDO.length;}
+  ['bFlat','bTri'].forEach(id=>$(id).classList.toggle('off',!n));$('bUndo').classList.toggle('off',!UNDO.length);$('bRedo').classList.toggle('off',!REDO.length);}
 $('cEdit').addEventListener('change',e=>{ST.edit=e.target.checked;if(ST.edit&&CUR){toPoly();compute();}renderAll();});
 $('cSym').addEventListener('change',e=>{ST.sym=e.target.checked;});
 $('edSel').addEventListener('change',e=>{if(ST.sv<0||!['vX','vY','vZ'].includes(e.target.id))return;pushUndo();const e2={V:ST.base.V.map(p=>p.slice()),P:ST.base.P};
   moveVert(e2,ST.sv,[+$('vX').value,+$('vY').value,+$('vZ').value],ST.sym);applyE(e2,true);});
-$('edOps').addEventListener('click',e=>{const b=e.target.closest('button[data-op]');if(!b||ST.sp<0)return;const d=Math.max(1,+$('edD').value||0),op=b.dataset.op;
+$('edOps').addEventListener('click',e=>{const b=e.target.closest('button[data-op]');if(!b)return;if(ST.sp<0){msg('Сначала кликните грань на модели');return;}if(b.dataset.op==='merge'&&b.classList.contains('off')){msg('Для «Убрать шов» кликните грань, потом Shift+клик по соседней');return;}const d=Math.max(1,+$('edD').value||0),op=b.dataset.op;
   if(op==='cut'){ST.seam=ST.seam?null:[];ST.sv=-1;renderAll();return;}
   if(op==='merge'){const r=mergePolys(E(),ST.sp,ST.sp2,ST.sym);if(!r){msg('Эти грани не слить: нет общего шва или он из нескольких кусков');return;}pushUndo();applyE(r);msg('Шов убран, грани выровнены');return;}
   pushUndo();
   const r={extrude:()=>extrude(E(),ST.sp,d,ST.sym),inset:()=>extrude(E(),ST.sp,-d,ST.sym),bump:()=>poke(E(),ST.sp,d,ST.sym),pit:()=>poke(E(),ST.sp,-d,ST.sym),split:()=>splitPoly(E(),ST.sp,ST.sym),del:()=>delPoly(E(),ST.sp,ST.sym)}[op]();applyE(r);});
-$('bFlat').addEventListener('click',()=>{pushUndo();applyE(flattenAll(E(),ST.sym),true);});
-$('bTri').addEventListener('click',()=>{pushUndo();applyE(triangulateBad(E(),1.5));});
+$('bFlat').addEventListener('click',()=>{if($('bFlat').classList.contains('off'))return;pushUndo();applyE(flattenAll(E(),ST.sym),true);});
+$('bTri').addEventListener('click',()=>{if($('bTri').classList.contains('off'))return;pushUndo();applyE(triangulateBad(E(),1.5));});
 $('bUndo').addEventListener('click',undo);$('bRedo').addEventListener('click',redo);
 $('bBlank').addEventListener('click',()=>{const k=$('blank').value,b=k==='box'?blankBox():blankSphere();ST.fig='';$('figSel').value='';
   const m=polyBase(b.V,b.P),s=meshBox(m.V).size;setBase(m,{name:k==='box'?'Заготовка — куб':'Заготовка — шар',dims:{W:Math.round(s[0]),H:Math.round(s[1]),D:Math.round(s[2])}});
@@ -221,7 +221,7 @@ function refUI(){const rid=ST.refId,has=!!rid;$('refRow').hidden=!has;$('cRef').
   const b0=REFB[rid]||(REFB[rid]=meshBox(modelPoly(rid).V)),b1=meshBox(CUR.M3.V),s=[0,1,2].map(k=>b1.size[k]/(b0.size[k]||1)),c0=(b0.min[0]+b0.max[0])/2,c1=(b1.min[0]+b1.max[0])/2,out=new Float32Array(pts.length);
   for(let i=0;i<pts.length;i+=3){out[i]=(pts[i]/10-c0)*s[0]+c1;out[i+1]=(pts[i+1]/10-b0.min[1])*s[1]+b1.min[1];out[i+2]=(pts[i+2]/10-b0.min[2])*s[2]+b1.min[2];}setRef(out);}
 $('cRef').addEventListener('change',e=>{ST.ref=e.target.checked;const rid=ST.refId;
-  if(ST.ref&&rid&&!(window.REFS&&REFS[rid])){const s=document.createElement('script');s.src='js/ref-'+rid+'.js?v=0.5.1';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
+  if(ST.ref&&rid&&!(window.REFS&&REFS[rid])){const s=document.createElement('script');s.src='js/ref-'+rid+'.js?v=0.5.2';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
 (()=>{if(!ok)return;const cv=renderer.domElement,tag=$('hovTag');let down=null,drag=null,raf=0;

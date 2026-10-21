@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.5.1">
+<link rel="stylesheet" href="css/style.css?v=0.5.2">
 </head>
 <body>
 <div class="wrap">
@@ -37,7 +37,7 @@
     <div class="studio">
       <div id="stage">
         <div class="loading" id="loading"><i></i><span id="loadTxt">Строю фигуру…</span></div>
-        <div class="vbar"><button data-v="iso" type="button">3D</button><button data-v="front" type="button">Спереди</button><button data-v="side" type="button">Сбоку</button><button data-v="top" type="button">Сверху</button><button id="bFit" type="button">Всё</button></div>
+        <div class="vbar"><button data-v="iso" type="button" title="Объёмный вид под углом">3D</button><button data-v="front" type="button" title="Вид спереди, на морду">Спереди</button><button data-v="side" type="button" title="Вид сбоку, в профиль">Сбоку</button><button data-v="top" type="button" title="Вид сверху">Сверху</button><button id="bFit" type="button" title="Показать фигуру целиком">Всё</button></div>
         <div class="hovtag" id="hovTag" hidden></div>
         <div class="hint" id="hint">Клик по грани — деталь · колесо — масштаб · правая кнопка — сдвиг</div>
       </div>
@@ -58,7 +58,7 @@
             <label class="chk" id="refRow" hidden><input type="checkbox" id="cRef"><span>Швы эталона</span></label>
             <div id="edSel" class="edsel"></div>
             <div class="row2"><label>На сколько, мм<input class="inp" id="edD" type="number" value="30" min="1" step="5"></label><span></span></div>
-            <div class="edbtns" id="edOps"><button type="button" data-op="extrude">Выдавить</button><button type="button" data-op="inset">Вдавить</button><button type="button" data-op="bump">Бугор</button><button type="button" data-op="pit">Впадина</button><button type="button" data-op="split">Разрезать пополам</button><button type="button" data-op="del">Удалить грань</button><button type="button" data-op="merge">Убрать шов</button><button type="button" data-op="cut">Провести шов</button></div>
+            <div class="edbtns" id="edOps"><button type="button" data-op="extrude" id="op_extrude">Выдавить</button><button type="button" data-op="inset" id="op_inset">Вдавить</button><button type="button" data-op="bump" id="op_bump">Бугор</button><button type="button" data-op="pit" id="op_pit">Впадина</button><button type="button" data-op="split" id="op_split">Разрезать пополам</button><button type="button" data-op="del" id="op_del">Удалить грань</button><button type="button" data-op="merge" id="op_merge">Убрать шов</button><button type="button" data-op="cut" id="op_cut">Провести шов</button></div>
             <p class="note" id="edPlan"></p>
             <div class="btns" id="edFix"><button id="bFlat" type="button">Выровнять грани</button><button id="bTri" type="button">Разбить на треугольники</button></div>
             <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
@@ -125,7 +125,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.5.1</span>
+    <span class="ver">v0.5.2</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -133,16 +133,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.5.1"></script>
-<script src="js/models.js?v=0.5.1"></script>
-<script src="js/models-poly.js?v=0.5.1"></script>
-<script src="js/figures.js?v=0.5.1"></script>
-<script src="js/edit.js?v=0.5.1"></script>
-<script src="js/view3d.js?v=0.5.1"></script>
-<script src="js/prod.js?v=0.5.1"></script>
-<script src="js/sheets.js?v=0.5.1"></script>
-<script src="js/ui.js?v=0.5.1"></script>
-<script src="js/tips.js?v=0.5.1"></script>
+<script src="js/mesh.js?v=0.5.2"></script>
+<script src="js/models.js?v=0.5.2"></script>
+<script src="js/models-poly.js?v=0.5.2"></script>
+<script src="js/figures.js?v=0.5.2"></script>
+<script src="js/edit.js?v=0.5.2"></script>
+<script src="js/view3d.js?v=0.5.2"></script>
+<script src="js/prod.js?v=0.5.2"></script>
+<script src="js/sheets.js?v=0.5.2"></script>
+<script src="js/ui.js?v=0.5.2"></script>
+<script src="js/tips.js?v=0.5.2"></script>
 <div id="printBox"></div>
 </body>
 </html>
