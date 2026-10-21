@@ -115,3 +115,5 @@ FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh(
 FIGURES.doberman5={name:'Доберман 5',H:600,faces:130,mesh:()=>modelMesh('doberman5')};
 // Доберман 6 — агент Meshy: фото на белом фоне → Meshy 7.1 → ремеш в четырёхугольники (516 граней, 1028 треугольников)
 FIGURES.doberman6={name:'Доберман 6',H:600,faces:200,mesh:()=>modelMesh('doberman6')};
+// Доберман 7 — плиты сняты с текстурной модели Meshy «Geometric Doberman» (art/tools/plates): плоские многоугольники, глаза — прорези
+FIGURES.doberman7={name:'Доберман 7',H:600,poly:true,build:()=>modelPoly('doberman7'),ref:'doberman7'};

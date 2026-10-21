@@ -118,14 +118,14 @@ function fitMesh(m,dims){const b=meshBox(m.V),s=[dims.W/(b.size[0]||1),dims.H/(b
   const cx=(b.min[0]+b.max[0])/2;   // по x — центр (ось симметрии), снизу y=0, стена z=0
   return {V:m.V.map(p=>[(p[0]-cx)*s[0],(p[1]-b.min[1])*s[1],(p[2]-b.min[2])*s[2]]),F:m.F};}
 
-/* ---------- детали: соседние треугольники в одной плоскости ---------- */
+/* ---------- детали: соседние треугольники в одной плоскости; m.T (из какой грани-многоугольника) — треугольники одной грани всегда вместе ---------- */
 const DENS={steel:7850,inox:7900,corten:7850,alu:2700};
 function buildParts(m,tolDeg=.5,tolMm=.3){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),cos=Math.cos(tolDeg*Math.PI/180);
   const E=new Map(),ek=(a,b)=>a<b?a+'_'+b:b+'_'+a;F.forEach((f,fi)=>{for(let k=0;k<3;k++){const key=ek(f[k],f[(k+1)%3]);(E.get(key)||E.set(key,[]).get(key)).push(fi);}});
   const part=new Int32Array(F.length).fill(-1),groups=[];
   F.forEach((f,s)=>{if(part[s]>=0)return;const g=[s],pl=V3.dot(N[s],V[f[0]]);part[s]=groups.length;
     for(let q=0;q<g.length;q++){const fi=g[q],ff=F[fi];for(let k=0;k<3;k++)(E.get(ek(ff[k],ff[(k+1)%3]))||[]).forEach(o=>{
-      if(part[o]>=0)return;if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>tolMm))return;part[o]=groups.length;g.push(o);});}
+      if(part[o]>=0)return;if(!(m.T&&m.T[o]===m.T[fi])){if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>tolMm))return;}part[o]=groups.length;g.push(o);});}
     groups.push(g);});
   // контур детали: рёбра, которые не делятся с треугольником той же детали
   const parts=groups.map((g,pi)=>{const n=V3.norm(g.reduce((s,fi)=>V3.add(s,triN(V,F[fi])),[0,0,0]));let area=0;g.forEach(fi=>area+=V3.len(triN(V,F[fi]))/2);
@@ -250,12 +250,18 @@ function dissolve(m,deg,tolMm){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),A=F.
   return compact({V,P});}
 // многоугольник → треугольники «отрезанием ушей» (для невыпуклых граней веер не годится)
 function earClip(V,Q){const n=Q.length;if(n<4)return [Q.slice()];let nn=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%n]];nn[0]+=(a[1]-b[1])*(a[2]+b[2]);nn[1]+=(a[2]-b[2])*(a[0]+b[0]);nn[2]+=(a[0]-b[0])*(a[1]+b[1]);});
-  const ax=Math.abs(nn[0])>Math.abs(nn[1])?(Math.abs(nn[0])>Math.abs(nn[2])?0:2):(Math.abs(nn[1])>Math.abs(nn[2])?1:2),u=(ax+1)%3,w=(ax+2)%3,sg=Math.sign(nn[ax])||1;
-  const p=i=>[V[i][u],V[i][w]],cr=(a,b,c)=>((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))*sg;
-  const inT=(x,a,b,c)=>cr(a,b,x)>=0&&cr(b,c,x)>=0&&cr(c,a,x)>=0;
+  // координаты в плоскости грани; обход против часовой
+  const N=V3.norm(nn),o=V[Q[0]];let u=Math.abs(N[0])<.9?[1,0,0]:[0,1,0];u=V3.norm(V3.sub(u,V3.mul(N,V3.dot(u,N))));const w=V3.cross(N,u);
+  const P2=new Map();Q.forEach(i=>{const d=V3.sub(V[i],o);P2.set(i,[V3.dot(d,u),V3.dot(d,w)]);});const p=i=>P2.get(i);
+  let sz=0;Q.forEach(i=>{const q=p(i);sz=Math.max(sz,Math.abs(q[0]),Math.abs(q[1]));});const eps=1e-9*sz*sz;
+  const cr=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  // точка внутри уха: строго внутри по сторонам многоугольника, касание диагонали — тоже мешает
+  const inT=(x,a,b,c)=>cr(a,b,x)>eps&&cr(b,c,x)>eps&&cr(c,a,x)>-eps;
   const R=Q.slice(),T=[];let guard=0;
-  while(R.length>3&&guard++<n*n){let cut=false;
-    for(let k=0;k<R.length;k++){const ia=R[(k+R.length-1)%R.length],ib=R[k],ic=R[(k+1)%R.length],a=p(ia),b=p(ib),c=p(ic);if(cr(a,b,c)<=1e-9)continue;
-      if(R.some(j=>j!==ia&&j!==ib&&j!==ic&&inT(p(j),a,b,c)))continue;T.push([ia,ib,ic]);R.splice(k,1);cut=true;break;}
-    if(!cut){for(let k=1;k+1<R.length;k++)T.push([R[0],R[k],R[k+1]]);return T;}}
+  while(R.length>3&&guard++<n*n){let cut=-1,best=-1,bc=eps;
+    for(let k=0;k<R.length;k++){const ia=R[(k+R.length-1)%R.length],ib=R[k],ic=R[(k+1)%R.length],a=p(ia),b=p(ib),c=p(ic),x=cr(a,b,c);if(x<=eps)continue;
+      if(x>bc){bc=x;best=k;}if(R.some(j=>j!==ia&&j!==ib&&j!==ic&&inT(p(j),a,b,c)))continue;cut=k;break;}
+    if(cut<0)cut=best;   // ушей «по правилам» нет (почти прямые углы, совпадающие точки) — режем самый выпуклый угол
+    if(cut<0){for(let k=1;k+1<R.length;k++)T.push([R[0],R[k],R[k+1]]);return T;}
+    T.push([R[(cut+R.length-1)%R.length],R[cut],R[(cut+1)%R.length]]);R.splice(cut,1);}
   T.push(R);return T;}

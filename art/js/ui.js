@@ -39,7 +39,7 @@ function ensureNest(cb){if(CUR&&CUR.N){cb&&cb();return;}if(cb)NEST.wait.push(cb)
     NEST.key=key;NEST.N=v.value;NEST.run=null;if(CUR&&NEST.want===key)CUR.N=v.value;const w=NEST.wait;NEST.wait=[];w.forEach(f=>f());if(!$('tab-sum').hidden)sumTable();};
   setTimeout(step,0);}
 function compute0(){const b=ST.base;let S=b;
-  if(isPoly()){const M3={V:b.V,F:b.F},R=buildParts(M3,1.5,1.5),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
+  if(isPoly()){const M3={V:b.V,F:b.F,T:b.T},R=buildParts(M3,1.5,1.5),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
     CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5))};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
