@@ -117,3 +117,5 @@ FIGURES.doberman5={name:'Доберман 5',H:600,faces:130,mesh:()=>modelMesh(
 FIGURES.doberman6={name:'Доберман 6',H:600,faces:200,mesh:()=>modelMesh('doberman6')};
 // Доберман 7 — плиты сняты с текстурной модели Meshy «Geometric Doberman» (art/tools/plates): плоские многоугольники, глаза — прорези
 FIGURES.doberman7={name:'Доберман 7',H:600,poly:true,build:()=>modelPoly('doberman7'),ref:'doberman7'};
+// Доберман 8 — рабочая копия «Доберман 7» для правки по кальке; правки Виталия (.json) сюда — art/tools/plates/fromjson.js doberman8 …
+FIGURES.doberman8={name:'Доберман 8',H:600,poly:true,build:()=>modelPoly('doberman8'),ref:'doberman7'};
