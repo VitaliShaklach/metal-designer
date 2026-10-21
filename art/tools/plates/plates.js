@@ -152,7 +152,7 @@ const seamMerge=()=>{let merged=0;for(let it=0;it<200;it++){const st=new Map();F
     if(!best)break;let [a,b]=best;if(P[b].mid&&!P[a].mid)[a,b]=[b,a];   // средняя плита остаётся средней
     F.forEach((_,t)=>{const l=lab[t];if(l<0||rv(l)!==b)return;lab[t]=P[a].mid||Cn[t][0]>=0?a:ML(a);});refitR();merged++;}
   mirrorLab();comps();return merged;};
-{const m=seamMerge();console.log('слито плит без шва на текстуре:',m);for(let r=0;r<2;r++){straighten(15);refitR();}}
+{const m=seamMerge();console.log('слито плит без шва на текстуре:',m);if(m)for(let r=0;r<2;r++){straighten(15);refitR();}}
 // узкие плиты (уже 15 мм) вливаем в соседа с ближайшей нормалью — сразу с зеркальной; повторяем
 const MINW=ARG.minw??15;let B;
 for(let round=0;round<(ARG.rounds??4);round++){B=build(false);const PB=g('polyBase')(B.E2.V,B.E2.P),R=g('buildParts')(PB,1.5,1.5);
