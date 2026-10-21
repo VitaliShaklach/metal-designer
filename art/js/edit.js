@@ -11,7 +11,9 @@ const polyC=(V,Q)=>V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);
 function polyDev(V,Q){if(Q.length<4)return 0;const n=polyNorm(V,Q),c=polyC(V,Q);return Math.max(...Q.map(i=>Math.abs(V3.dot(V3.sub(V[i],c),n))));}
 // зеркальные точки: i ↔ j, если j = (−x, y, z); на середине — сама себе
 function mirrorMap(V,tol=.6){const key=p=>Math.round(p[0]/tol)+','+Math.round(p[1]/tol)+','+Math.round(p[2]/tol),M=new Map();V.forEach((p,i)=>M.set(key(p),i));
-  return V.map(p=>{if(Math.abs(p[0])<tol)return -2;const j=M.get(key([-p[0],p[1],p[2]]));return j===undefined?-1:j;});}  // -2 — на середине
+  // точка у границы ячейки сетки может не найтись по ключу — тогда ищем ближайшую честно
+  const near=q=>{let bj=-1,bd=tol;V.forEach((r,j)=>{const d=Math.hypot(r[0]-q[0],r[1]-q[1],r[2]-q[2]);if(d<bd){bd=d;bj=j;}});return bj;};
+  return V.map(p=>{if(Math.abs(p[0])<tol)return -2;const q=[-p[0],p[1],p[2]];let j=M.get(key(q));if(j===undefined)j=near(q);return j<0?-1:j;});}  // -2 — на середине
 function mirrorPoly(E,pi,mm){const Q=E.P[pi],t=Q.map(i=>mm[i]===-2?i:mm[i]);if(t.some(i=>i<0))return -1;const k=[...t].sort((a,b)=>a-b).join();
   return E.P.findIndex(R=>R.length===t.length&&[...R].sort((a,b)=>a-b).join()===k);}
 function compact(E){const used=new Map(),V=[];const P=E.P.filter(Q=>Q.length>=3).map(Q=>Q.map(i=>{let j=used.get(i);if(j===undefined){j=V.length;V.push(E.V[i]);used.set(i,j);}return j;}));return {V,P};}
@@ -62,3 +64,40 @@ function blankSphere(R=220){const t=(1+Math.sqrt(5))/2;let V=[[-1,t,0],[1,t,0],[
   F=F.flatMap(([a,b,c])=>{const ab=m(a,b),bc=m(b,c),ca=m(c,a);return [[a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]];});
   // повернуть так, чтобы была симметрия по x=0, и поставить на пол
   V=V.map(([x,y,z])=>[y,z,x]);const b=meshBox(V);V=V.map(p=>[p[0],p[1]-b.min[1],p[2]-b.min[2]]);return {V,P:F};}
+
+/* ---------- швы: убрать (слить две соседние грани) и провести (разрезать грань по прямой) ---------- */
+// грань самопересекается? — контур в её плоскости
+function polySelfX(V,Q){const n=Q.length;if(n<4)return false;const N=polyNorm(V,Q),o=V[Q[0]];let u=Math.abs(N[0])<.9?[1,0,0]:[0,1,0];u=V3.norm(V3.sub(u,V3.mul(N,V3.dot(u,N))));const w=V3.cross(N,u);
+  const P=Q.map(i=>{const d=V3.sub(V[i],o);return [V3.dot(d,u),V3.dot(d,w)];}),cr=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);
+  const X=(a,b,c,d)=>{const d1=cr(c,d,a),d2=cr(c,d,b),d3=cr(a,b,c),d4=cr(a,b,d);return d1&&d2&&d3&&d4&&(d1>0)!==(d2>0)&&(d3>0)!==(d4>0);};
+  for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(X(P[i],P[(i+1)%n],P[j],P[(j+1)%n]))return true;}return false;}
+function selfXPolys(E){const r=[];E.P.forEach((Q,i)=>{if(polySelfX(E.V,Q))r.push(i);});return r;}
+// есть ли у граней общее ребро
+function polysAdjacent(E,a,b){const A=E.P[a],B=E.P[b];if(!A||!B||a===b)return false;const s=new Set();B.forEach((x,k)=>s.add(B[(k+1)%B.length]+'_'+x));return A.some((x,k)=>s.has(x+'_'+A[(k+1)%A.length]));}
+// контур двух граней без общих рёбер; null — общих рёбер нет или их несколько участков (вышла бы дыра)
+function mergeTwo(P,a,b){const es=new Map();[P[a],P[b]].forEach(Q=>Q.forEach((x,k)=>{const y=Q[(k+1)%Q.length];es.set(x+'_'+y,[x,y]);}));
+  const nx=new Map();let cut=0,bad=false;es.forEach(([x,y])=>{if(es.has(y+'_'+x)){cut++;return;}if(nx.has(x))bad=true;nx.set(x,y);});if(!cut||bad)return null;
+  const st=nx.keys().next().value,L=[];let v=st;while(v!==undefined&&L.length<=nx.size){L.push(v);v=nx.get(v);if(v===st)break;}
+  return L.length===nx.size&&L.length>=3?L:null;}
+// грань, в которой больше всего этих точек (номера граней после правок сдвигаются)
+function findPoly(E,vs){let bi=-1,bn=0;E.P.forEach((Q,i)=>{const n=Q.filter(x=>vs.includes(x)).length;if(n>bn){bn=n;bi=i;}});return bi;}
+// убрать шов: грани a и b — одна; с симметрией — и зеркальные; потом всё выравниваем в плоскость
+function mergePolys(E,a,b,sym){E=ecopy(E);const mm=sym?mirrorMap(E.V):null,ma=sym?mirrorPoly(E,a,mm):-1,mb=sym?mirrorPoly(E,b,mm):-1,A2=ma>=0?E.P[ma].slice():null,B2=mb>=0?E.P[mb].slice():null;
+  const one=(i,j)=>{const L=mergeTwo(E.P,i,j);if(!L)return false;E.P.splice(Math.max(i,j),1);E.P.splice(Math.min(i,j),1);E.P.push(L);return true;};
+  if(!one(a,b))return null;
+  if(A2&&B2&&!(ma===a&&mb===b)&&!(ma===b&&mb===a)){const i=findPoly(E,A2),j=findPoly(E,B2);if(i>=0&&j>=0&&i!==j)one(i,j);}
+  return flattenAll(compact(E),sym);}
+// провести шов: грань pi режется по прямой между её точками va и vb (не соседними); с симметрией — и зеркальная
+function cutPoly(E,pi,va,vb,sym){E=ecopy(E);const mm=sym?mirrorMap(E.V):null,mr=i=>mm[i]===-2?i:mm[i],jobs=[[va,vb]];
+  if(sym&&mm[va]!==-1&&mm[vb]!==-1){const a2=mr(va),b2=mr(vb);if(!(a2===va&&b2===vb)&&!(a2===vb&&b2===va))jobs.push([a2,b2]);}
+  let done=0;jobs.forEach(([a,b],k)=>{const i=k?E.P.findIndex(Q=>Q.includes(a)&&Q.includes(b)&&!polyHasEdge(Q,a,b)):pi;if(i<0)return;const Q=E.P[i],ia=Q.indexOf(a),ib=Q.indexOf(b),n=Q.length;
+    if(ia<0||ib<0||ia===ib||(ia+1)%n===ib||(ib+1)%n===ia)return;const A=[],B=[];for(let j=ia;;j=(j+1)%n){A.push(Q[j]);if(j===ib)break;}for(let j=ib;;j=(j+1)%n){B.push(Q[j]);if(j===ia)break;}
+    E.P.splice(i,1,A,B);done++;});
+  return done?E:null;}
+const polyHasEdge=(Q,a,b)=>Q.some((x,k)=>{const y=Q[(k+1)%Q.length];return x===a&&y===b||x===b&&y===a;});
+// новая точка p на ребре a–b (у всех граней с этим ребром); с симметрией — и на зеркальном ребре. Возвращает {E,m} — m номер точки
+function addEdgePoint(E,a,b,p,sym){E=ecopy(E);const mm=sym?mirrorMap(E.V):null,q=p.slice();
+  const midE=sym&&(mm[a]===-2&&mm[b]===-2||mm[a]===b);if(midE)q[0]=0;
+  const ins=(x,y,r)=>{E.V.push(r);const m=E.V.length-1;insertOnEdge(E,x,y,m);return m;},m=ins(a,b,q);
+  if(sym&&!midE&&mm[a]!==-1&&mm[b]!==-1){const a2=mm[a]===-2?a:mm[a],b2=mm[b]===-2?b:mm[b];if(!(a2===a&&b2===b)&&!(a2===b&&b2===a))ins(a2,b2,[-q[0],q[1],q[2]]);}
+  return {E,m};}

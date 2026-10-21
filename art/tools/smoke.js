@@ -74,4 +74,17 @@ for(const [id,n0] of [['doberman5',508],['doberman6',1028]]){run(`DM=figureMesh(
   EG2=new Map();MG.F.forEach(f=>{for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+"_"+b:b+"_"+a;EG2.set(key,(EG2.get(key)||0)+1);}})`);
   console.log(`     ${id}: упрощение до 300 → деталей ${run('n1')}, слить 12° → многоугольников ${run('G.P.length')}, деталей ${run('RG.parts.length')}, неплоских ${run('nonPlanar({V:VG,P:G.P},.5).length')}`);
   ok(run('RG.parts.length')<run('n1')*.8&&run('nonPlanar({V:VG,P:G.P},.5).length')===0&&run('[...EG2.values()].every(n=>n===2)')&&Math.abs(run('meshBox(MG.V).size[1]')-run('meshBox(FM.V).size[1]'))<1e-6,id+': слить 12° — деталей меньше на 20%+, все грани плоские, сетка замкнута, размер тот же');}
+// швы в редакторе: убрать и провести
+run(`EB=blankBox(300,400,260);tp=EB.P.findIndex(Q=>Q.every(i=>EB.V[i][1]===400));ES=splitPoly(EB,tp,true);hv=ES.P.map((Q,i)=>i).filter(i=>ES.P[i].every(q=>ES.V[q][1]===400));EM=mergePolys(ES,hv[0],hv[1],true)`);
+ok(run("ES.P.length")===7&&run("EM.P.length")===6&&run("nonPlanar(EM).length")===0,"убрать шов: две половинки верха куба снова одна грань");
+run(`EC=cutPoly(EB,tp,EB.P[tp][0],EB.P[tp][2],true);sd=EB.P.findIndex(Q=>Q.every(i=>EB.V[i][0]===150));EC2=cutPoly(EB,sd,EB.P[sd][0],EB.P[sd][2],true)`);
+ok(run("EC.P.length")===7&&run("nonPlanar(EC).length")===0&&run("EC2.P.length")===8,"провести шов: верх по диагонали — 7 граней, бок с симметрией — разрезан и зеркальный (8)");
+run(`ea=EB.P[sd][0];eb=EB.P[sd][1];EP=addEdgePoint(EB,ea,eb,V3.mul(V3.add(EB.V[ea],EB.V[eb]),.5),true)`);ok(run("EP.E.V.length")===10&&run("mirrorMap(EP.E.V).every(j=>j!==-1)"),"точка на ребре — и зеркальная, симметрия цела");
+// Доберман 7 — плиты сняты с модели Meshy
+run(`D7=figureMesh("doberman7");R7=buildParts(D7,1.5,1.5);C7=R7.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,2,1,true)}));N7=nest(C7.filter(c=>!c.bad),2500,1250,3,10,2.5,2,true);
+  ES7=new Set();D7.P.forEach(Q=>Q.forEach((a,k)=>ES7.add(a+"_"+Q[(k+1)%Q.length])));open7=D7.P.reduce((n,Q)=>n+Q.filter((a,k)=>!ES7.has(Q[(k+1)%Q.length]+"_"+a)).length,0)`);
+console.log("     доберман 7: граней "+run("D7.P.length")+", деталей "+run("R7.parts.length")+", габарит "+run("meshBox(D7.V).size.map(Math.round).join('×')")+", самопересечений "+run("selfXPolys(D7).length")+", открытых рёбер (глаза) "+run("open7")+", листов "+run("N7.sheets.length"));
+ok(run("nonPlanar({V:D7.V,P:D7.P},1).length")===0&&run("mirrorMap(D7.V).every(j=>j!==-1)")&&run("selfXPolys(D7).length")<=2&&run("R7.parts.every(p=>p.minW>=14.5)"),"доберман 7: все грани плоские, симметричен, самопересечений не больше 2, узких нет");
+ok(run("C7.filter(c=>c.bad).length")===0&&run("N7.too.length")===0&&run(`(()=>{let m=Infinity;N7.sheets.forEach(sh=>sh.items.forEach((a,i)=>sh.items.forEach((b,j)=>{if(j>i)m=Math.min(m,polyGap(a.pts,b.pts));})));return m;})()`)>=3-1e-9,"доберман 7: контуры реза целые, раскладка без наложений");
+ok(run("open7")>0&&run("open7")<=40&&run("buildParts(polyBase(fitMesh(D7,{W:400,H:700,D:300}).V,D7.P),1.5,1.5).parts.length")===run("R7.parts.length"),"доберман 7: открыты только прорези глаз; растянут 400×700×300 — деталей столько же");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

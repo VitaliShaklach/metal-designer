@@ -9,10 +9,14 @@ const area2=P=>{let a=0;P.forEach((p,i)=>{const q=P[(i+1)%P.length];a+=p[0]*q[1]
 function cutContour(p,t,gap,useT){const P=p.pts,n=P.length;if(n<3)return {pts:[],bad:true,s:[]};const ccw=area2(P)>0?1:-1;
   const s=p.segs.map(g=>edgeSetback(g,t,gap,useT));
   const L=P.map((a,i)=>{const b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l*ccw,ny=dx/l*ccw;return {p:[a[0]+nx*s[i],a[1]+ny*s[i]],d:[dx/l,dy/l]};});
-  const Q=L.map((cur,i)=>{const pr=L[(i+n-1)%n],den=pr.d[0]*cur.d[1]-pr.d[1]*cur.d[0];
-    if(Math.abs(den)<1e-9)return cur.p.slice();const w=[cur.p[0]-pr.p[0],cur.p[1]-pr.p[1]],k=(w[0]*cur.d[1]-w[1]*cur.d[0])/den;return [pr.p[0]+pr.d[0]*k,pr.p[1]+pr.d[1]*k];});
-  // выродилась: перевернулась сторона или площадь стала ≤ 0
-  let bad=area2(Q)*ccw<=1;Q.forEach((a,i)=>{const b=Q[(i+1)%n];if((b[0]-a[0])*L[i].d[0]+(b[1]-a[1])*L[i].d[1]<=0)bad=true;});
+  // стороны сдвинуты внутрь; соседние пересекаем. Короткая сторона между острыми углами при сдвиге выворачивается — её убираем, соседи сходятся
+  const meet=(pr,cur)=>{const den=pr.d[0]*cur.d[1]-pr.d[1]*cur.d[0];if(Math.abs(den)<1e-9)return cur.p.slice();const w=[cur.p[0]-pr.p[0],cur.p[1]-pr.p[1]],k=(w[0]*cur.d[1]-w[1]*cur.d[0])/den;return [pr.p[0]+pr.d[0]*k,pr.p[1]+pr.d[1]*k];};
+  const act=L.map((_,i)=>i);let Q;
+  for(;;){const m=act.length;Q=act.map((ci,k)=>meet(L[act[(k+m-1)%m]],L[ci]));
+    let worst=-1,wv=0;act.forEach((ci,k)=>{const a=Q[k],b=Q[(k+1)%m],v=(b[0]-a[0])*L[ci].d[0]+(b[1]-a[1])*L[ci].d[1];if(v<wv){wv=v;worst=k;}});
+    if(worst<0||m<=3)break;act.splice(worst,1);}
+  // выродилась: сторона всё равно перевернулась или площадь ≤ 0
+  let bad=act.length<3||area2(Q)*ccw<=1;Q.forEach((a,i)=>{const b=Q[(i+1)%Q.length];if((b[0]-a[0])*L[act[i]].d[0]+(b[1]-a[1])*L[act[i]].d[1]<=0)bad=true;});
   return {pts:Q,bad,s};}
 
 // ---------- раскладка по форме ----------

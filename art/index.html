@@ -55,9 +55,10 @@
           <label class="chk"><input type="checkbox" id="cEdit"><span>Править фигуру<small>На модели появятся точки: клик по точке — выбрать, тянуть мышкой — двигать. Клик по грани — выбрать грань</small></span></label>
           <div id="edBox" hidden>
             <label class="chk"><input type="checkbox" id="cSym" checked><span>Симметрия<small>Левая половина повторяет правую — для животных удобно</small></span></label>
+            <label class="chk" id="refRow" hidden><input type="checkbox" id="cRef"><span>Швы эталона</span></label>
             <div id="edSel" class="edsel"></div>
             <div class="row2"><label>На сколько, мм<input class="inp" id="edD" type="number" value="30" min="1" step="5"></label><span></span></div>
-            <div class="edbtns" id="edOps"><button type="button" data-op="extrude">Выдавить</button><button type="button" data-op="inset">Вдавить</button><button type="button" data-op="bump">Бугор</button><button type="button" data-op="pit">Впадина</button><button type="button" data-op="split">Разрезать пополам</button><button type="button" data-op="del">Удалить грань</button></div>
+            <div class="edbtns" id="edOps"><button type="button" data-op="extrude">Выдавить</button><button type="button" data-op="inset">Вдавить</button><button type="button" data-op="bump">Бугор</button><button type="button" data-op="pit">Впадина</button><button type="button" data-op="split">Разрезать пополам</button><button type="button" data-op="del">Удалить грань</button><button type="button" data-op="merge">Убрать шов</button><button type="button" data-op="cut">Провести шов</button></div>
             <p class="note" id="edPlan"></p>
             <div class="btns" id="edFix"><button id="bFlat" type="button">Выровнять грани</button><button id="bTri" type="button">Разбить на треугольники</button></div>
             <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
