@@ -19,6 +19,29 @@ function cutContour(p,t,gap,useT){const P=p.pts,n=P.length;if(n<3)return {pts:[]
   let bad=act.length<3||area2(Q)*ccw<=1;Q.forEach((a,i)=>{const b=Q[(i+1)%Q.length];if((b[0]-a[0])*L[act[i]].d[0]+(b[1]-a[1])*L[act[i]].d[1]<=0)bad=true;});
   return {pts:Q,bad,s};}
 
+/* ---------- подложка за прорезью (глаз): открытая петля не у стены → плоская деталь ----------
+   Контур — выпуклая оболочка прорези + нахлёст BACK_LAP; приваривается изнутри по краю прорези, утоплена на BACK_DEPTH */
+const BACK_LAP=8,BACK_DEPTH=8;
+function openLoops(V,F){const E=new Set();F.forEach(f=>{for(let k=0;k<3;k++)E.add(f[k]+'_'+f[(k+1)%3]);});const nx=new Map();F.forEach(f=>{for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3];if(!E.has(b+'_'+a))nx.set(a,b);}});
+  const used=new Set(),L=[];nx.forEach((_,s)=>{if(used.has(s))return;const Q=[];let v=s;while(v!==undefined&&!used.has(v)){used.add(v);Q.push(v);v=nx.get(v);}if(Q.length>=3)L.push(Q);});return L;}
+// выпуклый многоугольник шире на d (стороны сдвинуты наружу)
+function growConvex(P,d){const n=P.length,ccw=area2(P)>0?1:-1,L=P.map((a,i)=>{const b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;return {p:[a[0]+dy/l*ccw*d,a[1]-dx/l*ccw*d],d:[dx/l,dy/l]};});
+  return L.map((cur,i)=>{const pr=L[(i+n-1)%n],den=pr.d[0]*cur.d[1]-pr.d[1]*cur.d[0];if(Math.abs(den)<1e-9)return cur.p.slice();const w=[cur.p[0]-pr.p[0],cur.p[1]-pr.p[1]],k=(w[0]*cur.d[1]-w[1]*cur.d[0])/den;return [pr.p[0]+pr.d[0]*k,pr.p[1]+pr.d[1]*k];});}
+// добавить подложки в R.parts; вернуть длину их швов (по краю прорези)
+function addBacking(R,M3){const {V,F}=M3;if(!V.length)return 0;const ctr=V3.mul(V.reduce((s,p)=>V3.add(s,p),[0,0,0]),1/V.length);let wl=0;
+  openLoops(V,F).forEach(Q=>{if(Q.every(i=>Math.abs(V[i][2])<1))return;   // край у стены — не прорезь
+    let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});n=V3.norm(n);
+    const c=V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);if(V3.dot(n,V3.sub(c,ctr))<0)n=V3.mul(n,-1);
+    let u=V3.sub(V[Q[0]],c);u=V3.norm(V3.sub(u,V3.mul(n,V3.dot(u,n))));const w=V3.cross(n,u);
+    const G=growConvex(convexHull(Q.map(i=>{const d=V3.sub(V[i],c);return [V3.dot(d,u),V3.dot(d,w)];})),BACK_LAP);
+    // как у flatten: узкая сторона — по Y, от нуля
+    let bw=Infinity,ba=0;G.forEach((p,i)=>{const q=G[(i+1)%G.length],a=Math.atan2(q[1]-p[1],q[0]-p[0]),cs=Math.cos(a),sn=Math.sin(a);let mn=1e9,mx=-1e9;G.forEach(h=>{const y=-sn*h[0]+cs*h[1];mn=Math.min(mn,y);mx=Math.max(mx,y);});if(mx-mn<bw){bw=mx-mn;ba=a;}});
+    const cs=Math.cos(-ba),sn=Math.sin(-ba);let pts=G.map(p=>[cs*p[0]-sn*p[1],sn*p[0]+cs*p[1]]);const mnx=Math.min(...pts.map(p=>p[0])),mny=Math.min(...pts.map(p=>p[1]));pts=pts.map(p=>[p[0]-mnx,p[1]-mny]);
+    const segs=pts.map((p,i)=>({len:Math.hypot(pts[(i+1)%pts.length][0]-p[0],pts[(i+1)%pts.length][1]-p[1]),nb:-1}));
+    Q.forEach((i,j)=>{wl+=V3.len(V3.sub(V[Q[(j+1)%Q.length]],V[i]));});
+    R.parts.push({id:R.parts.length,no:R.parts.length+1,back:true,tris:[],n,c,area:Math.abs(area2(pts)),loop:[],full:Q.slice(),holes:0,adj:[],pts,segs,L:Math.max(...pts.map(p=>p[0])),W:Math.max(...pts.map(p=>p[1])),minW:bw,perim:segs.reduce((a,g)=>a+g.len,0)});});
+  return wl;}
+
 // ---------- раскладка по форме ----------
 // Лист — сетка клеток cell мм. Каждая деталь пробуется во всех положениях «сторона вдоль листа» (и перевёрнутой);
 // ставим туда, где правый край раскладки получается ближе всего к началу листа — детали заполняют пустоты между собой.

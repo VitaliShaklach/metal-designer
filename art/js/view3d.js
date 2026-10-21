@@ -20,6 +20,9 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
     f.forEach((v,k)=>{pos.set(V[v],fi*9+k*3);col.set([tmp.r,tmp.g,tmp.b],fi*9+k*3);});});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
   const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,metalness:.45,roughness:.6,side:THREE.DoubleSide,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));mesh.userData.pick=true;root.add(mesh);
+  // подложки за прорезями — тёмные, утоплены внутрь
+  if(o.backs&&o.backs.length){const bp=[];o.backs.forEach(P=>{const idx=P.map((_,i)=>i);earClip(P,idx).forEach(t=>t.forEach(i=>bp.push(...P[i])));});
+    const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.computeVertexNormals();root.add(new THREE.Mesh(bg,new THREE.MeshStandardMaterial({color:0x1c1e20,metalness:.3,roughness:.8,side:THREE.DoubleSide})));}
   // швы между деталями — тёмные линии; открытый край — светлее
   const L=[],Lo=[];R.edges.forEach(e=>(e.open?Lo:L).push(...V[e.a],...V[e.b]));
   const seg=(arr,c,op)=>{if(!arr.length)return;const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));root.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:op})));};

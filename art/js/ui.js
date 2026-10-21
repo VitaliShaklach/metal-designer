@@ -39,7 +39,7 @@ function ensureNest(cb){if(CUR&&CUR.N){cb&&cb();return;}if(cb)NEST.wait.push(cb)
     NEST.key=key;NEST.N=v.value;NEST.run=null;if(CUR&&NEST.want===key)CUR.N=v.value;const w=NEST.wait;NEST.wait=[];w.forEach(f=>f());if(!$('tab-sum').hidden)sumTable();};
   setTimeout(step,0);}
 function compute0(){const b=ST.base;let S=b;
-  if(isPoly()){const M3={V:b.V,F:b.F,T:b.T},R=buildParts(M3,1.5,1.5),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
+  if(isPoly()){const M3={V:b.V,F:b.F,T:b.T},R=buildParts(M3,1.5,1.5),wl=addBacking(R,M3),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});T.weld+=wl;T.open=Math.max(0,T.open-wl);
     CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5)),selfx:new Set(selfXPolys(E()))};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
@@ -54,7 +54,7 @@ function mergeFlat(M3){const G=dissolve(M3,ST.diss,Math.max(ST.dims.W,ST.dims.H,
   const V=planarize(G.V,G.P,(i,q)=>{if(open.has(i)&&Math.abs(G.V[i][2])<.5)q[2]=0;return q;},400);return fitMesh(polyMesh(V,G.P),ST.dims);}
 
 function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
-  build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null});edUI();refUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
+  build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();refUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
   stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
   $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],[`${T.n}`,'деталей'],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(T.weld/1000,1)} м`,'швов']]
@@ -84,13 +84,13 @@ function partSVG(p,big){const P=p.pts;if(!P.length)return '';const pad=big?Math.
   return s+'</svg>';}
 function selUI(){const p=ST.sel>=0?CUR.R.parts[ST.sel]:null;if(!p){$('selBox').innerHTML='<p class="note">Кликните грань на модели или строку в таблице</p>';return;}
   const m=p.area*1e-6*ST.t*1e-3*(DENS[ST.mat]||7850);
-  $('selBox').innerHTML=`<p class="selh">Деталь № ${p.no}${CUR.small.has(p.id)?' <span class="bad">узкая</span>':''}</p>${partSVG(p,true)}
+  $('selBox').innerHTML=`<p class="selh">Деталь № ${p.no}${p.back?' — подложка за прорезью (приварить изнутри по краю)':''}${CUR.small.has(p.id)?' <span class="bad">узкая</span>':''}</p>${partSVG(p,true)}
     <p class="note">Габарит ${Math.round(p.L)} × ${Math.round(p.W)} мм · ширина ${Math.round(p.minW)} мм · ${fmt(p.area/100,1)} см² · ${fmt(m,3)} кг · рез ${Math.round(p.perim)} мм</p>
     <p class="note">Сварка: ${p.segs.filter(g=>g.nb>=0).map(g=>`к № ${CUR.R.parts[g.nb].no} — ${Math.round(g.len)} мм, угол ${angT(g.dih)}`).join('; ')||'—'}${p.segs.some(g=>g.nb<0)?'. Открытый край — '+Math.round(p.segs.filter(g=>g.nb<0).reduce((s,g)=>s+g.len,0))+' мм':''}</p>`;}
 function partsTable(){const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),dens=DENS[ST.mat]||7850;
   $('parts').innerHTML=`<thead><tr><th>№</th><th>Эскиз</th><th>Размер, мм</th><th>Ширина</th><th>Площадь, см²</th><th>Масса, кг</th><th>Рез, мм</th><th>Соседи (угол)</th></tr></thead><tbody>`+
     ps.map(p=>`<tr data-p="${p.id}" class="${p.id===ST.sel?'on':''}${CUR.small.has(p.id)?' bad':''}"><td>${p.no}</td><td>${partSVG(p)}</td><td>${Math.round(p.L)} × ${Math.round(p.W)}</td><td>${Math.round(p.minW)}</td><td>${fmt(p.area/100,1)}</td><td>${fmt(p.area*1e-9*ST.t*dens,3)}</td><td>${Math.round(p.perim)}</td>
-      <td class="nbs">${p.segs.filter(g=>g.nb>=0).map(g=>`${CUR.R.parts[g.nb].no}<small> ${angT(g.dih)}</small>`).join(', ')}</td></tr>`).join('')+'</tbody>';}
+      <td class="nbs">${p.back?'подложка глаза':p.segs.filter(g=>g.nb>=0).map(g=>`${CUR.R.parts[g.nb].no}<small> ${angT(g.dih)}</small>`).join(', ')}</td></tr>`).join('')+'</tbody>';}
 function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
   if(CUR.small.size)warn.push(`${CUR.small.size} дет. уже ${ST.minW} мм — подсвечены красным. Уменьшите число граней или увеличьте фигуру`);
   const H=ST.dims.H;if(ST.t<=1&&H>350||ST.t<1.5&&H>700)warn.push(`Лист ${ST.t} мм на фигуре ${H} мм — поведёт от сварки. Варите короткими прихватками вразбежку или возьмите толще`);
@@ -221,7 +221,7 @@ function refUI(){const id=ST.fig,f=FIGURES[id],has=!!(f&&f.ref);$('refRow').hidd
   const b0=REFB[id]||(REFB[id]=meshBox(figureMesh(id).V)),b1=meshBox(CUR.M3.V),s=[0,1,2].map(k=>b1.size[k]/(b0.size[k]||1)),c0=(b0.min[0]+b0.max[0])/2,c1=(b1.min[0]+b1.max[0])/2,out=new Float32Array(pts.length);
   for(let i=0;i<pts.length;i+=3){out[i]=(pts[i]/10-c0)*s[0]+c1;out[i+1]=(pts[i+1]/10-b0.min[1])*s[1]+b1.min[1];out[i+2]=(pts[i+2]/10-b0.min[2])*s[2]+b1.min[2];}setRef(out);}
 $('cRef').addEventListener('change',e=>{ST.ref=e.target.checked;const f=FIGURES[ST.fig];
-  if(ST.ref&&f&&f.ref&&!(window.REFS&&REFS[f.ref])){const s=document.createElement('script');s.src='js/ref-'+f.ref+'.js?v=0.4.0';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
+  if(ST.ref&&f&&f.ref&&!(window.REFS&&REFS[f.ref])){const s=document.createElement('script');s.src='js/ref-'+f.ref+'.js?v=0.5.0';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
 (()=>{if(!ok)return;const cv=renderer.domElement,tag=$('hovTag');let down=null,drag=null,raf=0;
