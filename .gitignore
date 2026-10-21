@@ -10,3 +10,7 @@ node_modules/
 !.claude/skills/
 Thumbs.db
 .DS_Store
+
+# исходники Meshy и рабочие файлы конвейера плит — большие
+art/tools/plates/src/
+art/tools/plates/out/
