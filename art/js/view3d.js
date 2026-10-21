@@ -1,6 +1,6 @@
 /* ---------- 3D: грани-детали, швы, номера, выбор ---------- */
 const stage=document.getElementById('stage');
-let renderer,scene,camera,controls,labels,root,refG,ok=true,camAnim=null,need=3;
+let renderer,scene,camera,controls,labels,root,ok=true,camAnim=null,need=3;
 function req3D(){need=Math.max(need,3);}
 try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);}catch(e){ok=false;}
 if(ok){scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,5,30000);camera.position.set(700,600,1400);
@@ -9,17 +9,20 @@ if(ok){scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,5,30000);
   scene.add(new THREE.HemisphereLight(0xf2f4f5,0x8f8a84,.75));
   const d=new THREE.DirectionalLight(0xffffff,.85);d.position.set(900,1600,1800);scene.add(d);
   const d2=new THREE.DirectionalLight(0xbfd0e0,.35);d2.position.set(-1500,500,-900);scene.add(d2);
-  root=new THREE.Group();scene.add(root);refG=new THREE.Group();scene.add(refG);
+  root=new THREE.Group();scene.add(root);
   const grid=new THREE.GridHelper(6000,60,0xb9c0bd,0xd5dad7);grid.material.transparent=true;grid.material.opacity=.5;scene.add(grid);}
 const COL={steel:[0x6b737b,0x8a929a],inox:[0x9aa3ab,0xc2c9cf],corten:[0x8a4a2a,0xa8623a],alu:[0xa9b0b6,0xd0d5d9]};
 let LBL=[];
 // R — результат buildParts, M3 — сетка в мм; o: {sel, small:Set, nums, mat}
 function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const c=root.children.pop();c.geometry&&c.geometry.dispose();if(c.element)c.element.remove();}LBL=[];
   const {V,F}=M3,pos=new Float32Array(F.length*9),col=new Float32Array(F.length*9),[c0,c1]=(COL[o.mat]||COL.steel).map(x=>new THREE.Color(x)),sel=new THREE.Color(0xd0561f),red=new THREE.Color(0xd01f1f),amb=new THREE.Color(0xe0a020),blu=new THREE.Color(0x3a6fe0),tmp=new THREE.Color();
-  F.forEach((f,fi)=>{const pi=R.partOf[fi],h=((pi*2654435761)>>>0)/4294967296;tmp.copy(c0).lerp(c1,h);if(o.small&&o.small.has(pi))tmp.copy(red);if(o.warn&&o.warn.has(fi))tmp.copy(amb);if(o.blue&&o.blue.has(fi))tmp.copy(blu);if(o.hi?o.hi.has(fi):pi===o.sel)tmp.copy(sel);
+  // калька (o.tex): грани белые — цвет даёт текстура; выделения — подкраска поверх рисунка
+  const tx=o.tex,wh=new THREE.Color(1,1,1),tint=c=>tx?tmp.copy(wh).lerp(c,.6):tmp.copy(c);
+  F.forEach((f,fi)=>{const pi=R.partOf[fi],h=((pi*2654435761)>>>0)/4294967296;if(tx)tmp.copy(wh);else tmp.copy(c0).lerp(c1,h);if(o.small&&o.small.has(pi))tint(red);if(o.warn&&o.warn.has(fi))tint(amb);if(o.blue&&o.blue.has(fi))tint(blu);if(o.hi?o.hi.has(fi):pi===o.sel)tint(sel);
     f.forEach((v,k)=>{pos.set(V[v],fi*9+k*3);col.set([tmp.r,tmp.g,tmp.b],fi*9+k*3);});});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
-  const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,metalness:.45,roughness:.6,side:THREE.DoubleSide,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));mesh.userData.pick=true;root.add(mesh);
+  let map=null;if(tx){g.setAttribute('uv',new THREE.BufferAttribute(tx.uv,2));if(!tx.tex){tx.tex=new THREE.DataTexture(tx.data,tx.W,tx.H,THREE.RGBAFormat);tx.tex.magFilter=tx.tex.minFilter=THREE.LinearFilter;tx.tex.generateMipmaps=false;tx.tex.needsUpdate=true;}map=tx.tex;}
+  const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,map,metalness:tx?0:.45,roughness:tx?.85:.6,side:THREE.DoubleSide,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));mesh.userData.pick=true;root.add(mesh);
   // подложки за прорезями — тёмные, утоплены внутрь
   if(o.backs&&o.backs.length){const bp=[];o.backs.forEach(P=>{const idx=P.map((_,i)=>i);earClip(P,idx).forEach(t=>t.forEach(i=>bp.push(...P[i])));});
     const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.computeVertexNormals();root.add(new THREE.Mesh(bg,new THREE.MeshStandardMaterial({color:0x1c1e20,metalness:.3,roughness:.8,side:THREE.DoubleSide})));}
@@ -49,9 +52,6 @@ function pickTri(ev){if(!ok)return -1;const r=renderer.domElement.getBoundingCli
 // точка поверхности под курсором
 function pickHit(ev){if(!ok)return null;const r=renderer.domElement.getBoundingClientRect(),m=new THREE.Vector2((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1),rc=new THREE.Raycaster();rc.setFromCamera(m,camera);
   const h=rc.intersectObjects(root.children.filter(o=>o.userData.pick),false)[0];return h?[h.point.x,h.point.y,h.point.z]:null;}
-// швы эталона — оранжевые точки поверх модели (null — убрать)
-function setRef(pts){if(!ok)return;req3D();while(refG.children.length){const c=refG.children.pop();c.geometry.dispose();}if(!pts)return;
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pts,3));refG.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xff7a1a,size:3,sizeAttenuation:false})));}
 // точка под курсором (ближе 14 px и не за гранью)
 function pickVert(ev,V){if(!ok)return -1;const r=renderer.domElement.getBoundingClientRect(),mx=ev.clientX-r.left,my=ev.clientY-r.top,m=new THREE.Vector2(mx/r.width*2-1,-my/r.height*2+1),rc=new THREE.Raycaster();rc.setFromCamera(m,camera);
   const h=rc.intersectObjects(root.children.filter(o=>o.userData.pick),false)[0],hd=h?h.distance:Infinity;let best=-1,bd=14;const q=new THREE.Vector3();

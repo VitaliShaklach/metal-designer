@@ -89,4 +89,19 @@ console.log("     доберман 7: граней "+run("D7.P.length")+", де�
 ok(run("nonPlanar({V:D7.V,P:D7.P},1).length")===0&&run("mirrorMap(D7.V).every(j=>j!==-1)")&&run("selfXPolys(D7).length")<=2&&run("R7.parts.every(p=>p.minW>=14.5)"),"доберман 7: все грани плоские, симметричен, самопересечений не больше 2, узких нет");
 ok(run("C7.filter(c=>c.bad).length")===0&&run("N7.too.length")===0&&run(`(()=>{let m=Infinity;N7.sheets.forEach(sh=>sh.items.forEach((a,i)=>sh.items.forEach((b,j)=>{if(j>i)m=Math.min(m,polyGap(a.pts,b.pts));})));return m;})()`)>=3-1e-9,"доберман 7: контуры реза целые, раскладка без наложений");
 ok(run("open7")>0&&run("open7")<=40&&run("buildParts(polyBase(fitMesh(D7,{W:400,H:700,D:300}).V,D7.P),1.5,1.5).parts.length")===run("R7.parts.length"),"доберман 7: открыты только прорези глаз; растянут 400×700×300 — деталей столько же");
+// калька: облако эталона на гранях Добермана 7, магнит к швам
+c.atob=atob;c.window=c;vm.runInContext(fs.readFileSync(P+'trace.js','utf8')+'\n;\n'+fs.readFileSync(P+'trace-doberman7.js','utf8'),c);
+run(`TT=traceLoad(TRACE.doberman7);B7=meshBox(D7.V);AT=traceAtlas(D7.V,D7.P,D7.F,D7.T,traceMap(B7,B7),TT);
+  EC7=new Map();D7.P.forEach(Q=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length],key=a<b?a+"_"+b:b+"_"+a;EC7.set(key,(EC7.get(key)||0)+1);}));
+  E2=[...EC7].filter(e=>e[1]===2).map(e=>e[0].split("_").map(Number));
+  near7=E2.filter(([a,b])=>{const p=V3.mul(V3.add(D7.V[a],D7.V[b]),.5);return traceNear(TT,p[0],p[1],p[2],3,1)>=0;}).length/E2.length;
+  D7s=polyBase(fitMesh(D7,{W:400,H:700,D:300}).V,D7.P);AT2=traceAtlas(D7s.V,D7s.P,D7s.F,D7s.T,traceMap(B7,meshBox(D7s.V)),TT);`);
+console.log("     калька: точек "+run("TT.n")+", швов "+run("TT.seams")+", атлас "+run("AT.W+'×'+AT.H")+", окрашено "+run("(AT.cover*100).toFixed(1)")+"%, рёбер у шва эталона "+run("(near7*100).toFixed(0)")+"%");
+ok(run("TT.n")>80000&&run("TT.seams")>3000,"калька: облако эталона загружено, швы найдены");
+ok(run("AT.uv.every(x=>x>=0&&x<=1)")&&run("AT.cover")>.95&&run("Math.abs(AT2.cover-AT.cover)")<.02,"калька: uv в атласе, окрашено больше 95% граней, растянутая фигура — так же");
+ok(run("near7")>=.6,"калька совпадает с фигурой: у 60%+ наших рёбер рядом шов эталона");
+// магнит на плоской кальке: серое поле, светлый шов по x=51; ребро поперёк шва, ребро вдоль шва, клик вдали
+{const pts=[];for(let x=1;x<200;x+=2)for(let y=1;y<200;y+=2){const s=x===51?225:128;pts.push([x,y,0,s,s,s]);}const bf=Buffer.alloc(pts.length*9);pts.forEach((p,i)=>{for(let k=0;k<3;k++)bf.writeInt16LE(p[k]*10,i*9+k*2);bf[i*9+6]=p[3];bf[i*9+7]=p[4];bf[i*9+8]=p[5];});c.B64=bf.toString('base64');}
+run(`TP=traceLoad(B64);ID=p=>p.slice();ID.s=[1,1,1];mg1=seamOnEdge([10,40,0],[110,60,0],[60,52,0],ID,TP);mg2=seamOnEdge([51,20,0],[51,180,0],[51,100,0],ID,TP);mg3=seamOnEdge([10,40,0],[110,60,0],[90,56,0],ID,TP);`);
+ok(run("TP.seams")===100&&run("mg1&&Math.abs(mg1[0]-51)<1.5&&Math.abs(mg1[1]-48.2)<1")&&run("mg2")===null&&run("mg3")===null,"магнит: точка встаёт туда, где шов эталона пересекает ребро; шов вдоль ребра и далёкий клик — без притяжения");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
