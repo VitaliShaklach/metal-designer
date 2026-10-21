@@ -120,12 +120,12 @@ function fitMesh(m,dims){const b=meshBox(m.V),s=[dims.W/(b.size[0]||1),dims.H/(b
 
 /* ---------- детали: соседние треугольники в одной плоскости; m.T (из какой грани-многоугольника) — треугольники одной грани всегда вместе ---------- */
 const DENS={steel:7850,inox:7900,corten:7850,alu:2700};
-function buildParts(m,tolDeg=.5,tolMm=.3){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),cos=Math.cos(tolDeg*Math.PI/180);
+function buildParts(m,tolDeg=.5,tolMm=.3){const {V,F}=m,SK=new Set((m.S||[]).flatMap(([a,b])=>[a+'_'+b,b+'_'+a])),N=F.map(f=>V3.norm(triN(V,f))),cos=Math.cos(tolDeg*Math.PI/180);
   const E=new Map(),ek=(a,b)=>a<b?a+'_'+b:b+'_'+a;F.forEach((f,fi)=>{for(let k=0;k<3;k++){const key=ek(f[k],f[(k+1)%3]);(E.get(key)||E.set(key,[]).get(key)).push(fi);}});
   const part=new Int32Array(F.length).fill(-1),groups=[];
   F.forEach((f,s)=>{if(part[s]>=0)return;const g=[s],pl=V3.dot(N[s],V[f[0]]);part[s]=groups.length;
     for(let q=0;q<g.length;q++){const fi=g[q],ff=F[fi];for(let k=0;k<3;k++)(E.get(ek(ff[k],ff[(k+1)%3]))||[]).forEach(o=>{
-      if(part[o]>=0)return;if(!(m.T&&m.T[o]===m.T[fi])){if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>tolMm))return;}part[o]=groups.length;g.push(o);});}
+      if(part[o]>=0)return;if(SK.size&&SK.has(ff[k]+'_'+ff[(k+1)%3])&&!(m.T&&m.T[o]===m.T[fi]))return;if(!(m.T&&m.T[o]===m.T[fi])){if(V3.dot(N[o],N[s])<cos)return;if(F[o].some(i=>Math.abs(V3.dot(N[s],V[i])-pl)>tolMm))return;}part[o]=groups.length;g.push(o);});}
     groups.push(g);});
   // контур детали: рёбра, которые не делятся с треугольником той же детали
   const parts=groups.map((g,pi)=>{const n=V3.norm(g.reduce((s,fi)=>V3.add(s,triN(V,F[fi])),[0,0,0]));let area=0;g.forEach(fi=>area+=V3.len(triN(V,F[fi]))/2);

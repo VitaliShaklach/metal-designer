@@ -3,8 +3,9 @@
    Симметрия — по плоскости x=0: всё, что делаем справа, повторяется слева. */
 
 // модель для расчёта: треугольники + какой треугольник из какой грани
-function polyBase(V,P){const F=[],T=[];P.forEach((Q,pi)=>earClip(V,Q).forEach(t=>{F.push(t);T.push(pi);}));return {V,P,F,T};}
-const ecopy=E=>({V:E.V.map(p=>p.slice()),P:E.P.map(Q=>Q.slice())});
+// S — швы, проведённые руками: пары точек; через них грани не склеиваются в одну деталь, даже в одной плоскости
+function polyBase(V,P,S){const F=[],T=[];P.forEach((Q,pi)=>earClip(V,Q).forEach(t=>{F.push(t);T.push(pi);}));return {V,P,F,T,S:S||[]};}
+const ecopy=E=>({V:E.V.map(p=>p.slice()),P:E.P.map(Q=>Q.slice()),S:(E.S||[]).map(s=>s.slice())});
 function polyNorm(V,Q){let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});return V3.norm(n);}
 const polyC=(V,Q)=>V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);
 // насколько грань не плоская, мм
@@ -16,7 +17,10 @@ function mirrorMap(V,tol=.6){const key=p=>Math.round(p[0]/tol)+','+Math.round(p[
   return V.map(p=>{if(Math.abs(p[0])<tol)return -2;const q=[-p[0],p[1],p[2]];let j=M.get(key(q));if(j===undefined)j=near(q);return j<0?-1:j;});}  // -2 — на середине
 function mirrorPoly(E,pi,mm){const Q=E.P[pi],t=Q.map(i=>mm[i]===-2?i:mm[i]);if(t.some(i=>i<0))return -1;const k=[...t].sort((a,b)=>a-b).join();
   return E.P.findIndex(R=>R.length===t.length&&[...R].sort((a,b)=>a-b).join()===k);}
-function compact(E){const used=new Map(),V=[];const P=E.P.filter(Q=>Q.length>=3).map(Q=>Q.map(i=>{let j=used.get(i);if(j===undefined){j=V.length;V.push(E.V[i]);used.set(i,j);}return j;}));return {V,P};}
+function compact(E){const used=new Map(),V=[];const P=E.P.filter(Q=>Q.length>=3).map(Q=>Q.map(i=>{let j=used.get(i);if(j===undefined){j=V.length;V.push(E.V[i]);used.set(i,j);}return j;}));
+  // швы — только те, что остались общим ребром двух граней
+  const ec=new Map();P.forEach(Q=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length],key=a<b?a+'_'+b:b+'_'+a;ec.set(key,(ec.get(key)||0)+1);}));
+  const S=(E.S||[]).map(([a,b])=>[used.get(a),used.get(b)]).filter(([a,b])=>a!==undefined&&b!==undefined&&ec.get(a<b?a+'_'+b:b+'_'+a)===2);return {V,P,S};}
 // точка на ребре: если уже есть — берём её
 function vAt(E,p){const i=E.V.findIndex(q=>Math.abs(q[0]-p[0])<.05&&Math.abs(q[1]-p[1])<.05&&Math.abs(q[2]-p[2])<.05);if(i>=0)return i;E.V.push(p);return E.V.length-1;}
 // вставить точку m в ребро a–b у всех граней (чтобы не было «щелей»)
@@ -52,8 +56,8 @@ function delPoly(E,pi,sym){E=ecopy(E);return withMirror(E,pi,sym,()=>{});}
 function nonPlanar(E,tol=.8){const r=[];E.P.forEach((Q,i)=>{if(polyDev(E.V,Q)>tol)r.push(i);});return r;}
 function flattenAll(E,sym,pin){const mm=sym?mirrorMap(E.V):null,open=openVerts(E);
   const fix=(i,q)=>{if(pin!==undefined&&(i===pin||mm&&mm[pin]===i))return E.V[i].slice();if(mm&&mm[i]===-2)q[0]=0;if(open.has(i)&&Math.abs(E.V[i][2])<.5)q[2]=0;return q;};
-  let V=planarize(E.V,E.P,fix,300);if(mm)V=V.map((p,i)=>mm[i]>=0&&i>mm[i]?[-V[mm[i]][0],V[mm[i]][1],V[mm[i]][2]]:p);return {V,P:E.P.map(Q=>Q.slice())};}
-function triangulateBad(E,tol=.8){const bad=new Set(nonPlanar(E,tol));const P=[];E.P.forEach((Q,i)=>{if(!bad.has(i)){P.push(Q.slice());return;}for(let k=1;k+1<Q.length;k++)P.push([Q[0],Q[k],Q[k+1]]);});return {V:E.V.map(p=>p.slice()),P};}
+  let V=planarize(E.V,E.P,fix,300);if(mm)V=V.map((p,i)=>mm[i]>=0&&i>mm[i]?[-V[mm[i]][0],V[mm[i]][1],V[mm[i]][2]]:p);return {V,P:E.P.map(Q=>Q.slice()),S:(E.S||[]).map(s=>s.slice())};}
+function triangulateBad(E,tol=.8){const S=(E.S||[]).map(s=>s.slice());const bad=new Set(nonPlanar(E,tol));const P=[];E.P.forEach((Q,i)=>{if(!bad.has(i)){P.push(Q.slice());return;}for(let k=1;k+1<Q.length;k++)P.push([Q[0],Q[k],Q[k+1]]);});return {V:E.V.map(p=>p.slice()),P,S};}
 
 // заготовки: куб и шар (икосаэдр, разбитый один раз), мм, спина на z=0
 function blankBox(W=300,H=400,D=260){const x=W/2,V=[[-x,0,0],[x,0,0],[x,H,0],[-x,H,0],[-x,0,D],[x,0,D],[x,H,D],[-x,H,D]];
@@ -92,12 +96,12 @@ function cutPoly(E,pi,va,vb,sym){E=ecopy(E);const mm=sym?mirrorMap(E.V):null,mr=
   if(sym&&mm[va]!==-1&&mm[vb]!==-1){const a2=mr(va),b2=mr(vb);if(!(a2===va&&b2===vb)&&!(a2===vb&&b2===va))jobs.push([a2,b2]);}
   let done=0;jobs.forEach(([a,b],k)=>{const i=k?E.P.findIndex(Q=>Q.includes(a)&&Q.includes(b)&&!polyHasEdge(Q,a,b)):pi;if(i<0)return;const Q=E.P[i],ia=Q.indexOf(a),ib=Q.indexOf(b),n=Q.length;
     if(ia<0||ib<0||ia===ib||(ia+1)%n===ib||(ib+1)%n===ia)return;const A=[],B=[];for(let j=ia;;j=(j+1)%n){A.push(Q[j]);if(j===ib)break;}for(let j=ib;;j=(j+1)%n){B.push(Q[j]);if(j===ia)break;}
-    E.P.splice(i,1,A,B);done++;});
+    E.P.splice(i,1,A,B);E.S.push([a,b]);done++;});
   return done?E:null;}
 const polyHasEdge=(Q,a,b)=>Q.some((x,k)=>{const y=Q[(k+1)%Q.length];return x===a&&y===b||x===b&&y===a;});
 // новая точка p на ребре a–b (у всех граней с этим ребром); с симметрией — и на зеркальном ребре. Возвращает {E,m} — m номер точки
 function addEdgePoint(E,a,b,p,sym){E=ecopy(E);const mm=sym?mirrorMap(E.V):null,q=p.slice();
   const midE=sym&&(mm[a]===-2&&mm[b]===-2||mm[a]===b);if(midE)q[0]=0;
-  const ins=(x,y,r)=>{E.V.push(r);const m=E.V.length-1;insertOnEdge(E,x,y,m);return m;},m=ins(a,b,q);
+  const ins=(x,y,r)=>{E.V.push(r);const m=E.V.length-1;insertOnEdge(E,x,y,m);E.S=E.S.flatMap(s=>s[0]===x&&s[1]===y||s[0]===y&&s[1]===x?[[s[0],m],[m,s[1]]]:[s]);return m;},m=ins(a,b,q);
   if(sym&&!midE&&mm[a]!==-1&&mm[b]!==-1){const a2=mm[a]===-2?a:mm[a],b2=mm[b]===-2?b:mm[b];if(!(a2===a&&b2===b)&&!(a2===b&&b2===a))ins(a2,b2,[-q[0],q[1],q[2]]);}
   return {E,m};}

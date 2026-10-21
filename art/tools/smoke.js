@@ -80,6 +80,8 @@ ok(run("ES.P.length")===7&&run("EM.P.length")===6&&run("nonPlanar(EM).length")==
 run(`EC=cutPoly(EB,tp,EB.P[tp][0],EB.P[tp][2],true);sd=EB.P.findIndex(Q=>Q.every(i=>EB.V[i][0]===150));EC2=cutPoly(EB,sd,EB.P[sd][0],EB.P[sd][2],true)`);
 ok(run("EC.P.length")===7&&run("nonPlanar(EC).length")===0&&run("EC2.P.length")===8,"провести шов: верх по диагонали — 7 граней, бок с симметрией — разрезан и зеркальный (8)");
 run(`ea=EB.P[sd][0];eb=EB.P[sd][1];EP=addEdgePoint(EB,ea,eb,V3.mul(V3.add(EB.V[ea],EB.V[eb]),.5),true)`);ok(run("EP.E.V.length")===10&&run("mirrorMap(EP.E.V).every(j=>j!==-1)"),"точка на ребре — и зеркальная, симметрия цела");
+run(`SC=cutPoly(EB,tp,EB.P[tp][0],EB.P[tp][2],true);SR=buildParts(polyBase(SC.V,SC.P,SC.S),1.5,1.5);sh=SC.P.map((Q,i)=>i).filter(i=>SC.P[i].every(q=>SC.V[q][1]===400));SM=mergePolys(SC,sh[0],sh[1],true)`);
+ok(run("SR.parts.length")===7&&run("SR.edges.filter(e=>!e.open).length")===13&&run("SM.S.length")===0&&run("buildParts(polyBase(SM.V,SM.P,SM.S),1.5,1.5).parts.length")===6,"шов, проведённый руками, — отдельные детали даже в одной плоскости; «убрать шов» снимает его");
 // Доберман 7 — плиты сняты с модели Meshy
 run(`D7=figureMesh("doberman7");R7=buildParts(D7,1.5,1.5);C7=R7.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,2,1,true)}));N7=nest(C7.filter(c=>!c.bad),2500,1250,3,10,2.5,2,true);
   ES7=new Set();D7.P.forEach(Q=>Q.forEach((a,k)=>ES7.add(a+"_"+Q[(k+1)%Q.length])));open7=D7.P.reduce((n,Q)=>n+Q.filter((a,k)=>!ES7.has(Q[(k+1)%Q.length]+"_"+a)).length,0)`);
