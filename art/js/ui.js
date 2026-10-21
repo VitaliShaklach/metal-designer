@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,ref:false,name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
+const ST={edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,ref:false,refId:'',name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
@@ -107,17 +107,17 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
 /* ---------- загрузка фигур и файлов ---------- */
 function setBase(m,o={}){ST.base=m;SIMP={key:'',m:null};ST.sel=-1;ST.name=o.name||ST.name;$('mName').value=ST.name;
   ST.faces=o.faces||(isDense()?250:m.F.length);if(o.dims)ST.dims=o.dims;else dimsFromH(o.H||600);ST.sv=ST.sp=-1;UNDO.length=REDO.length=0;ST.edit=false;$('cEdit').checked=false;if(m.P)setPolyDims();}
-function loadFigure(id){later(()=>{const f=FIGURES[id];ST.fig=id;setBase(figureMesh(id,12),{name:f.name,faces:f.faces,H:f.H});const hn=/faces=(\d+)/.exec(location.hash),hd=/diss=(\d+)/.exec(location.hash);if(hn)ST.faces=+hn[1];if(hd)ST.diss=+hd[1];if(/edit/.test(location.hash)){ST.edit=true;$('cEdit').checked=true;}compute();renderAll('instant');store('art-fig',id);msg('');const hv=/v=([a-z]+)/.exec(location.hash);if(hv)viewDir(hv[1],meshBox(CUR.M3.V),/og/.test(location.hash));},'Строю фигуру…');}
+function loadFigure(id){later(()=>{const f=FIGURES[id];ST.fig=id;ST.refId=f.ref||'';setBase(figureMesh(id,12),{name:f.name,faces:f.faces,H:f.H});const hn=/faces=(\d+)/.exec(location.hash),hd=/diss=(\d+)/.exec(location.hash);if(hn)ST.faces=+hn[1];if(hd)ST.diss=+hd[1];if(/edit/.test(location.hash)){ST.edit=true;$('cEdit').checked=true;}compute();renderAll('instant');store('art-fig',id);msg('');const hv=/v=([a-z]+)/.exec(location.hash);if(hv)viewDir(hv[1],meshBox(CUR.M3.V),/og/.test(location.hash));},'Строю фигуру…');}
 function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=file.name.replace(/\.[^.]+$/,'');
   file.arrayBuffer().then(buf=>later(()=>{let m,o={name};
     if(ext==='obj')m=parseOBJ(new TextDecoder().decode(buf));else if(ext==='stl')m=parseSTL(buf);else if(ext==='glb')m=parseGLB(buf);
-    else if(ext==='json'){const j=JSON.parse(new TextDecoder().decode(buf));if(j.type!=='md-art')throw new Error('это не файл фигуры');m=j.P?polyBase(j.V,j.P,j.S):{V:j.V,F:j.F};o={name:j.name||name,dims:j.dims,faces:j.F.length};
+    else if(ext==='json'){const j=JSON.parse(new TextDecoder().decode(buf));if(j.type!=='md-art')throw new Error('это не файл фигуры');m=j.P?polyBase(j.V,j.P,j.S):{V:j.V,F:j.F};o={name:j.name||name,dims:j.dims,faces:j.F.length,ref:j.ref};
       ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
     else throw new Error('нужен файл OBJ, STL, GLB или JSON');
-    if(!m.F.length)throw new Error('в файле нет граней');ST.fig='';$('figSel').value='';setBase(m,o);compute();renderAll('instant');
+    if(!m.F.length)throw new Error('в файле нет граней');ST.refId=o.ref&&typeof MODELS_POLY!=='undefined'&&MODELS_POLY[o.ref]?o.ref:'';ST.fig='';$('figSel').value='';setBase(m,o);compute();renderAll('instant');
     msg(`Открыто: ${m.F.length} треугольников${isDense()?' — упрощаю до '+ST.faces:''}`);},'Читаю модель…'));}
 function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,diss:0,
-    V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly()){j.P=ST.base.P;j.S=ST.base.S||[];}
+    V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly()){j.P=ST.base.P;j.S=ST.base.S||[];}if(ST.refId)j.ref=ST.refId;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
 
@@ -216,12 +216,12 @@ function addCut(v){if(!ST.seam||ST.sp<0)return;if(!ST.seam.includes(v))ST.seam.p
   if(ST.seam.length===2){const r=cutPoly(E(),ST.sp,ST.seam[0],ST.seam[1],ST.sym);if(r){pushUndo();applyE(r);msg('Шов проведён');return;}msg('Между этими точками уже есть край грани — выберите несоседние');ST.seam=[];}renderAll();}
 // швы эталона: точки в мм исходной модели → под текущий размер фигуры
 const REFB={};
-function refUI(){const id=ST.fig,f=FIGURES[id],has=!!(f&&f.ref);$('refRow').hidden=!has;$('cRef').checked=ST.ref;
-  const pts=has&&ST.ref&&ST.edit&&window.REFS&&REFS[f.ref];if(!pts){setRef(null);return;}
-  const b0=REFB[id]||(REFB[id]=meshBox(figureMesh(id).V)),b1=meshBox(CUR.M3.V),s=[0,1,2].map(k=>b1.size[k]/(b0.size[k]||1)),c0=(b0.min[0]+b0.max[0])/2,c1=(b1.min[0]+b1.max[0])/2,out=new Float32Array(pts.length);
+function refUI(){const rid=ST.refId,has=!!rid;$('refRow').hidden=!has;$('cRef').checked=ST.ref;
+  const pts=has&&ST.ref&&ST.edit&&window.REFS&&REFS[rid];if(!pts){setRef(null);return;}
+  const b0=REFB[rid]||(REFB[rid]=meshBox(modelPoly(rid).V)),b1=meshBox(CUR.M3.V),s=[0,1,2].map(k=>b1.size[k]/(b0.size[k]||1)),c0=(b0.min[0]+b0.max[0])/2,c1=(b1.min[0]+b1.max[0])/2,out=new Float32Array(pts.length);
   for(let i=0;i<pts.length;i+=3){out[i]=(pts[i]/10-c0)*s[0]+c1;out[i+1]=(pts[i+1]/10-b0.min[1])*s[1]+b1.min[1];out[i+2]=(pts[i+2]/10-b0.min[2])*s[2]+b1.min[2];}setRef(out);}
-$('cRef').addEventListener('change',e=>{ST.ref=e.target.checked;const f=FIGURES[ST.fig];
-  if(ST.ref&&f&&f.ref&&!(window.REFS&&REFS[f.ref])){const s=document.createElement('script');s.src='js/ref-'+f.ref+'.js?v=0.5.0';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
+$('cRef').addEventListener('change',e=>{ST.ref=e.target.checked;const rid=ST.refId;
+  if(ST.ref&&rid&&!(window.REFS&&REFS[rid])){const s=document.createElement('script');s.src='js/ref-'+rid+'.js?v=0.5.1';s.onload=()=>{msg('');refUI();};document.head.appendChild(s);msg('Загружаю швы эталона…');return;}refUI();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
 (()=>{if(!ok)return;const cv=renderer.domElement,tag=$('hovTag');let down=null,drag=null,raf=0;
