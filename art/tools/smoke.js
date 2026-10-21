@@ -104,4 +104,12 @@ ok(run("near7")>=.6,"калька совпадает с фигурой: у 60%+ 
 {const pts=[];for(let x=1;x<200;x+=2)for(let y=1;y<200;y+=2){const s=x===51?225:128;pts.push([x,y,0,s,s,s]);}const bf=Buffer.alloc(pts.length*9);pts.forEach((p,i)=>{for(let k=0;k<3;k++)bf.writeInt16LE(p[k]*10,i*9+k*2);bf[i*9+6]=p[3];bf[i*9+7]=p[4];bf[i*9+8]=p[5];});c.B64=bf.toString('base64');}
 run(`TP=traceLoad(B64);ID=p=>p.slice();ID.s=[1,1,1];mg1=seamOnEdge([10,40,0],[110,60,0],[60,52,0],ID,TP);mg2=seamOnEdge([51,20,0],[51,180,0],[51,100,0],ID,TP);mg3=seamOnEdge([10,40,0],[110,60,0],[90,56,0],ID,TP);`);
 ok(run("TP.seams")===100&&run("mg1&&Math.abs(mg1[0]-51)<1.5&&Math.abs(mg1[1]-48.2)<1")&&run("mg2")===null&&run("mg3")===null,"магнит: точка встаёт туда, где шов эталона пересекает ребро; шов вдоль ребра и далёкий клик — без притяжения");
+// сверка с калькой: плоскость z=50, шов эталона по x=51; наш шов по шву — совпал, в 70 мм от него — лишний; шов эталона без нашего — жёлтый участок
+{const pts=[];for(let x=1;x<200;x+=2)for(let y=1;y<200;y+=2){const s=x===51?225:128;pts.push([x,y,50,s,s,s]);}const bf=Buffer.alloc(pts.length*9);pts.forEach((p,i)=>{for(let k=0;k<3;k++)bf.writeInt16LE(p[k]*10,i*9+k*2);bf[i*9+6]=p[3];bf[i*9+7]=p[4];bf[i*9+8]=p[5];});c.B64P=bf.toString('base64');}
+run(`TQ=traceLoad(B64P);VQ=[[0,0,50],[200,0,50],[200,200,50],[0,200,50],[51,5,50],[51,195,50],[121,5,50],[121,195,50]];FQ=[[0,1,2],[0,2,3]];ID2=p=>p.slice();ID2.s=[1,1,1];ID2.inv=p=>p.slice();
+  dq1=traceDiff([{a:4,b:5},{a:6,b:7}],VQ,FQ,ID2,TQ);dq2=traceDiff([{a:6,b:7}],VQ,FQ,ID2,TQ);
+  DD=traceDiff(R7.edges,D7.V,D7.F,traceMap(B7,B7),TT);`);
+console.log("     сверка доберман 7: на шве эталона "+run("Math.round(DD.on*100)")+"%, рядом "+run("Math.round(DD.near*100)")+"%, лишних швов "+run("DD.red.length")+", недостающих участков "+run("DD.parts"));
+ok(run("JSON.stringify(dq1.red)")==="[1]"&&run("dq1.parts")===0&&Math.abs(run("dq1.on")-.5)<1e-9&&run("JSON.stringify(dq2.red)")==="[0]"&&run("dq2.parts")===1&&run("dq2.yel.length/3")>=90,"сверка: шов на шве эталона — совпал, далёкий — лишний (красный), шов эталона без нашего — жёлтый участок");
+ok(run("DD.near")>=.65&&run("DD.red.length")<120&&run("DD.parts")>0,"сверка доберман 7: рядом со швами эталона 65%+ наших швов, лишние и недостающие найдены");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

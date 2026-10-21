@@ -27,9 +27,11 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
   if(o.backs&&o.backs.length){const bp=[];o.backs.forEach(P=>{const idx=P.map((_,i)=>i);earClip(P,idx).forEach(t=>t.forEach(i=>bp.push(...P[i])));});
     const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.computeVertexNormals();root.add(new THREE.Mesh(bg,new THREE.MeshStandardMaterial({color:0x1c1e20,metalness:.3,roughness:.8,side:THREE.DoubleSide})));}
   // швы между деталями — тёмные линии; открытый край — светлее
-  const L=[],Lo=[];R.edges.forEach(e=>(e.open?Lo:L).push(...V[e.a],...V[e.b]));
+  // с калькой (o.diff): лишние швы — красные, недостающие швы эталона — жёлтые точки
+  const L=[],Lo=[],Lr=[],RS=new Set(o.diff?o.diff.red:[]);R.edges.forEach((e,i)=>(e.open?Lo:RS.has(i)?Lr:L).push(...V[e.a],...V[e.b]));
   const seg=(arr,c,op)=>{if(!arr.length)return;const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));root.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:op})));};
-  seg(L,0x15191b,.8);seg(Lo,0xd0561f,.9);
+  seg(L,0x15191b,.8);seg(Lo,0xd0561f,.9);seg(Lr,0xe01818,1);
+  if(o.diff&&o.diff.yel.length){const yg=new THREE.BufferGeometry();yg.setAttribute('position',new THREE.BufferAttribute(o.diff.yel,3));root.add(new THREE.Points(yg,new THREE.PointsMaterial({color:0xffc400,size:5,sizeAttenuation:false})));}
   // редактор: точки; выбранная — крупная оранжевая
   if(o.verts){const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.Float32BufferAttribute(V.flat(),3));root.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x1f8fe0,size:7,sizeAttenuation:false})));
     if(o.mark&&o.mark.length){const mg=new THREE.BufferGeometry();mg.setAttribute('position',new THREE.Float32BufferAttribute(o.mark.map(i=>V[i]).flat(),3));root.add(new THREE.Points(mg,new THREE.PointsMaterial({color:0xd0561f,size:13,sizeAttenuation:false,depthTest:false})));}

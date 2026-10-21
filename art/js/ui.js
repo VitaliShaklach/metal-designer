@@ -54,7 +54,7 @@ function mergeFlat(M3){const G=dissolve(M3,ST.diss,Math.max(ST.dims.W,ST.dims.H,
   const V=planarize(G.V,G.P,(i,q)=>{if(open.has(i)&&Math.abs(G.V[i][2])<.5)q[2]=0;return q;},400);return fitMesh(polyMesh(V,G.P),ST.dims);}
 
 function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
-  build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
+  build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),diff:ed&&traceOn()?TRC.diff:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
   stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
   $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],[`${T.n}`,'деталей'],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(T.weld/1000,1)} м`,'швов']]
@@ -218,23 +218,26 @@ function addCut(v){if(!ST.seam||ST.sp<0)return;if(!ST.seam.includes(v))ST.seam.p
 const TRC={id:'',t:null,b0:null,key:'',at:null,loading:false};
 function traceOn(){return !!(ST.trace&&ST.refId&&TRC.id===ST.refId&&TRC.t&&CUR&&isPoly());}
 function traceMapNow(){return traceMap(TRC.b0,meshBox(CUR.M3.V));}
-function traceTex(){if(!traceOn())return null;const {V,P}=ST.base;let h=V.length*31+P.length;V.forEach((p,i)=>{h+=(p[0]*1.3+p[1]*2.7+p[2]*3.1)*((i%7)+1);});P.forEach(Q=>{h+=Q.length*17+Q[0];});const key=h.toFixed(3);
-  if(TRC.key!==key){const t0=performance.now();TRC.at=traceAtlas(V,P,ST.base.F,ST.base.T,traceMapNow(),TRC.t);TRC.key=key;if(!TRC.logged){TRC.logged=1;console.log('калька: атлас',TRC.at.W+'×'+TRC.at.H,Math.round(performance.now()-t0)+' мс');}}return TRC.at;}
-function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;}
+function traceTex(){if(!traceOn())return null;const {V,P}=ST.base;let h=V.length*31+P.length;V.forEach((p,i)=>{h+=(p[0]*1.3+p[1]*2.7+p[2]*3.1)*((i%7)+1);});P.forEach(Q=>{h+=Q.length*17+Q[0];});(ST.base.S||[]).forEach(e=>{h+=e[0]*.7+e[1]*1.9;});const key=h.toFixed(3);
+  // пока тянут точку — старый рисунок (те же треугольники), пересчёт после отпускания
+  if(TRC.key!==key&&ST.drag&&TRC.at&&TRC.at.uv.length===ST.base.F.length*6)return TRC.at;
+  if(TRC.key!==key){const t0=performance.now();const mp=traceMapNow();TRC.at=traceAtlas(V,P,ST.base.F,ST.base.T,mp,TRC.t);TRC.diff=traceDiff(CUR.R.edges,V,ST.base.F,mp,TRC.t);TRC.key=key;if(!TRC.logged){TRC.logged=1;console.log('калька: атлас',TRC.at.W+'×'+TRC.at.H,Math.round(performance.now()-t0)+' мс');}}return TRC.at;}
+function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;const d=ST.edit&&traceOn()?TRC.diff:null,el=$('edTrace');el.hidden=!d;if(!d)return;
+  el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.6.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.6.1';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
 (()=>{if(!ok)return;const cv=renderer.domElement,tag=$('hovTag');let down=null,drag=null,raf=0;
   cv.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};if(e.button!==0||!ST.edit||!isPoly()||!CUR)return;
-    const v=pickVert(e,ST.base.V);if(v<0)return;if(ST.seam){if(ST.sp>=0&&ST.base.P[ST.sp].includes(v)){down=null;addCut(v);}return;}ST.sv=v;ST.sp=-1;ST.sel=-1;drag={v,snap:snapE(),moved:false};controls.enabled=false;cv.setPointerCapture(e.pointerId);renderAll();});
+    const v=pickVert(e,ST.base.V);if(v<0)return;if(ST.seam){if(ST.sp>=0&&ST.base.P[ST.sp].includes(v)){down=null;addCut(v);}return;}ST.sv=v;ST.sp=-1;ST.sel=-1;drag={v,snap:snapE(),moved:false};ST.drag=true;controls.enabled=false;cv.setPointerCapture(e.pointerId);renderAll();});
   cv.addEventListener('pointermove',e=>{if(drag){const p=dragPoint(e,ST.base.V[drag.v]);if(!p)return;drag.moved=true;tag.hidden=true;if(raf)return;
-      raf=requestAnimationFrame(()=>{raf=0;if(!drag)return;const e2={V:ST.base.V.map(q=>q.slice()),P:ST.base.P};moveVert(e2,drag.v,dragPoint(e,ST.base.V[drag.v])||p,ST.sym);applyE(e2,true);});return;}
+      raf=requestAnimationFrame(()=>{raf=0;if(!drag)return;const e2={V:ST.base.V.map(q=>q.slice()),P:ST.base.P,S:ST.base.S||[]};moveVert(e2,drag.v,dragPoint(e,ST.base.V[drag.v])||p,ST.sym);applyE(e2,true);});return;}
     if(!CUR||e.buttons){tag.hidden=true;return;}const t=pickTri(e);if(t<0){tag.hidden=true;return;}const p=CUR.R.parts[CUR.R.partOf[t]],r=stage.getBoundingClientRect();
     tag.textContent=`№ ${p.no} · ${Math.round(p.L)} × ${Math.round(p.W)} мм`;tag.style.left=(e.clientX-r.left)+'px';tag.style.top=(e.clientY-r.top)+'px';tag.hidden=false;});
-  cv.addEventListener('pointerup',e=>{if(drag){const d=drag;drag=null;controls.enabled=true;if(d.moved){UNDO.push(d.snap);REDO.length=0;edUI();}down=null;return;}
+  cv.addEventListener('pointerup',e=>{if(drag){const d=drag;drag=null;ST.drag=false;controls.enabled=true;if(d.moved){UNDO.push(d.snap);REDO.length=0;renderAll();}down=null;return;}
     if(!down||!CUR)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(mv>5||e.button!==0)return;
     const t=pickTri(e),pi=t>=0?CUR.R.partOf[t]:-1;
     if(ST.edit&&isPoly()){const fp=t>=0?ST.base.T[t]:-1;

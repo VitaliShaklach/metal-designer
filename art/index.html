@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.6.0">
+<link rel="stylesheet" href="css/style.css?v=0.6.1">
 </head>
 <body>
 <div class="wrap">
@@ -60,6 +60,7 @@
             <div class="row2"><label>На сколько, мм<input class="inp" id="edD" type="number" value="30" min="1" step="5"></label><span></span></div>
             <div class="edbtns" id="edOps"><button type="button" data-op="extrude" id="op_extrude">Выдавить</button><button type="button" data-op="inset" id="op_inset">Вдавить</button><button type="button" data-op="bump" id="op_bump">Бугор</button><button type="button" data-op="pit" id="op_pit">Впадина</button><button type="button" data-op="split" id="op_split">Разрезать пополам</button><button type="button" data-op="del" id="op_del">Удалить грань</button><button type="button" data-op="merge" id="op_merge">Убрать шов</button><button type="button" data-op="cut" id="op_cut">Провести шов</button></div>
             <p class="note" id="edPlan"></p>
+            <p class="note" id="edTrace" hidden></p>
             <div class="btns" id="edFix"><button id="bFlat" type="button">Выровнять грани</button><button id="bTri" type="button">Разбить на треугольники</button></div>
             <div class="btns"><button id="bUndo" type="button" title="Ctrl+Z">↶ Отменить</button><button id="bRedo" type="button" title="Ctrl+Y">↷ Вернуть</button></div>
             <div class="row2"><label>Заготовка<select id="blank"><option value="box">Куб</option><option value="sphere">Шар (80 граней)</option></select></label><button id="bBlank" type="button">Начать с заготовки</button></div>
@@ -125,7 +126,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.6.0</span>
+    <span class="ver">v0.6.1</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -133,17 +134,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.6.0"></script>
-<script src="js/models.js?v=0.6.0"></script>
-<script src="js/models-poly.js?v=0.6.0"></script>
-<script src="js/figures.js?v=0.6.0"></script>
-<script src="js/edit.js?v=0.6.0"></script>
-<script src="js/trace.js?v=0.6.0"></script>
-<script src="js/view3d.js?v=0.6.0"></script>
-<script src="js/prod.js?v=0.6.0"></script>
-<script src="js/sheets.js?v=0.6.0"></script>
-<script src="js/ui.js?v=0.6.0"></script>
-<script src="js/tips.js?v=0.6.0"></script>
+<script src="js/mesh.js?v=0.6.1"></script>
+<script src="js/models.js?v=0.6.1"></script>
+<script src="js/models-poly.js?v=0.6.1"></script>
+<script src="js/figures.js?v=0.6.1"></script>
+<script src="js/edit.js?v=0.6.1"></script>
+<script src="js/trace.js?v=0.6.1"></script>
+<script src="js/view3d.js?v=0.6.1"></script>
+<script src="js/prod.js?v=0.6.1"></script>
+<script src="js/sheets.js?v=0.6.1"></script>
+<script src="js/ui.js?v=0.6.1"></script>
+<script src="js/tips.js?v=0.6.1"></script>
 <div id="printBox"></div>
 </body>
 </html>

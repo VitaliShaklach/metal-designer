@@ -1,6 +1,6 @@
 /* ---------- калька: рисунок эталона (облако точек с цветом) прямо на гранях нашей модели + магнит к швам ----------
    облако — в кадре эталона (мм модели из MODELS_POLY); текущая фигура может быть растянута — map переводит её точки туда */
-const TR_CELL=2,TR_SEAM=22;   // шаг облака, мм (как в tools/plates/tracing.js): в клетке не больше одной точки; насколько шов светлее соседей
+const TR_CELL=2,TR_SEAM=22,TR_RUST=26;   // шаг облака, мм (как в tools/plates/tracing.js): в клетке не больше одной точки; насколько шов светлее соседей, ржавчина темнее
 // base64 → {P:xyz мм, C:rgb, S: 1 — светлый шов, 2 — тёмное (глаза), G — сетка клеток TR_CELL: индекс точки+1}
 function traceLoad(b64){const bin=typeof atob==='function'?atob(b64):Buffer.from(b64,'base64').toString('binary'),n=bin.length/9|0,dv=new DataView(new ArrayBuffer(n*9));
   for(let i=0;i<n*9;i++)dv.setUint8(i,bin.charCodeAt(i));
@@ -9,12 +9,14 @@ function traceLoad(b64){const bin=typeof atob==='function'?atob(b64):Buffer.from
   }
   const o0=mn.map(x=>Math.floor(x/TR_CELL)-1),dim=mx.map((x,k)=>Math.floor(x/TR_CELL)-o0[k]+2),G=new Int32Array(dim[0]*dim[1]*dim[2]),t={n,P,C,S,G,o0,dim};
   for(let i=0;i<n;i++){const c=traceCell(t,P[i*3],P[i*3+1],P[i*3+2]);if(c>=0)G[c]=i+1;}
-  // шов — светлая серая линия: точка заметно светлее соседей в 4 мм (на текстуре линия ~1 мм, после усреднения — 150…200); тёмное (< 45) — глаза
+  // шов на текстуре эталона — светлая серая линия (точка заметно светлее соседей в 4 мм; линия ~1 мм, после усреднения — 150…200)
+  // или ржавая полоса сварки (темнее соседей, рыжеватая); совсем тёмное (< 45) — глаза
   const lum=new Float32Array(n);for(let i=0;i<n;i++)lum[i]=.3*C[i*3]+.59*C[i*3+1]+.11*C[i*3+2];const [X,Y,Z]=dim;let ns=0;
-  for(let i=0;i<n;i++){const r=C[i*3],g=C[i*3+1],b=C[i*3+2];if(lum[i]<45){S[i]=2;continue;}if(Math.max(r,g,b)-Math.min(r,g,b)>60||lum[i]<120)continue;
+  for(let i=0;i<n;i++){const r=C[i*3],g=C[i*3+1],b=C[i*3+2],sat=Math.max(r,g,b)-Math.min(r,g,b);
     const ci=Math.floor(P[i*3]/TR_CELL)-o0[0],cj=Math.floor(P[i*3+1]/TR_CELL)-o0[1],ck=Math.floor(P[i*3+2]/TR_CELL)-o0[2];let sum=0,cnt=0;
     for(let k=ck-2;k<=ck+2;k++)for(let j=cj-2;j<=cj+2;j++)for(let a=ci-2;a<=ci+2;a++){if(a<0||j<0||k<0||a>=X||j>=Y||k>=Z)continue;const q=G[(k*Y+j)*X+a]-1;if(q>=0){sum+=lum[q];cnt++;}}
-    if(lum[i]>sum/cnt+TR_SEAM){S[i]=1;ns++;}}
+    const av=sum/cnt;if(lum[i]<45&&av<70){S[i]=2;continue;}   // глаз: тёмное среди тёмного
+    if(lum[i]>av+TR_SEAM&&sat<60&&lum[i]>=120||lum[i]<av-TR_RUST&&r>=b&&r>=g-5){S[i]=1;ns++;}}
   t.seams=ns;return t;}
 function traceCell(t,x,y,z){const i=Math.floor(x/TR_CELL)-t.o0[0],j=Math.floor(y/TR_CELL)-t.o0[1],k=Math.floor(z/TR_CELL)-t.o0[2];
   return i<0||j<0||k<0||i>=t.dim[0]||j>=t.dim[1]||k>=t.dim[2]?-1:(k*t.dim[1]+j)*t.dim[0]+i;}
@@ -24,7 +26,8 @@ function traceNear(t,x,y,z,r=1,want=0){const ci=Math.floor(x/TR_CELL)-t.o0[0],cj
     const dx=t.P[q*3]-x,dy=t.P[q*3+1]-y,dz=t.P[q*3+2]-z,d=dx*dx+dy*dy+dz*dz;if(d<bd){bd=d;best=q;}}}}return best;}
 // текущий размер фигуры → кадр эталона: поосевой масштаб по габаритам (b0 — эталон, b1 — сейчас); s — масштаб «эталон/сейчас»
 function traceMap(b0,b1){const s=[0,1,2].map(k=>b0.size[k]/(b1.size[k]||1)),c0=(b0.min[0]+b0.max[0])/2,c1=(b1.min[0]+b1.max[0])/2;
-  const f=p=>[(p[0]-c1)*s[0]+c0,(p[1]-b1.min[1])*s[1]+b0.min[1],(p[2]-b1.min[2])*s[2]+b0.min[2]];f.s=s;return f;}
+  const f=p=>[(p[0]-c1)*s[0]+c0,(p[1]-b1.min[1])*s[1]+b0.min[1],(p[2]-b1.min[2])*s[2]+b0.min[2]];f.s=s;
+  f.inv=p=>[(p[0]-c0)/s[0]+c1,(p[1]-b0.min[1])/s[1]+b1.min[1],(p[2]-b0.min[2])/s[2]+b1.min[2]];return f;}
 /* атлас: каждая грань-многоугольник — прямоугольник в своей плоскости (шаг tx мм), раскладка полками; тексель → точка грани → кадр эталона →
    ближайшая точка облака (сперва рядом, потом вдоль нормали ±2…6 мм — грани у нас выровнены и могут отходить от поверхности эталона) */
 function traceAtlas(V,P,F,T,map,t,tx=2){const AW=2048,PAD=2;
@@ -63,3 +66,35 @@ function seamOnEdge(A,B,click,map,t,end=8){const a=map(A),b=map(B),ab=V3.sub(b,a
   else{if(!C.length)return null;const us=C.map(c=>c.u);if((Math.max(...us)-Math.min(...us))*L>6)return null;pick=C.reduce((x,y)=>y.pd<x.pd?y:x);}
   const near=(off.length?off:C).filter(c=>Math.abs(c.u-pick.u)*L<=3&&c.pd<=pick.pd+2),u=near.reduce((s,c)=>s+c.u,0)/near.length;
   return V3.add(A,V3.mul(V3.sub(B,A),u));}
+/* расхождения с эталоном: E — наши швы [{a,b,open}] (R.edges), V — текущие мм. Наши швы почти все чуть сдвинуты от эталона (выравнивание граней) —
+   это видно на самой кальке; подсвечиваем только то, что исправляется швами:
+   red — наш шов, у которого шва эталона нет и в TR_FAR мм (по медиане вдоль ребра) — кандидат «Убрать шов»;
+   yel — точки швов эталона на нашей поверхности (ближе TR_SURF мм; дальше — это уже разница формы, не шва) и дальше TR_FAR мм от любого нашего шва, кучками (одиночные пятна текстуры не в счёт) — кандидат «Провести шов»; parts — сколько таких участков;
+   on — доля длины наших швов, что лежит на шве эталона (медиана ≤ TR_NEAR), near — ≤ TR_FAR */
+const TR_NEAR=4,TR_FAR=10,TR_SURF=5;
+function traceDiff(E,V,F,map,t){const red=[],ST=2;let tot=0,on=0,nr=0;const G=new Map(),gk=(x,y,z)=>Math.floor(x/TR_FAR)+','+Math.floor(y/TR_FAR)+','+Math.floor(z/TR_FAR);
+  E.forEach((e,i)=>{const A=V[e.a],B=V[e.b],L=V3.len(V3.sub(B,A)),n=Math.max(2,Math.round(L/ST)),ds=[];
+    for(let k=0;k<=n;k++){const p=V3.add(A,V3.mul(V3.sub(B,A),k/n)),key=gk(...p);let c=G.get(key);if(!c)G.set(key,c=[]);c.push(p);
+      if(e.open||k===0||k===n)continue;const q=map(p),dd=j=>j<0?1e9:Math.hypot(t.P[j*3]-q[0],t.P[j*3+1]-q[1],t.P[j*3+2]-q[2]);let d=dd(traceNear(t,q[0],q[1],q[2],2,1));if(d>TR_NEAR)d=Math.min(d,dd(traceNear(t,q[0],q[1],q[2],5,1)));ds.push(d);}
+    if(e.open||!ds.length)return;ds.sort((x,y)=>x-y);const md=ds[ds.length>>1];tot+=L;if(md<=TR_NEAR)on+=L;if(md<=TR_FAR)nr+=L;else red.push(i);});
+  // наша поверхность — занятые клетки по TR_SURF/2 мм
+  const SG=new Set(),sk=(i,j,k)=>((i+256)*512+j+256)*512+k+256,R2=TR_SURF/2;   // клетки по TR_SURF/2 мм, где есть наша поверхность; ключ < 2³¹ — быстрый
+  // растр в плоскости треугольника через 2 мм + его стороны: выборок ~ площадь, а не квадрат длинной стороны (у тонких треугольников)
+  const put=(x,y,z)=>SG.add(sk(Math.floor(x/R2),Math.floor(y/R2),Math.floor(z/R2)));
+  F.forEach(f=>{const A=V[f[0]],B=V[f[1]],C=V[f[2]],u=V3.sub(B,A),Lu=V3.len(u);if(Lu<1e-9)return;const ex=V3.mul(u,1/Lu),w=V3.sub(C,A),N=V3.cross(u,w);if(V3.len(N)<1e-9)return;
+    const ey=V3.norm(V3.cross(V3.norm(N),ex)),cx=V3.dot(w,ex),cy=V3.dot(w,ey);
+    [[A,B],[B,C],[C,A]].forEach(([P,Q])=>{const n=Math.ceil(V3.len(V3.sub(Q,P))/2);for(let k=0;k<=n;k++)put(P[0]+(Q[0]-P[0])*k/n,P[1]+(Q[1]-P[1])*k/n,P[2]+(Q[2]-P[2])*k/n);});
+    const x0=Math.min(0,cx),x1=Math.max(Lu,cx);for(let y=1;y<cy;y+=2)for(let x=x0+1;x<x1;x+=2){const b2=y/cy,a2=(x-cx*b2)/Lu;if(a2<0||a2+b2>1)continue;
+      put(A[0]+ex[0]*x+ey[0]*y,A[1]+ex[1]*x+ey[1]*y,A[2]+ex[2]*x+ey[2]*y);}});
+  // ближе ~TR_SURF: в своей клетке или в соседних ±2 (по шару)
+  const onSurf=p=>{const g=p.map(x=>Math.floor(x/R2));for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++)for(let dz=-2;dz<=2;dz++){if(dx*dx+dy*dy+dz*dz>5)continue;if(SG.has(sk(g[0]+dx,g[1]+dy,g[2]+dz)))return true;}return false;};
+  const far=new Map();for(let i=0;i<t.n;i++){if(t.S[i]!==1)continue;const p=map.inv([t.P[i*3],t.P[i*3+1],t.P[i*3+2]]);if(p[2]<3)continue;   // у стены — не фигура
+    const g=p.map(x=>Math.floor(x/TR_FAR));let near=false;
+    for(let dx=-1;dx<=1&&!near;dx++)for(let dy=-1;dy<=1&&!near;dy++)for(let dz=-1;dz<=1&&!near;dz++){const c=G.get((g[0]+dx)+','+(g[1]+dy)+','+(g[2]+dz));if(c)for(const q of c)if(Math.hypot(q[0]-p[0],q[1]-p[1],q[2]-p[2])<=TR_FAR){near=true;break;}}
+    if(!near&&onSurf(p))far.set(i,p);}
+  // участки: точки, связанные через соседние клетки (≤ 2 клетки); участок короче 4 точек — пятно, не шов
+  const [X,Y,Z]=t.dim,lab=new Map(),yel=[];let parts=0;
+  far.forEach((_,s0)=>{if(lab.has(s0))return;const comp=[s0];lab.set(s0,1);for(let h=0;h<comp.length;h++){const i=comp[h],ci=Math.floor(t.P[i*3]/TR_CELL)-t.o0[0],cj=Math.floor(t.P[i*3+1]/TR_CELL)-t.o0[1],ck=Math.floor(t.P[i*3+2]/TR_CELL)-t.o0[2];
+      for(let k=ck-2;k<=ck+2;k++)for(let j=cj-2;j<=cj+2;j++)for(let a=ci-2;a<=ci+2;a++){if(a<0||j<0||k<0||a>=X||j>=Y||k>=Z)continue;const q=t.G[(k*Y+j)*X+a]-1;if(q>=0&&far.has(q)&&!lab.has(q)){lab.set(q,1);comp.push(q);}}}
+    if(comp.length<4)return;parts++;comp.forEach(i=>yel.push(...far.get(i)));});
+  return {red,yel:new Float32Array(yel),on:tot?on/tot:0,near:tot?nr/tot:0,parts};}
