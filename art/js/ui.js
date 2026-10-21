@@ -88,11 +88,13 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
   if(CUR.small.size)warn.push(`${CUR.small.size} дет. уже ${ST.minW} мм — подсвечены красным. Уменьшите число граней или увеличьте фигуру`);
   const H=ST.dims.H;if(ST.t<=1&&H>350||ST.t<1.5&&H>700)warn.push(`Лист ${ST.t} мм на фигуре ${H} мм — поведёт от сварки. Варите короткими прихватками вразбежку или возьмите толще`);
   if(CUR.degen)warn.push(`${CUR.degen} дет. после учёта толщины и шва выродились (слишком узкие) — уменьшите число граней, увеличьте фигуру или снимите «Учитывать толщину»`);
+  if(CUR.N&&ST.engrave){const sm=CUR.N.sheets.flatMap(sh=>sh.items).filter(o=>!engraveSegs(o.no,o.pts)).map(o=>'№'+o.no);if(sm.length)warn.push(`Номер не влезает гравировкой (детали малы): ${sm.join(', ')} — это щепки от упрощения, их можно убрать: больше граней, «Мин. ширина детали» или крупнее фигура`);}
   if(CUR.N&&CUR.N.too.length)warn.push(`Не влезают в лист: ${CUR.N.too.map(o=>'№'+o.no).join(', ')} — выберите лист больше`);
   const holes=CUR.R.parts.filter(p=>p.holes).length;if(holes)warn.push(`У ${holes} дет. внутри дыра — проверьте модель`);
   $('warn').hidden=!warn.length;$('warn').innerHTML=warn.map(esc).join('<br>');
   const rows=[['Деталей',T.n],['Площадь металла',fmt(T.area/1e6,2)+' м²'],[`Масса (${ST.t} мм, ${MATN[ST.mat]})`,'≈ '+fmt(T.mass,1)+' кг'],['Длина реза (с учётом толщины)',fmt(CUR.cutLen/1000,1)+' м'],
-    ['Длина швов',fmt(T.weld/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,CUR.N?`${CUR.N.sheets.length} (занято ${Math.round(CUR.N.sheets[0]?CUR.N.sheets[0].len:0)} мм длины первого листа)`:'раскладываю…']];if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
+    ['Длина швов',fmt(T.weld/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,CUR.N?`${CUR.N.sheets.length} (детали в полосе ${sw} × ${Math.round(CUR.N.sheets[0]?CUR.N.sheets[0].len:0)} мм)`:'раскладываю…']];
+  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));rows.splice(4,0,['Врезок (по одной на деталь)',cs.pierce]);if(ST.engrave)rows.splice(5,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
   $('sum').innerHTML='<tbody>'+rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('')+'</tbody>';}
 
 /* ---------- загрузка фигур и файлов ---------- */
@@ -148,7 +150,7 @@ document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').ad
 function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden;if(!vis||!CUR)return;
   if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}if(!CUR.N){ensureNest(()=>sheetsUI(true));return;}SHEETS_OLD=false;
   if(!$('tab-nest').hidden){const L=sheetsNest(),d=new Date(),date=d.toLocaleDateString('ru-RU');$('nestBox').innerHTML=L.map((b,i)=>`<figure class="sheet"><figcaption>Раскрой ${i+1} из ${L.length}</figcaption>${wrapSheet(b,{n:i+1,N:L.length,date})}</figure>`).join('');
-    const s0=CUR.N.sheets[0];$('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · деталей ${CUR.N.sheets.reduce((a,s)=>a+s.items.length,0)} · зазор ${ST.ngap} мм${s0?` · занято ${Math.round(s0.len)} мм длины, плотность ${Math.round(s0.dense*100)}%`:''}${ST.engrave?' · номера гравировкой':''}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
+    const s0=CUR.N.sheets[0];$('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · деталей ${CUR.N.sheets.reduce((a,s)=>a+s.items.length,0)} · зазор ${ST.ngap} мм${s0?` · детали в полосе ${sheetWL()[1]} × ${Math.round(s0.len)} мм (плотность ${Math.round(s0.dense*100)}%), остальное свободно`:''} · ${cutTxt(cutStats(CUR.N.sheets.flatMap(s=>s.items)))}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
   if(!$('tab-sheets').hidden){const sh=buildSheets();$('sheets').innerHTML=sh.map((s,i)=>`<figure class="sheet" id="sheet${i+1}"><figcaption>Лист ${i+1} из ${sh.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
     $('shGo').innerHTML=sh.map((s,i)=>`<option value="${i+1}">Лист ${i+1} · ${esc(s.title)}</option>`).join('');}}
 $('shGo').addEventListener('change',e=>{const el=$('sheet'+e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
