@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'plasma',minW:30,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:true,small:true};
+const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'plasma',minW:30,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
