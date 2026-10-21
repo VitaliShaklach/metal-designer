@@ -144,6 +144,15 @@ function build(loud){const say=(...a)=>{if(loud)console.log(...a);};
   say('после выравнивания: неплоскость макс',dev.toFixed(2),'мм, неплоских >1мм',npl,', точки сдвинулись до',mov.toFixed(1),'мм, без пары',asym);
   return {CLU,polys,E2,EP:c.EP};}
 for(let r=0;r<(ARG.str??3);r++){const n=straighten(15);refitR();console.log('прямые границы: перекрашено',n);}
+// слить соседние плиты, если между ними на текстуре НЕТ шва (настоящий шов виден на текстуре, мнимый — нет)
+const dS=new Int32Array(NT).fill(99);{let fr=[];F.forEach((_,t)=>{if(seam[t]){dS[t]=0;fr.push(t);}});for(let r=1;r<=4;r++){const nx=[];fr.forEach(t=>NB[t].forEach(o=>{if(dS[o]>r){dS[o]=r;nx.push(o);}}));fr=nx;}}
+const seamMerge=()=>{let merged=0;for(let it=0;it<200;it++){const st=new Map();F.forEach((_,t)=>{const a=lab[t];if(a<0||Cn[t][0]<0)return;NB[t].forEach(o=>{const b=lab[o];if(b<0||b===a)return;const ka=rv(a),kb=rv(b);if(ka===kb)return;
+      const k=ka<kb?ka+'_'+kb:kb+'_'+ka;let x=st.get(k);if(!x)st.set(k,x={n:0,c:0});x.n++;if(dS[t]<=(ARG.band??2))x.c++;});});
+    let best=null,bf=1;st.forEach((x,k)=>{if(x.n<6)return;const [a,b]=k.split('_').map(Number);if(isEye(a)||isEye(b))return;const f=x.c/x.n;if(f<(ARG.seamf??0)&&V3.dot(P[a].n,P[b].n)>Math.cos((ARG.sang??25)*Math.PI/180)&&f<bf){bf=f;best=[a,b];}});
+    if(!best)break;let [a,b]=best;if(P[b].mid&&!P[a].mid)[a,b]=[b,a];   // средняя плита остаётся средней
+    F.forEach((_,t)=>{const l=lab[t];if(l<0||rv(l)!==b)return;lab[t]=P[a].mid||Cn[t][0]>=0?a:ML(a);});refitR();merged++;}
+  mirrorLab();comps();return merged;};
+{const m=seamMerge();console.log('слито плит без шва на текстуре:',m);for(let r=0;r<2;r++){straighten(15);refitR();}}
 // узкие плиты (уже 15 мм) вливаем в соседа с ближайшей нормалью — сразу с зеркальной; повторяем
 const MINW=ARG.minw??15;let B;
 for(let round=0;round<(ARG.rounds??4);round++){B=build(false);const PB=g('polyBase')(B.E2.V,B.E2.P),R=g('buildParts')(PB,1.5,1.5);
