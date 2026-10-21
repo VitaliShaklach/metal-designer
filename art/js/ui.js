@@ -139,7 +139,7 @@ document.querySelectorAll('.vbar [data-v]').forEach(b=>b.addEventListener('click
 $('bFit').addEventListener('click',()=>CUR&&fitBox(meshBox(CUR.M3.V)));
 // вкладки и группы панели
 const TABS=[...document.querySelectorAll('.tabbar button')];
-function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('art-tab',k);if(k==='sheets'||k==='nest')sheetsUI(true);}
+function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('art-tab',k);if(k==='sheets'||k==='nest')sheetsUI(true);if(k==='sum'&&CUR)sumTable();}
 TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(['sum','nest','sheets'].includes(store('art-tab'))?store('art-tab'):'parts');
 document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').addEventListener('click',()=>g.classList.toggle('shut')));
 (()=>{const pn=$('controls'),bt=$('drawerBtn'),set=o=>{pn.classList.toggle('open',o);bt.setAttribute('aria-expanded',String(o));bt.textContent=o?'Готово':'Панель';};
