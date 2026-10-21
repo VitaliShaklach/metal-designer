@@ -70,7 +70,7 @@
           <p class="note" id="fNote"></p>
           <div class="row2"><label>Мин. ширина детали, мм<input class="inp" id="minW" type="number" min="0" step="5"></label><label class="chk lone"><input type="checkbox" id="cSmall" checked><span>Подсветить узкие</span></label></div>
           <p class="note">Узкие треугольники программа сама стягивает или перекладывает диагональ. Что осталось уже — подсвечено красным</p>
-          <div class="rot"><span>Повернуть модель на 90°:</span><button data-r="x" type="button">↻ X</button><button data-r="y" type="button">↻ Y</button><button data-r="z" type="button">↻ Z</button></div>
+          <div class="rot" id="rot"><span>Повернуть модель на 90°:</span><button data-r="x" type="button">↻ X</button><button data-r="y" type="button">↻ Y</button><button data-r="z" type="button">↻ Z</button></div>
         </div>
 
         <div class="grp" data-g="metal"><button type="button" class="gt">Металл</button>
@@ -78,9 +78,8 @@
             <label>Материал<select id="sMat"><option value="steel">Сталь</option><option value="inox">Нержавейка</option><option value="corten">Кортен</option><option value="alu">Алюминий</option></select></label></div>
           <div class="row2"><label>Лист<select id="sSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option><option value="1500x6000">1500 × 6000</option><option value="own">Свой размер</option></select></label>
             <label>Резка<select id="sCut"><option value="plasma">Плазма</option><option value="laser">Лазер</option></select></label></div>
-          <div class="row2"><label>Зазор шва, мм<input class="inp" id="sGap" type="number" value="1" min="0" step=".5"></label><label class="chk lone"><input type="checkbox" id="cUseT" checked><span>Учитывать толщину</span></label></div>
-          <div class="row2"><label>Зазор между деталями, мм<input class="inp" id="sNGap" type="number" value="3" min="1" step=".5"></label><label class="chk lone"><input type="checkbox" id="cEngrave" checked><span>Номера гравировкой</span></label></div>
-          <p class="note">В раскрое детали стоят по форме, вплотную, с этим зазором (лазеру хватает 3 мм). Номер детали — линиями в слое ENGRAVE: лазер гравирует, не прорезает. С гравировкой детали лежат внутренней стороной вверх — номер окажется внутри фигуры, снаружи его не видно</p>
+          <div class="row2"><label>Зазор под сварку, мм<input class="inp" id="sGap" type="number" value="1" min="0" step=".5"></label><label class="chk lone"><input type="checkbox" id="cUseT" checked><span>Учитывать толщину</span></label></div>
+          <div class="row2"><label>Между деталями на листе, мм<input class="inp" id="sNGap" type="number" value="3" min="1" step=".5"></label><label class="chk lone"><input type="checkbox" id="cEngrave" checked><span>Номера гравировкой</span></label></div>
           <div class="row2" id="ownSheet" hidden><label>Лист, ширина<input class="inp" id="sW" type="number" value="1250" min="100"></label><label>длина<input class="inp" id="sL" type="number" value="2500" min="100"></label></div>
         </div>
 
@@ -140,6 +139,7 @@
 <script src="js/prod.js?v=0.4.0"></script>
 <script src="js/sheets.js?v=0.4.0"></script>
 <script src="js/ui.js?v=0.4.0"></script>
+<script src="js/tips.js?v=0.4.0"></script>
 <div id="printBox"></div>
 </body>
 </html>
