@@ -65,4 +65,13 @@ ok(run("D5.F.length")===508&&run("R5.parts.length")>=90&&run("R5.parts.length")<
 run(`D6=figureMesh("doberman6");S6=simplify(D6,200);F6=fitMesh(S6,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S6.V)));R6=buildParts(fixSlivers(F6,30));T6=totals(R6,{t:2,mat:"steel",sheet:[2500,1250]})`);
 console.log("     доберман 6 (агент Meshy, ремеш): "+run("D6.F.length")+" тр → 200 → деталей "+run("R6.parts.length")+", масса "+run("T6.mass").toFixed(1)+" кг, швы "+(run("T6.weld")/1000).toFixed(1)+" м");
 ok(run("D6.F.length")===1028&&run("R6.parts.length")>=90&&run("R6.parts.length")<=200&&run("T6.open")===0,"доберман 6: 1028 треугольников, после упрощения 90–200 деталей, сетка замкнута");
+// слить почти плоские грани
+run(`LV=[[0,0,0],[200,0,0],[200,100,0],[100,100,0],[100,200,0],[0,200,0]];LT=earClip(LV,[0,1,2,3,4,5]);LA=LT.reduce((a,t)=>a+V3.len(triN(LV,t))/2,0)`);
+ok(run("LT.length")===4&&Math.abs(run("LA")-30000)<1e-6&&run("LT.every(t=>triN(LV,t)[2]>0)"),"невыпуклая грань (буква Г) режется на треугольники без перехлёста");
+run(`SPH=blankSphere(200);SG=dissolve(polyBase(SPH.V,SPH.P),1,1)`);ok(run("SG.P.length")===80,"шар: соседние грани под углом больше порога — не сливаются");
+for(const [id,n0] of [['doberman5',508],['doberman6',1028]]){run(`DM=figureMesh("${id}");SM=simplify(DM,300);FM=fitMesh(SM,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(SM.V)));FM=fixSlivers(FM,15);n1=buildParts(FM).parts.length;
+  G=dissolve(FM,12,6);op=openVerts(G);VG=planarize(G.V,G.P,(i,q)=>{if(op.has(i)&&Math.abs(G.V[i][2])<.5)q[2]=0;return q;},400);MG=fitMesh(polyMesh(VG,G.P),meshBox(FM.V).size.reduce((o,v,i)=>(o['WHD'[i]]=v,o),{}));RG=buildParts(MG,1.5,1.5);
+  EG2=new Map();MG.F.forEach(f=>{for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+"_"+b:b+"_"+a;EG2.set(key,(EG2.get(key)||0)+1);}})`);
+  console.log(`     ${id}: упрощение до 300 → деталей ${run('n1')}, слить 12° → многоугольников ${run('G.P.length')}, деталей ${run('RG.parts.length')}, неплоских ${run('nonPlanar({V:VG,P:G.P},.5).length')}`);
+  ok(run('RG.parts.length')<run('n1')*.8&&run('nonPlanar({V:VG,P:G.P},.5).length')===0&&run('[...EG2.values()].every(n=>n===2)')&&Math.abs(run('meshBox(MG.V).size[1]')-run('meshBox(FM.V).size[1]'))<1e-6,id+': слить 12° — деталей меньше на 20%+, все грани плоские, сетка замкнута, размер тот же');}
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

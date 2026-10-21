@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
+const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
@@ -45,9 +45,13 @@ function compute0(){const b=ST.base;let S=b;
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   const asIs=!isDense()&&ST.faces>=b.F.length;   // гранёная как есть: грани уже плоские, не трогаем
   let M3=fitMesh(S,ST.dims);if(ST.minW>0&&!asIs)M3=fitMesh(fixSlivers(M3,ST.minW),ST.dims);   // после чистки — снова точно в размер
-  const R=asIs?buildParts(M3,1.5,1.5):buildParts(M3),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
+  if(ST.diss>0)M3=mergeFlat(M3);
+  const R=asIs||ST.diss>0?buildParts(M3,1.5,1.5):buildParts(M3),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
   const small=new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id));
   CUR={M3,R,T,small,bad:new Set()};if(ST.sel>=R.parts.length)ST.sel=-1;}
+// слить почти плоские грани в многоугольники → выровнять в плоскость (стена остаётся на z=0) → снова точно в размер
+function mergeFlat(M3){const G=dissolve(M3,ST.diss,Math.max(ST.dims.W,ST.dims.H,ST.dims.D)*.01),open=openVerts(G);
+  const V=planarize(G.V,G.P,(i,q)=>{if(open.has(i)&&Math.abs(G.V[i][2])<.5)q[2]=0;return q;},400);return fitMesh(polyMesh(V,G.P),ST.dims);}
 
 function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
   build3D(CUR.M3,CUR.R,{sel:ST.sel,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp])):null,warn:isPoly()?tri(CUR.bad):null});edUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
@@ -59,7 +63,7 @@ function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
 const angT=d=>d>180.5?Math.round(360-d)+'° внутрь':Math.round(d)+'°';
 const MATN={steel:'сталь',inox:'нержавейка',corten:'кортен',alu:'алюминий'};
 function sizeUI(){['H','W','D'].forEach(k=>{const el=$('d'+k);if(document.activeElement!==el)el.value=ST.dims[k];});$('cProp').checked=ST.prop;}
-function facesUI(){$('fRng').disabled=isPoly();if(isPoly()){$('fVal').textContent=ST.base.P.length+' (многоугольников)';$('fNote').textContent='Модель из граней-многоугольников: берём как есть, число граней меняется в редакторе. Чтобы упростить гладкую модель — откройте её заново';$('minW').value=ST.minW;$('cSmall').checked=ST.small;return;}
+function facesUI(){$('fRng').disabled=$('dRng').disabled=isPoly();$('dRng').value=ST.diss;$('dVal').textContent=ST.diss?ST.diss+'°':'нет';if(isPoly()){$('fVal').textContent=ST.base.P.length+' (многоугольников)';$('fNote').textContent='Модель из граней-многоугольников: берём как есть, число граней меняется в редакторе. Чтобы упростить гладкую модель — откройте её заново';$('minW').value=ST.minW;$('cSmall').checked=ST.small;return;}
   const n=ST.base.F.length,r=$('fRng');r.max=Math.min(n,1500);r.min=Math.min(40,n);r.value=Math.min(ST.faces,n);$('fVal').textContent=Math.min(ST.faces,n);
   $('fNote').textContent=isDense()?`Модель гладкая: ${fmt(n)} треугольников — упрощаем до выбранного числа. 150–300 — как у фигур в мастерских, больше — глаже, но больше сварки`
     :ST.faces>=n?`Модель гранёная: ${n} треугольников — берём как есть, грани в одной плоскости сливаются в одну деталь. Ползунок влево — ещё проще`:`Модель гранёная (${n} треугольников) — упрощена до ${ST.faces}`;
@@ -103,16 +107,16 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
 /* ---------- загрузка фигур и файлов ---------- */
 function setBase(m,o={}){ST.base=m;SIMP={key:'',m:null};ST.sel=-1;ST.name=o.name||ST.name;$('mName').value=ST.name;
   ST.faces=o.faces||(isDense()?250:m.F.length);if(o.dims)ST.dims=o.dims;else dimsFromH(o.H||600);ST.sv=ST.sp=-1;UNDO.length=REDO.length=0;ST.edit=false;$('cEdit').checked=false;if(m.P)setPolyDims();}
-function loadFigure(id){later(()=>{const f=FIGURES[id];ST.fig=id;setBase(figureMesh(id,12),{name:f.name,faces:f.faces,H:f.H});if(/edit/.test(location.hash)){ST.edit=true;$('cEdit').checked=true;}compute();renderAll('instant');store('art-fig',id);msg('');const hv=/v=([a-z]+)/.exec(location.hash);if(hv)viewDir(hv[1],meshBox(CUR.M3.V),/og/.test(location.hash));},'Строю фигуру…');}
+function loadFigure(id){later(()=>{const f=FIGURES[id];ST.fig=id;setBase(figureMesh(id,12),{name:f.name,faces:f.faces,H:f.H});const hn=/faces=(\d+)/.exec(location.hash),hd=/diss=(\d+)/.exec(location.hash);if(hn)ST.faces=+hn[1];if(hd)ST.diss=+hd[1];if(/edit/.test(location.hash)){ST.edit=true;$('cEdit').checked=true;}compute();renderAll('instant');store('art-fig',id);msg('');const hv=/v=([a-z]+)/.exec(location.hash);if(hv)viewDir(hv[1],meshBox(CUR.M3.V),/og/.test(location.hash));},'Строю фигуру…');}
 function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=file.name.replace(/\.[^.]+$/,'');
   file.arrayBuffer().then(buf=>later(()=>{let m,o={name};
     if(ext==='obj')m=parseOBJ(new TextDecoder().decode(buf));else if(ext==='stl')m=parseSTL(buf);else if(ext==='glb')m=parseGLB(buf);
     else if(ext==='json'){const j=JSON.parse(new TextDecoder().decode(buf));if(j.type!=='md-art')throw new Error('это не файл фигуры');m=j.P?polyBase(j.V,j.P):{V:j.V,F:j.F};o={name:j.name||name,dims:j.dims,faces:j.F.length};
-      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
+      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
     else throw new Error('нужен файл OBJ, STL, GLB или JSON');
     if(!m.F.length)throw new Error('в файле нет граней');ST.fig='';$('figSel').value='';setBase(m,o);compute();renderAll('instant');
     msg(`Открыто: ${m.F.length} треугольников${isDense()?' — упрощаю до '+ST.faces:''}`);},'Читаю модель…'));}
-function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,
+function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,diss:0,
     V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly())j.P=ST.base.P;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
@@ -129,6 +133,7 @@ $('mName').addEventListener('input',e=>{ST.name=e.target.value;$('ttl').textCont
 $('cProp').addEventListener('change',e=>{ST.prop=e.target.checked;});
 $('bReset').addEventListener('click',()=>{if(isPoly()){syncDims();msg('Модель из граней — пропорции уже её собственные');return;}dimsFromH(ST.dims.H);recalc(true);});
 $('fRng').addEventListener('input',e=>{ST.faces=+e.target.value;$('fVal').textContent=ST.faces;recalc(false,true);});
+$('dRng').addEventListener('input',e=>{ST.diss=+e.target.value;$('dVal').textContent=ST.diss?ST.diss+'°':'нет';recalc(false,true);});
 $('minW').addEventListener('change',e=>{ST.minW=Math.max(0,+e.target.value||0);recalc();});
 $('cSmall').addEventListener('change',e=>{ST.small=e.target.checked;renderAll();});
 $('cNums').addEventListener('change',e=>{ST.nums=e.target.checked;renderAll();});

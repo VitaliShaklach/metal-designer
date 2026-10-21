@@ -3,7 +3,7 @@
    Симметрия — по плоскости x=0: всё, что делаем справа, повторяется слева. */
 
 // модель для расчёта: треугольники + какой треугольник из какой грани
-function polyBase(V,P){const F=[],T=[];P.forEach((Q,pi)=>{for(let k=1;k+1<Q.length;k++){F.push([Q[0],Q[k],Q[k+1]]);T.push(pi);}});return {V,P,F,T};}
+function polyBase(V,P){const F=[],T=[];P.forEach((Q,pi)=>earClip(V,Q).forEach(t=>{F.push(t);T.push(pi);}));return {V,P,F,T};}
 const ecopy=E=>({V:E.V.map(p=>p.slice()),P:E.P.map(Q=>Q.slice())});
 function polyNorm(V,Q){let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});return V3.norm(n);}
 const polyC=(V,Q)=>V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);

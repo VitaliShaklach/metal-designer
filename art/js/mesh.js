@@ -216,4 +216,46 @@ function orientPolys(V,polys,center){const ek=(a,b)=>a<b?a+'_'+b:b+'_'+a,E=new M
     let vote=0;comp.forEach(pi=>{const P=out[pi],c=V3.mul(P.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/P.length),n=V3.cross(V3.sub(V[P[1]],V[P[0]]),V3.sub(V[P[2]],V[P[0]]));vote+=Math.sign(V3.dot(n,V3.sub(c,center)));});
     if(vote<0)comp.forEach(pi=>out[pi].reverse());});
   return out;}
-function polyMesh(V,polys){const F=[];polys.forEach(P=>{for(let k=1;k+1<P.length;k++)F.push([P[0],P[k],P[k+1]]);});return {V,F};}
+function polyMesh(V,polys){const F=[];polys.forEach(P=>earClip(V,P).forEach(t=>F.push(t)));return {V,F};}
+
+/* ---------- слить почти плоские грани (как Limited Dissolve в Blender) ----------
+   Соседние треугольники, которые отходят от общей плоскости меньше чем на deg° и tolMm мм, — одна грань-многоугольник.
+   Грань растёт от самого большого треугольника и остаётся «диском» (без дыр и перемычек).
+   Точки на шве ровно двух граней убираем — после выравнивания шов прямой. Возвращает {V,P}. */
+function dissolve(m,deg,tolMm){const {V,F}=m,N=F.map(f=>V3.norm(triN(V,f))),A=F.map(f=>V3.len(triN(V,f))/2),C=F.map(f=>V3.mul(V3.add(V3.add(V[f[0]],V[f[1]]),V[f[2]]),1/3));
+  const cos=Math.cos(deg*Math.PI/180),ek=(a,b)=>a<b?a+'_'+b:b+'_'+a,E=new Map();F.forEach((f,fi)=>{for(let k=0;k<3;k++){const key=ek(f[k],f[(k+1)%3]);(E.get(key)||E.set(key,[]).get(key)).push(fi);}});
+  const across=(fi,a,b)=>(E.get(ek(a,b))||[]).find(x=>x!==fi);
+  const reg=new Int32Array(F.length).fill(-1),P=[];let nid=0;
+  F.map((_,i)=>i).sort((a,b)=>A[b]-A[a]).forEach(s=>{if(reg[s]>=0)return;const id=nid++,tris=[s],vs=new Set(F[s]);reg[s]=id;
+    let ns=V3.mul(N[s],A[s]),cs=V3.mul(C[s],A[s]),as=A[s];
+    for(;;){const n=V3.norm(ns),c=V3.mul(cs,1/as);let best=-1,bd=-2;
+      tris.forEach(t=>{const f=F[t];for(let k=0;k<3;k++){const o=across(t,f[k],f[(k+1)%3]);if(o===undefined||reg[o]>=0)continue;const d=V3.dot(N[o],n);if(d<cos||d<=bd)continue;
+        const g=F[o];if(g.some(v=>Math.abs(V3.dot(V3.sub(V[v],c),n))>tolMm))continue;
+        // диск: треугольник касается грани одним ребром, а третьей вершиной уже лежит на ней — получится перемычка или дыра
+        const on=[0,1,2].filter(j=>{const x=across(o,g[j],g[(j+1)%3]);return x!==undefined&&reg[x]===id;});
+        if(on.length===1&&vs.has(g[(on[0]+2)%3]))continue;
+        best=o;bd=d;}});
+      if(best<0)break;reg[best]=id;tris.push(best);F[best].forEach(v=>vs.add(v));ns=V3.add(ns,V3.mul(N[best],A[best]));cs=V3.add(cs,V3.mul(C[best],A[best]));as+=A[best];}
+    // контур грани: рёбра, за которыми не эта грань
+    const nxt=new Map();let ok=true;tris.forEach(t=>{const f=F[t];for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],o=across(t,a,b);if(o===undefined||reg[o]!==id){if(nxt.has(a))ok=false;nxt.set(a,b);}}});
+    const L=[];if(ok){let c=nxt.keys().next().value;while(c!==undefined&&L.length<=nxt.size){L.push(c);c=nxt.get(c);if(c===L[0])break;}if(L.length!==nxt.size)ok=false;}
+    if(ok&&L.length>=3)P.push(L);else tris.forEach(t=>P.push(F[t].slice()));});
+  // точки на шве ровно двух граней (не на открытом краю), почти на прямой между соседями, — лишние; кончик уха — нет
+  const VP=V.map(()=>new Set()),open=new Set();P.forEach((Q,pi)=>Q.forEach(v=>VP[v].add(pi)));
+  E.forEach((fs,key)=>{if(fs.length===1)key.split('_').forEach(x=>open.add(+x));});
+  const offLine=(p,a,b)=>{const ab=V3.sub(b,a),l=V3.dot(ab,ab)||1,t=Math.max(0,Math.min(1,V3.dot(V3.sub(p,a),ab)/l));return V3.len(V3.sub(p,V3.add(a,V3.mul(ab,t))));};
+  V.forEach((_,v)=>{if(open.has(v)||VP[v].size!==2)return;const [a,b]=[...VP[v]];if(P[a].length<4||P[b].length<4)return;
+    const Q=P[a],k=Q.indexOf(v);if(offLine(V[v],V[Q[(k+Q.length-1)%Q.length]],V[Q[(k+1)%Q.length]])>tolMm)return;
+    [a,b].forEach(pi=>{P[pi]=P[pi].filter(x=>x!==v);});});
+  return compact({V,P});}
+// многоугольник → треугольники «отрезанием ушей» (для невыпуклых граней веер не годится)
+function earClip(V,Q){const n=Q.length;if(n<4)return [Q.slice()];let nn=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%n]];nn[0]+=(a[1]-b[1])*(a[2]+b[2]);nn[1]+=(a[2]-b[2])*(a[0]+b[0]);nn[2]+=(a[0]-b[0])*(a[1]+b[1]);});
+  const ax=Math.abs(nn[0])>Math.abs(nn[1])?(Math.abs(nn[0])>Math.abs(nn[2])?0:2):(Math.abs(nn[1])>Math.abs(nn[2])?1:2),u=(ax+1)%3,w=(ax+2)%3,sg=Math.sign(nn[ax])||1;
+  const p=i=>[V[i][u],V[i][w]],cr=(a,b,c)=>((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))*sg;
+  const inT=(x,a,b,c)=>cr(a,b,x)>=0&&cr(b,c,x)>=0&&cr(c,a,x)>=0;
+  const R=Q.slice(),T=[];let guard=0;
+  while(R.length>3&&guard++<n*n){let cut=false;
+    for(let k=0;k<R.length;k++){const ia=R[(k+R.length-1)%R.length],ib=R[k],ic=R[(k+1)%R.length],a=p(ia),b=p(ib),c=p(ic);if(cr(a,b,c)<=1e-9)continue;
+      if(R.some(j=>j!==ia&&j!==ib&&j!==ic&&inT(p(j),a,b,c)))continue;T.push([ia,ib,ic]);R.splice(k,1);cut=true;break;}
+    if(!cut){for(let k=1;k+1<R.length;k++)T.push([R[0],R[k],R[k+1]]);return T;}}
+  T.push(R);return T;}
