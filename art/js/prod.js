@@ -99,19 +99,19 @@ function dxfMarks(e,o,pts,ox,oy,segNb){const cx=pts.reduce((s,p)=>s+p[0],0)/pts.
     dxfTxt(e,mx+dx/l*k+ox,my+dy/l*k+oy,Math.max(2.5,Math.min(6,m*.08)),String(nb));});}
 
 /* ---------- гравировка номера: цифры из линий (как на табло), лазер проходит их на малой мощности ----------
-   Цифра — клетка 1×2 (y вверх, как в DXF), между цифрами 0,5. Под номером черта — видно, где низ (6 и 9 не перепутать). */
+   Цифра — клетка 1×2 (y вверх, как в DXF), между цифрами 0,5. «9» без нижней палочки — перевёрнутая она не похожа на «6» (у «6» есть верх). */
 const DIGITS={0:[[[0,0],[1,0],[1,2],[0,2],[0,0]]],1:[[[.5,0],[.5,2],[.2,1.7]],[[.2,0],[.8,0]]],2:[[[0,2],[1,2],[1,1],[0,1],[0,0],[1,0]]],3:[[[0,2],[1,2],[1,0],[0,0]],[[0,1],[1,1]]],
   4:[[[0,2],[0,1],[1,1]],[[1,2],[1,0]]],5:[[[1,2],[0,2],[0,1],[1,1],[1,0],[0,0]]],6:[[[1,2],[0,2],[0,0],[1,0],[1,1],[0,1]]],7:[[[0,2],[1,2],[1,0]]],
-  8:[[[0,0],[1,0],[1,2],[0,2],[0,0]],[[0,1],[1,1]]],9:[[[1,1],[0,1],[0,2],[1,2],[1,0],[0,0]]]};
+  8:[[[0,0],[1,0],[1,2],[0,2],[0,0]],[[0,1],[1,1]]],9:[[[1,1],[0,1],[0,2],[1,2],[1,0]]]};
 // самое просторное место внутри детали: точка, дальше всего от кромок (перебор по сетке + уточнение)
 function innerPoint(P){const d=polyDist(P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;
   for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
   if(!best)return null;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const p=[c[0]+i*step,c[1]+j*step];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}}
   return {p:best,r:bd};}
 // отрезки гравировки номера внутри детали P (координаты те же, y вверх); null — деталь слишком узкая (меньше 3 мм высоты цифр)
-function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2.5,  // ширина/высота блока в единицах (с чертой)
+function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2,  // ширина/высота блока в единицах
     clear=o.clear??2,u=Math.min((o.maxH||20)/2,(ip.r-clear)/Math.hypot(uw/2,uh/2));if(2*u<(o.minH||3))return null;
-  const ox=ip.p[0]-uw*u/2,oy=ip.p[1]-uh*u/2+.5*u,seg=[];
+  const ox=ip.p[0]-uw*u/2,oy=ip.p[1]-uh*u/2,seg=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++)seg.push([ox+(i*1.5+L[k][0])*u,oy+L[k][1]*u,ox+(i*1.5+L[k+1][0])*u,oy+L[k+1][1]*u]);}));
-  seg.push([ox,oy-.5*u,ox+uw*u,oy-.5*u]);return seg;}
+  return seg;}
 function dxfSegs(e,S,lay,ox=0,oy=0){S.forEach(s=>e.push('0','LINE','8',lay,'62',lay==='ENGRAVE'?1:7,'10',dn(s[0]+ox),'20',dn(s[1]+oy),'30',0,'11',dn(s[2]+ox),'21',dn(s[3]+oy),'31',0));}
