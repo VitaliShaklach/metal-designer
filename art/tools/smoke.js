@@ -45,12 +45,17 @@ ok(run("CC.every(c=>!c.bad&&Math.abs(Math.abs(area2(c.pts))-95*95)<1e-6)"),"ку
 run(`RO=buildParts(polyBase(delPoly(blankBox(100,100,100),0,false).V,delPoly(blankBox(100,100,100),0,false).P));CO=RO.parts.map(p=>cutContour(p,2,1,true))`);
 ok(run("CO.some(c=>c.s.includes(0))&&CO.every(c=>!c.bad)"),"открытый край — без сдвига");
 ok(Math.abs(run("edgeSetback({nb:1,dih:225},2,1,true)")-0.5)<1e-9,"вогнутый шов — сдвиг только на полшва");
-run(`D3=figureMesh("doberman2");R3=buildParts(D3,1.5,1.5);C3=R3.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,2,1,true)}));N3=nest(C3.filter(c=>!c.bad),2500,1250,8,10)`);
+run(`D3=figureMesh("doberman2");R3=buildParts(D3,1.5,1.5);C3=R3.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,2,1,true)}));N3=nest(C3.filter(c=>!c.bad),2500,1250,3,10,2.5,2,true)`);
 console.log("     доберман 3: вырожденных "+run("C3.filter(c=>c.bad).length")+", листов "+run("N3.sheets.length")+", заполнение "+Math.round(run("N3.used")*100)+"%");
 ok(run("C3.filter(c=>!c.bad).reduce((a,c)=>a+Math.abs(area2(c.pts)),0)")<run("R3.parts.reduce((a,p)=>a+p.area,0)"),"доберман 3: контуры реза меньше поверхности");
-ok(run(`N3.sheets.every(sh=>sh.items.every((a,i)=>a.x>=10-1e-6&&a.y>=10-1e-6&&a.x+a.w<=2490+1e-6&&a.y+a.h<=1240+1e-6&&sh.items.every((b,j)=>j<=i||a.x+a.w+8-1e-6<=b.x||b.x+b.w+8-1e-6<=a.x||a.y+a.h+8-1e-6<=b.y||b.y+b.h+8-1e-6<=a.y)))`)&&run("N3.too.length")===0,"доберман 3: раскладка без наложений, всё внутри листа");
-run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);dxfMarks(DE,{no:i+1},c.pts,i*300,0,c.pts.map(()=>5));});DX=dxfDoc(DE)`);
-ok(run("(DX.match(/\\r\\nLINE\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')&&/\\r\\nTEXT\\r\\n/.test(DX)"),"DXF: все стороны контуров реза — линии, есть номера, файл замкнут");
+ok(run(`(()=>{let m=Infinity;N3.sheets.forEach(sh=>sh.items.forEach((a,i)=>sh.items.forEach((b,j)=>{if(j>i)m=Math.min(m,polyGap(a.pts,b.pts));})));return m;})()`)>=3-1e-9&&run("N3.sheets.every(sh=>sh.items.every(o=>o.pts.every(p=>p[0]>=10-1e-6&&p[1]>=10-1e-6&&p[0]<=2490+1e-6&&p[1]<=1240+1e-6)))")&&run("N3.too.length")===0,"доберман 3: раскладка по форме — зазор между деталями не меньше 3 мм, всё внутри листа");
+console.log("     доберман 3: занято "+Math.round(run("N3.sheets[0].len"))+" мм длины листа, плотность "+Math.round(run("N3.sheets[0].dense")*100)+"%");
+ok(run("N3.sheets.every(sh=>sh.items.every(o=>Math.sign(area2(o.pts))===-Math.sign(area2(C3.find(c=>c.id===o.id).pts))))"),"гравировка внутрь: каждая деталь в раскрое зеркальна развёртке — вверх смотрит внутренняя сторона");
+ok(run("N3.sheets[0].dense")>.55,"доберман 3: плотность раскладки больше 55%");
+run(`EG=N3.sheets[0].items.map(o=>({o,g:engraveSegs(o.no,o.pts)}))`);
+ok(run("EG.filter(x=>x.g).length")>=run("EG.length")*.9&&run("EG.every(x=>!x.g||x.g.every(s=>inPoly([s[0],s[1]],x.o.pts)&&inPoly([s[2],s[3]],x.o.pts)))"),"гравировка номера: у 90%+ деталей, все линии внутри детали");
+run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);const g=engraveSegs(i+1,c.pts);if(g)dxfSegs(DE,g,"ENGRAVE",i*300,0);});DX=dxfDoc(DE)`);
+ok(run("(DX.match(/LINE\\r\\n8\\r\\nCUT\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("/LINE\\r\\n8\\r\\nENGRAVE\\r\\n/.test(DX)&&DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')"),"DXF: все стороны контуров — линии CUT, номера — линии ENGRAVE, файл замкнут");
 {const t0=Date.now();run(`D4=figureMesh("doberman4");S4=simplify(D4,200);F4=fitMesh(S4,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S4.V)));F4=fixSlivers(F4,30);R4=buildParts(F4);T4=totals(R4,{t:2,mat:"steel",sheet:[2500,1250]})`);
 console.log("     доберман 4 (Meshy): запас "+run("D4.F.length")+" тр → 200 за "+(Date.now()-t0)+" мс → деталей "+run("R4.parts.length")+", габарит "+run("meshBox(F4.V).size.map(Math.round).join('×')")+", масса "+run("T4.mass").toFixed(1)+" кг, швы "+(run("T4.weld")/1000).toFixed(1)+" м, открытый край "+Math.round(run("T4.open"))+" мм");
 ok(run("R4.parts.length")>=90&&run("R4.parts.length")<=200&&run("T4.open")===0,"доберман 4: 90–200 деталей, сетка замкнута");}

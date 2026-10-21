@@ -23,7 +23,7 @@ function svgTable(x,y,cols,rows,rh=7){const W=cols.reduce((s,c)=>s+c.w,0),H=rh*(
   [cols.map(c=>c.t),...rows].forEach((r,ri)=>{let cx=x;r.forEach((v,i)=>{const c=cols[i],mx=Math.floor(c.w/1.55);let t=String(v);if(t.length>mx)t=t.slice(0,mx-1)+'…';
     s+=`<text class="td" x="${r2(ri===0?cx+c.w/2:c.r?cx+c.w-1.2:cx+1.2)}" y="${r2(y+ri*rh+rh-2)}"${ri===0?' text-anchor="middle"':c.r?' text-anchor="end"':''}>${shEsc(t)}</text>`;cx+=c.w;});});
   return s;}
-const SH_STYLE=`<style>.l{fill:none;stroke:#000;stroke-width:.35;stroke-linejoin:round}.t{fill:none;stroke:#000;stroke-width:.18}.dash{fill:none;stroke:#000;stroke-width:.15;stroke-dasharray:1.2 .8}.fr{fill:none;stroke:#000;stroke-width:.7}.fc{stroke:#000;stroke-width:.15;stroke-linejoin:round}.ar{fill:#000}text{font-family:"Arial Narrow",Arial,sans-serif;font-style:italic;fill:#000;font-size:3.5px}.hd{font-size:6px}.h2{font-size:4.5px}.sm,.lb{font-size:2.3px}.td{font-size:2.8px}.no{font-size:2.6px;font-style:normal;font-weight:bold}.nb{font-size:2.1px;fill:#a33}.big{font-size:5px;font-style:normal;font-weight:bold}</style>`;
+const SH_STYLE=`<style>.l{fill:none;stroke:#000;stroke-width:.35;stroke-linejoin:round}.t{fill:none;stroke:#000;stroke-width:.18}.dash{fill:none;stroke:#000;stroke-width:.15;stroke-dasharray:1.2 .8}.fr{fill:none;stroke:#000;stroke-width:.7}.eng{fill:none;stroke:#c33;stroke-width:.12}.fc{stroke:#000;stroke-width:.15;stroke-linejoin:round}.ar{fill:#000}text{font-family:"Arial Narrow",Arial,sans-serif;font-style:italic;fill:#000;font-size:3.5px}.hd{font-size:6px}.h2{font-size:4.5px}.sm,.lb{font-size:2.3px}.td{font-size:2.8px}.no{font-size:2.6px;font-style:normal;font-weight:bold}.nb{font-size:2.1px;fill:#a33}.big{font-size:5px;font-style:normal;font-weight:bold}</style>`;
 // рамка и основная надпись (только email — по просьбе автора)
 function wrapSheet(b,o){const x=230,y=276,c=[95,30,30,30],cell=(i,row,lab,val)=>{const xx=x+c.slice(0,i).reduce((s,v)=>s+v,0),yy=y+row*8;return `<text class="lb" x="${xx+1}" y="${yy+2.6}">${lab}</text><text class="td" x="${xx+1.2}" y="${yy+6.6}">${shEsc(val)}</text>`;};
   let xs=x,v='';c.slice(0,-1).forEach(w=>{xs+=w;v+=`M${xs},${y}V${y+16}`;});const nm=ST.name||'Фигура';
@@ -93,9 +93,11 @@ function sheetsSpec(){const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),dens=DENS
 /* ---------- 5. раскрой листа ---------- */
 function sheetsNest(){const N=CUR.N,n=N.sheets.length===1?pickScale([N.W,N.H],[385,235]):pickScale([N.W,N.H],[385,108]),k=1/n,out=[],[sl,sw]=sheetWL();
   for(let i=0;i<N.sheets.length;i+=2){let s='';N.sheets.slice(i,i+2).forEach((sh,j)=>{const ox=25+(385-N.W*k)/2,oy=30+j*125;
-      s+=`<text class="h2" x="25" y="${oy-3}">Лист металла ${i+j+1} из ${N.sheets.length} · ${sw} × ${sl} · ${ST.t} мм, ${MATN[ST.mat]} · деталей ${sh.items.length} · заполнение ${Math.round(sh.used*100)}%</text><rect class="l" x="${r2(ox)}" y="${oy}" width="${r2(N.W*k)}" height="${r2(N.H*k)}"/>`;
-      sh.items.forEach(o=>{const Q=o.pts.map(q=>[ox+(o.x+q[0])*k,oy+(o.y+q[1])*k]);s+=`<polygon class="t" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
-        const cx=Q.reduce((a,q)=>a+q[0],0)/Q.length,cy=Q.reduce((a,q)=>a+q[1],0)/Q.length;s+=`<text class="no" x="${r2(cx)}" y="${r2(cy+.9)}" text-anchor="middle">${o.no}</text>`;});});
+      s+=`<text class="h2" x="25" y="${oy-3}">Лист металла ${i+j+1} из ${N.sheets.length} · ${sw} × ${sl} · ${ST.t} мм, ${MATN[ST.mat]} · деталей ${sh.items.length} · заполнение листа ${Math.round(sh.used*100)}%, занято ${Math.round(sh.len)} мм длины (плотность ${Math.round(sh.dense*100)}%) · зазор ${N.gap} мм</text><rect class="l" x="${r2(ox)}" y="${oy}" width="${r2(N.W*k)}" height="${r2(N.H*k)}"/>`;
+      const T=(x,y)=>[ox+(x)*k,oy+(N.H-y)*k];   // как в DXF: y вверх
+      sh.items.forEach(o=>{const Q=o.pts.map(q=>T(o.x+q[0],o.y+q[1]));s+=`<polygon class="t" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
+        const g=ST.engrave?engraveSegs(o.no,o.pts):null;if(g)s+=`<path class="eng" d="${g.map(z=>{const a=T(z[0],z[1]),b=T(z[2],z[3]);return 'M'+r2(a[0])+','+r2(a[1])+'L'+r2(b[0])+','+r2(b[1]);}).join('')}"/>`;
+        else{const cx=Q.reduce((a,q)=>a+q[0],0)/Q.length,cy=Q.reduce((a,q)=>a+q[1],0)/Q.length;s+=`<text class="no" x="${r2(cx)}" y="${r2(cy+.9)}" text-anchor="middle">${o.no}</text>`;}});});
     out.push({title:'Раскрой листа',scale:scaleTxt(n),body:s});}
   if(N.too.length)out.push({title:'Раскрой листа',scale:'—',body:`<text class="h2" x="25" y="40">Не влезают в лист: ${N.too.map(o=>'№'+o.no).join(', ')} — выберите лист больше или уменьшите фигуру</text>`});
   return out;}
@@ -105,7 +107,8 @@ function buildSheets(){if(!CUR||!CUR.R.parts.length)return [];const L=[sheetGene
 
 /* ---------- DXF: раскрой (все листы) и детали (сеткой) ---------- */
 function segNbOf(p){return p.segs.map(g=>g.nb>=0?CUR.R.parts[g.nb].no:null);}
-function dxfNest(){const N=CUR.N,e=[];N.sheets.forEach((sh,i)=>{const oy=i*(N.H+200);dxfPoly(e,[[0,0],[N.W,0],[N.W,N.H],[0,N.H]],'SHEET',0,oy);dxfTxt(e,N.W/2,N.H+60+oy,40,`ЛИСТ ${i+1}`,'SHEET');
-  sh.items.forEach(o=>{const p=CUR.R.parts[o.id];dxfPoly(e,o.pts,"CUT",o.x,o.y+oy);dxfMarks(e,o,o.pts,o.x,o.y+oy,segNbOf(p));});});return dxfDoc(e);}
+function dxfNest(){const N=CUR.N,e=[];N.sheets.forEach((sh,i)=>{const oy=i*(N.H+200);dxfPoly(e,[[0,0],[N.W,0],[N.W,N.H],[0,N.H]],'SHEET',0,oy);dxfTxt(e,N.W/2,N.H+60+oy,40,`SHEET ${i+1}`,"SHEET");
+  sh.items.forEach(o=>{dxfPoly(e,o.pts,"CUT",o.x,o.y+oy);if(ST.engrave){const g=engraveSegs(o.no,o.pts);if(g)dxfSegs(e,g,"ENGRAVE",o.x,o.y+oy);}});});return dxfDoc(e);}
 function dxfParts(){const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),e=[];let x=0,y=0,rowH=0;const rowW=Math.max(1500,Math.max(...ps.map(p=>p.L))+50);
-  ps.forEach(p=>{const c=CUR.C[p.id];if(x+p.L>rowW){x=0;y+=rowH+30;rowH=0;}dxfPoly(e,c.pts,'CUT',x,y);dxfMarks(e,p,c.pts,x,y,segNbOf(p));x+=p.L+30;rowH=Math.max(rowH,p.W);});return dxfDoc(e);}
+  ps.forEach(p=>{const c=CUR.C[p.id];if(x+p.L>rowW){x=0;y+=rowH+30;rowH=0;}// с гравировкой — зеркально, внутренней стороной вверх
+    const P=ST.engrave?c.pts.map(q=>[p.L-q[0],q[1]]):c.pts;dxfPoly(e,P,'CUT',x,y);if(ST.engrave){const g=engraveSegs(p.no,P);if(g)dxfSegs(e,g,'ENGRAVE',x,y);}x+=p.L+30;rowH=Math.max(rowH,p.W);});return dxfDoc(e);}

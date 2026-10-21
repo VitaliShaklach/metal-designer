@@ -15,16 +15,49 @@ function cutContour(p,t,gap,useT){const P=p.pts,n=P.length;if(n<3)return {pts:[]
   let bad=area2(Q)*ccw<=1;Q.forEach((a,i)=>{const b=Q[(i+1)%n];if((b[0]-a[0])*L[i].d[0]+(b[1]-a[1])*L[i].d[1]<=0)bad=true;});
   return {pts:Q,bad,s};}
 
-// раскладка полками: детали длинной стороной вдоль листа; W×H — лист (W — длинная сторона)
-function nest(items,W,H,gap,margin){const it=items.map(o=>{const xs=o.pts.map(p=>p[0]),ys=o.pts.map(p=>p[1]),mx=Math.min(...xs),my=Math.min(...ys);
-    let pts=o.pts.map(p=>[p[0]-mx,p[1]-my]),w=Math.max(...xs)-mx,h=Math.max(...ys)-my;if(h>w){pts=pts.map(p=>[p[1],w-p[0]]);[w,h]=[h,w];}
-    return {id:o.id,no:o.no,pts,w,h,area:Math.abs(area2(o.pts))};}).sort((a,b)=>b.h-a.h||b.w-a.w);
-  const sheets=[],too=[];let sh=null,x=0,y=0,rowH=0;const newSheet=()=>{sh={items:[]};sheets.push(sh);x=margin;y=margin;rowH=0;};
-  it.forEach(o=>{if(o.w>W-2*margin||o.h>H-2*margin){too.push(o);return;}
-    if(!sh)newSheet();if(x+o.w>W-margin){x=margin;y+=rowH+gap;rowH=0;}if(y+o.h>H-margin){newSheet();}
-    sh.items.push({...o,x,y});x+=o.w+gap;rowH=Math.max(rowH,o.h);});
-  sheets.forEach(s=>{s.used=s.items.reduce((a,o)=>a+o.area,0)/(W*H);});
-  return {sheets,too,W,H,used:sheets.length?sheets.reduce((a,s)=>a+s.used,0)/sheets.length:0};}
+// ---------- раскладка по форме ----------
+// Лист — сетка клеток cell мм. Каждая деталь пробуется во всех положениях «сторона вдоль листа» (и перевёрнутой);
+// ставим туда, где правый край раскладки получается ближе всего к началу листа — детали заполняют пустоты между собой.
+// Занятость — клетки, которых касается деталь; проверка — та же деталь, расширенная на зазор. W — длинная сторона листа.
+function ptSegD(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);}
+function inPoly(p,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+function segX(a,b,c,d){const o=(p,q,r)=>Math.sign((q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]));return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0;}
+function polyGap(A,B){let d=Infinity;for(let i=0;i<A.length;i++){const a=A[i],a2=A[(i+1)%A.length];for(let j=0;j<B.length;j++){const b=B[j],b2=B[(j+1)%B.length];if(segX(a,a2,b,b2))return 0;d=Math.min(d,ptSegD(a,b,b2),ptSegD(b,a,a2));}}if(inPoly(A[0],B)||inPoly(B[0],A))return 0;return d;}
+function polyDist(P){return p=>{let d=Infinity;P.forEach((a,i)=>{d=Math.min(d,ptSegD(p,a,P[(i+1)%P.length]));});return d;};}
+function nestOrient(P,cell,r,flips=[false,true]){const out=[],seen=new Set();
+  flips.forEach(flip=>{const Q0=flip?P.map(p=>[-p[0],p[1]]):P;Q0.forEach((a,i)=>{const b=Q0[(i+1)%Q0.length];[0,Math.PI].forEach(add=>{
+    const ang=-Math.atan2(b[1]-a[1],b[0]-a[0])+add,c=Math.cos(ang),s=Math.sin(ang);let Q=Q0.map(p=>[c*p[0]-s*p[1],s*p[0]+c*p[1]]);
+    const mx=Math.min(...Q.map(q=>q[0])),my=Math.min(...Q.map(q=>q[1]));Q=Q.map(q=>[q[0]-mx,q[1]-my]);
+    const key=Q.map(q=>Math.round(q[0])+','+Math.round(q[1])).sort().join(';');if(seen.has(key))return;seen.add(key);
+    // клетки, чьи центры внутри детали, раздутой на ползазора (r — ползазора, мм); точный зазор проверяется отдельно
+    const o=Math.ceil(r/cell)+1,w=Math.ceil(Math.max(...Q.map(q=>q[0]))/cell)+2*o+1,h=Math.ceil(Math.max(...Q.map(q=>q[1]))/cell)+2*o+1,core=new Uint8Array(w*h),dist=polyDist(Q);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const p=[(x-o+.5)*cell,(y-o+.5)*cell];if(inPoly(p,Q)||dist(p)<=r)core[y*w+x]=1;}
+    const rows=m=>{const R=[];for(let y=0;y<h;y++){let x=0;const iv=[];while(x<w){if(m[y*w+x]){const s0=x;while(x<w&&m[y*w+x])x++;iv.push([s0,x-1]);}else x++;}R.push(iv);}return R;};
+    const cr=rows(core);out.push({Q,w,h,o,core:cr,dil:cr,flip});});});});
+  return out;}
+function nest(...a){const g=nestGen(...a);let v;do{v=g.next();}while(!v.done);return v.value;}
+// innerUp: деталь кладём зеркально — внутренней стороной вверх, гравировка номера уйдёт внутрь фигуры (лазер гравирует верх листа).
+// Развёртка p.pts смотрит наружной стороной на нас (нормаль к зрителю), поэтому «внутрь вверх» = только зеркальные положения.
+function* nestGen(items,W,H,gap,margin,cell=2.5,mode=2,innerUp=false){const r=gap/2,GW=Math.floor((W-2*margin)/cell),GH=Math.floor((H-2*margin)/cell);
+  const it=items.map(o=>({id:o.id,no:o.no,area:Math.abs(area2(o.pts)),or:nestOrient(o.pts,cell,r,innerUp?[true]:[false,true])})).sort((a,b)=>mode===2?Math.max(...b.or.map(o=>o.w))-Math.max(...a.or.map(o=>o.w)):b.area-a.area);
+  const sheets=[],too=[];
+  const newSheet=()=>{const sh={items:[],occ:new Uint8Array(GW*GH),pre:new Int32Array((GW+1)*GH),len:0};sheets.push(sh);return sh;};
+  const free=(sh,R,x,y)=>{for(let ry=0;ry<R.length;ry++){const iv=R[ry];if(!iv.length)continue;const base=(y+ry)*(GW+1);for(const [a,b] of iv)if(sh.pre[base+x+b+1]-sh.pre[base+x+a])return false;}return true;};
+  const gapOK=(sh,o,x,y)=>{const ox=margin+(x+o.o)*cell,oy=margin+(y+o.o)*cell,P=o.Q.map(q=>[q[0]+ox,q[1]+oy]),bx=[Math.min(...P.map(p=>p[0]))-gap,Math.min(...P.map(p=>p[1]))-gap,Math.max(...P.map(p=>p[0]))+gap,Math.max(...P.map(p=>p[1]))+gap];
+    if(bx[0]<margin-.01||bx[1]<margin-.01||bx[2]>W-margin+gap+.01||bx[3]>H-margin+gap+.01)return false;
+    for(const it of sh.items){const b=it.bb;if(b[0]>bx[2]||b[2]<bx[0]||b[1]>bx[3]||b[3]<bx[1])continue;if(polyGap(P,it.pts)<gap)return false;}return true;};
+  const fit=(sh,o,limit)=>{for(let x=0;x+o.w<=GW;x++){if(x+o.w>=limit)return null;for(let y=0;y+o.h<=GH;y++)if(free(sh,o.dil,x,y)&&gapOK(sh,o,x,y))return {x,y};}return null;};
+  const place=(sh,o,x,y)=>{o.core.forEach((iv,ry)=>{const Y=y+ry;if(Y>=GH)return;iv.forEach(([a,b])=>{for(let X=x+a;X<=x+b&&X<GW;X++)sh.occ[Y*GW+X]=1;});
+      const base=Y*(GW+1);let acc=0;for(let X=0;X<GW;X++){sh.pre[base+X]=acc;acc+=sh.occ[Y*GW+X];}sh.pre[base+GW]=acc;});};
+  for(let pi=0;pi<it.length;pi++){const p=it[pi];let done=false;yield {done:pi,of:it.length};
+    for(const sh of sheets.concat([null])){const S=sh||newSheet();let best=null;
+      p.or.forEach(o=>{if(o.w>GW||o.h>GH)return;const f=fit(S,o,best?(mode?best.x+1+o.w:best.score):Infinity);if(f){const score=mode?f.x*1e4+f.y:f.x+o.w;if(!best||score<best.score||score===best.score&&f.y<best.y)best={o,...f,score,right:f.x+o.w};}});
+      if(best){place(S,best.o,best.x,best.y);const ox=margin+(best.x+best.o.o)*cell,oy=margin+(best.y+best.o.o)*cell;
+        const pts=best.o.Q.map(q=>[q[0]+ox,q[1]+oy]);S.items.push({id:p.id,no:p.no,flip:best.o.flip,area:p.area,x:0,y:0,pts,bb:[Math.min(...pts.map(q=>q[0])),Math.min(...pts.map(q=>q[1])),Math.max(...pts.map(q=>q[0])),Math.max(...pts.map(q=>q[1]))]});S.len=Math.max(S.len,margin+best.right*cell);done=true;break;}
+      if(!sh){sheets.pop();break;}}
+    if(!done)too.push({id:p.id,no:p.no});}
+  sheets.forEach(s=>{const a=s.items.reduce((q,o)=>q+o.area,0);s.used=a/(W*H);s.dense=a/((s.len-margin)*(H-2*margin)||1);delete s.occ;delete s.pre;});
+  return {sheets,too,W,H,gap,used:sheets.length?sheets.reduce((a,s)=>a+s.used,0)/sheets.length:0};}
 
 /* ---------- DXF (R12, ASCII): LINE по контуру, TEXT — номера ---------- */
 function dxfDoc(ents){return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC','0','SECTION','2','ENTITIES',...ents,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
@@ -37,3 +70,21 @@ function dxfMarks(e,o,pts,ox,oy,segNb){const cx=pts.reduce((s,p)=>s+p[0],0)/pts.
   dxfTxt(e,cx+ox,cy+oy,Math.max(4,Math.min(20,m*.25)),String(o.no));
   if(segNb)pts.forEach((a,i)=>{const nb=segNb[i];if(nb==null)return;const b=pts[(i+1)%pts.length],mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,dx=cx-mx,dy=cy-my,l=Math.hypot(dx,dy)||1,k=Math.min(8,l*.35);
     dxfTxt(e,mx+dx/l*k+ox,my+dy/l*k+oy,Math.max(2.5,Math.min(6,m*.08)),String(nb));});}
+
+/* ---------- гравировка номера: цифры из линий (как на табло), лазер проходит их на малой мощности ----------
+   Цифра — клетка 1×2 (y вверх, как в DXF), между цифрами 0,5. Под номером черта — видно, где низ (6 и 9 не перепутать). */
+const DIGITS={0:[[[0,0],[1,0],[1,2],[0,2],[0,0]]],1:[[[.5,0],[.5,2],[.2,1.7]],[[.2,0],[.8,0]]],2:[[[0,2],[1,2],[1,1],[0,1],[0,0],[1,0]]],3:[[[0,2],[1,2],[1,0],[0,0]],[[0,1],[1,1]]],
+  4:[[[0,2],[0,1],[1,1]],[[1,2],[1,0]]],5:[[[1,2],[0,2],[0,1],[1,1],[1,0],[0,0]]],6:[[[1,2],[0,2],[0,0],[1,0],[1,1],[0,1]]],7:[[[0,2],[1,2],[1,0]]],
+  8:[[[0,0],[1,0],[1,2],[0,2],[0,0]],[[0,1],[1,1]]],9:[[[1,1],[0,1],[0,2],[1,2],[1,0],[0,0]]]};
+// самое просторное место внутри детали: точка, дальше всего от кромок (перебор по сетке + уточнение)
+function innerPoint(P){const d=polyDist(P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;
+  for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
+  if(!best)return null;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const p=[c[0]+i*step,c[1]+j*step];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}}
+  return {p:best,r:bd};}
+// отрезки гравировки номера внутри детали P (координаты те же, y вверх); null — деталь слишком узкая (меньше 3 мм высоты цифр)
+function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2.5,  // ширина/высота блока в единицах (с чертой)
+    clear=o.clear??2,u=Math.min((o.maxH||20)/2,(ip.r-clear)/Math.hypot(uw/2,uh/2));if(2*u<(o.minH||3))return null;
+  const ox=ip.p[0]-uw*u/2,oy=ip.p[1]-uh*u/2+.5*u,seg=[];
+  [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++)seg.push([ox+(i*1.5+L[k][0])*u,oy+L[k][1]*u,ox+(i*1.5+L[k+1][0])*u,oy+L[k+1][1]*u]);}));
+  seg.push([ox,oy-.5*u,ox+uw*u,oy-.5*u]);return seg;}
+function dxfSegs(e,S,lay,ox=0,oy=0){S.forEach(s=>e.push('0','LINE','8',lay,'62',lay==='ENGRAVE'?1:7,'10',dn(s[0]+ox),'20',dn(s[1]+oy),'30',0,'11',dn(s[2]+ox),'21',dn(s[3]+oy),'31',0));}
