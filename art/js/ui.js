@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'plasma',minW:30,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
+const ST={edit:false,sym:true,sv:-1,sp:-1,name:'',fig:'dog',base:null,faces:260,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
@@ -73,7 +73,10 @@ function partSVG(p,big){const P=p.pts;if(!P.length)return '';const pad=big?Math.
       const nb=g.nb>=0?CUR.R.parts[g.nb].no:null;
       s+=`<text x="${ox.toFixed(1)}" y="${(p.W-oy).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${Math.round(g.len)}</text>`;
       if(nb)s+=`<text x="${(mx-dx/l*fs*1.2).toFixed(1)}" y="${(p.W-(my-dy/l*fs*1.2)).toFixed(1)}" font-size="${(fs*.8).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" class="nb">→${nb}</text>`;});
-    s+=`<text x="${cx.toFixed(1)}" y="${(p.W-cy).toFixed(1)}" font-size="${(fs*1.5).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" class="no">${p.no}</text>`;}
+    const eg=ST.engrave&&CUR.C&&CUR.C[p.id]&&!CUR.C[p.id].bad?engraveSegs(p.no,CUR.C[p.id].pts):null;
+    if(eg)s+=`<path class="engr" d="${eg.map(z=>`M${z[0].toFixed(1)},${(p.W-z[1]).toFixed(1)}L${z[2].toFixed(1)},${(p.W-z[3]).toFixed(1)}`).join('')}"/>`;
+    else s+=`<text x="${cx.toFixed(1)}" y="${(p.W-cy).toFixed(1)}" font-size="${(fs*1.5).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" class="no">${p.no}</text>`;}
+  else if(ST.engrave&&CUR.C&&CUR.C[p.id]&&!CUR.C[p.id].bad){const eg=engraveSegs(p.no,CUR.C[p.id].pts);if(eg)s+=`<path class="engr" d="${eg.map(z=>`M${z[0].toFixed(1)},${(p.W-z[1]).toFixed(1)}L${z[2].toFixed(1)},${(p.W-z[3]).toFixed(1)}`).join('')}"/>`;}
   return s+'</svg>';}
 function selUI(){const p=ST.sel>=0?CUR.R.parts[ST.sel]:null;if(!p){$('selBox').innerHTML='<p class="note">Кликните грань на модели или строку в таблице</p>';return;}
   const m=p.area*1e-6*ST.t*1e-3*(DENS[ST.mat]||7850);

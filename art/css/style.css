@@ -384,3 +384,5 @@ body.og #stage{position:fixed!important;inset:0;width:100vw!important;height:100
 button .tip{margin-left:6px}
 #parts td.nbs{min-width:220px}
 #parts td.nbs small{display:inline}
+svg .engr{fill:none;stroke:#c33;stroke-width:1;vector-effect:non-scaling-stroke}
+svg.mini .engr{stroke-width:.6}
