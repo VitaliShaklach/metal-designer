@@ -33,6 +33,8 @@ node art/tools/plates/fromjson.js doberman8 "C:/…/Доберман 7.json" "Д
 # проверка
 node art/tools/smoke.js
 node art/tools/plates/check.js bull1
+node art/tools/plates/creases.js bull1   # швы на изломах эталона: доля в 3 мм (Доберман 7: 73%), худшие рёбра
+node art/tools/plates/plates.js dump=1   # то же по стадиям конвейера
 ```
 
 `make.js` по шагам, если нужно по отдельности:

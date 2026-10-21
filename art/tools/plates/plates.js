@@ -1,9 +1,10 @@
 // конвейер: модель Meshy с текстурой → плиты (геометрия + швы текстуры + глаза), симметрично → многогранник {V,P}
-// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [merge=4] [mina=6e-4] [pen=0.5] — после prep.js; результат и картинки в out/
+// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [merge=4] [mina=6e-4] [pen=0.5] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
+// dump=1 — замеры «швы на изломах эталона» по стадиям (creases.js): метки после VSA, после выпрямления, итог; углы до выравнивания; готовый многогранник
 const fs=require('fs'),vm=require('vm'),path=require('path'),OUT=path.join(__dirname,'out'),JS=path.join(__dirname,'../../js/'),O=f=>path.join(OUT,f);const {render}=require('./rend.js');
 const c={console,Math};vm.createContext(c);vm.runInContext(fs.readFileSync(JS+'mesh.js','utf8')+';'+fs.readFileSync(JS+'edit.js','utf8'),c);
 const g=n=>vm.runInContext(n,c),V3=g('V3'),triN=g('triN');
-const ARG=Object.fromEntries(process.argv.slice(2).map(s=>s.split('=')).map(([k,v])=>[k,+v]));
+const ARG=Object.fromEntries(process.argv.slice(2).map(s=>s.split('=')).map(([k,v])=>[k,k==='tag'?v:+v]));
 const ANG=ARG.ang??4,MM=ARG.mm??3,SEAM=ARG.seam??185,MERGE=ARG.merge??4,MINA=ARG.mina??6e-4,PEN=ARG.pen??.5,CL=ARG.cl??6,TAG=ARG.tag??'';
 const M=JSON.parse(fs.readFileSync(O('mesh.json'),'utf8')),TM=JSON.parse(fs.readFileSync(O('tex.json'),'utf8'));c.M0={V:M.V,F:M.F};
 const {V,F}=g(`b=meshBox(M0.V);fitMesh(M0,{W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]})`);
@@ -158,7 +159,14 @@ function build(loud){const say=(...a)=>{if(loud)console.log(...a);};
   const dev=g(`Math.max(...E2.P.map(Q=>polyDev(E2.V,Q)))`),npl=g(`nonPlanar(E2,1).length`),mov=Math.max(...E2.V.map((p,i)=>V3.len(V3.sub(p,c.EP.V[i])))),asym=g(`mirrorMap(E2.V,1).filter(j=>j===-1).length`);
   say('после выравнивания: неплоскость макс',dev.toFixed(2),'мм, неплоских >1мм',npl,', точки сдвинулись до',mov.toFixed(1),'мм, без пары',asym);
   return {CLU,polys,E2,EP:c.EP};}
+// замеры «швы на изломах» по стадиям (dump=1; калька — TRACE_ID, по умолчанию doberman7): границы меток на сетке эталона, углы до и после выравнивания
+const KZ=ARG.dump?require('./creases.js')(process.env.TRACE_ID||'doberman7'):null;
+const stageLab=tag=>{if(!KZ)return;const S=[];let k=0;E.forEach((fs2,kk)=>{if(fs2.length!==2)return;const [t1,t2]=fs2,a=lab[t1],b=lab[t2];if(a<0||b<0||a===b||Cn[t1][0]<0)return;if(k++%4)return;
+    const n1=allP(a).n,n2=allP(b).n;if(V3.dot(n1,n2)>Math.cos(10*Math.PI/180))return;const v1=Math.floor(kk/1e6),v2=kk%1e6;S.push({m:V3.mul(V3.add(V[v1],V[v2]),.5),u:V3.norm(V3.cross(n1,n2)),n1,n2});});
+  KZ.show('стадия «'+tag+'»',KZ.samples(S));};
+stageLab('метки после VSA');
 for(let r=0;r<(ARG.str??3);r++){const n=straighten(15);refitR();console.log('прямые границы: перекрашено',n);}
+stageLab('метки после выпрямления');
 // слить соседние плиты, если между ними на текстуре НЕТ шва (настоящий шов виден на текстуре, мнимый — нет)
 const dS=new Int32Array(NT).fill(99);{let fr=[];F.forEach((_,t)=>{if(seam[t]){dS[t]=0;fr.push(t);}});for(let r=1;r<=4;r++){const nx=[];fr.forEach(t=>NB[t].forEach(o=>{if(dS[o]>r){dS[o]=r;nx.push(o);}}));fr=nx;}}
 const seamMerge=()=>{let merged=0;for(let it=0;it<200;it++){const st=new Map();F.forEach((_,t)=>{const a=lab[t];if(a<0||Cn[t][0]<0)return;NB[t].forEach(o=>{const b=lab[o];if(b<0||b===a)return;const ka=rv(a),kb=rv(b);if(ka===kb)return;
@@ -181,10 +189,11 @@ for(let round=0;round<(ARG.rounds??4);round++){B=build(false);const PB=g('polyBa
   F.forEach((_,t)=>{const l=lab[t];if(l<0)return;const k=rv(l);if(!tgt.has(k))return;const m=fin(k);lab[t]=Cn[t][0]>=0||P[m].mid?m:ML(m);if(P[k].mid&&!P[m].mid&&Cn[t][0]<0)lab[t]=ML(m);});
   tgt.forEach((m,k)=>{if(P[k].mid)P[fin(k)].mid=P[fin(k)].mid;});refitR();}
 B=build(true);const {CLU,polys,E2}=B;c.E2=E2;
+if(KZ){stageLab('метки итог');KZ.show('стадия «углы до выравнивания»',KZ.poly(B.EP.V,B.EP.P));KZ.show('стадия «итог»',KZ.poly(E2.V,E2.P));}
 // где выравнивание сильно двигает точки
 {const mv=E2.V.map((p,i)=>V3.len(V3.sub(p,B.EP.V[i])));const bad2=polys.map((p,i)=>({l:p.l,m:Math.max(...p.Q.map(q=>mv[q])),c:g('polyC')(E2.V,p.Q)})).filter(x=>x.m>10).sort((a,b)=>b.m-a.m);
   console.log('плиты, где точки сдвинулись >10 мм:',bad2.length,bad2.slice(0,10).map(x=>'пл'+x.l+' '+x.m.toFixed(0)+'мм @'+x.c.map(Math.round).join(',')).join('; '));}
-fs.writeFileSync(O('plates'+TAG+'.json'),JSON.stringify({V:E2.V.map(p=>p.map(x=>Math.round(x*100)/100)),P:E2.P,lab:[...lab],eye:polys.map(p=>(p.l>=0&&allP(p.l).eye))}));
+fs.writeFileSync(O('plates'+TAG+'.json'),JSON.stringify({V:E2.V.map(p=>p.map(x=>Math.round(x*100)/100)),P:E2.P,lab:[...lab],L:polys.map(p=>p.l),eye:polys.map(p=>(p.l>=0&&allP(p.l).eye))}));
 // картинки: разбивка на сетке модели и готовый многогранник
 const rnd=i=>{let x=Math.sin(i*12.9898+1)*43758.5453;x-=Math.floor(x);return x;};
 const T=[],TG=[];E2.P.forEach((Q,i)=>g('earClip')(E2.V,Q).forEach(t=>{T.push(t);TG.push(i);}));
