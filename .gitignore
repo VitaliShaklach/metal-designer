@@ -14,3 +14,6 @@ Thumbs.db
 # исходники Meshy и рабочие файлы конвейера плит — большие
 art/tools/plates/src/
 art/tools/plates/out/
+
+# временные страницы снимков и проверок (art/tools/plates/marks/README.md)
+art/_*

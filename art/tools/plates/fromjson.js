@@ -9,5 +9,8 @@ const r10=x=>Math.round(x*10),S=(j.S||[]).flat();
 putPoly(id,{V:[].concat(...j.V.map(p=>p.map(r10))),P:[].concat(...j.P.map(Q=>[...Q,-1])),S});
 console.log(id+': точек',j.V.length,'граней',j.P.length,'ручных швов',S.length/2,j.ref?'калька '+j.ref:'без кальки');
 const FG=path.join(ART,'js/figures.js'),IX=path.join(ART,'index.html');let fg=fs.readFileSync(FG,'utf8'),ix=fs.readFileSync(IX,'utf8');
-if(!fg.includes('FIGURES.'+id+'=')){fg=fg.replace(/\s*$/,'\n')+`// ${name} — правка в редакторе (${path.basename(file)}), art/tools/plates/fromjson.js\nFIGURES.${id}={name:'${name.replace(/'/g,"\'")}',H:600,poly:true,build:()=>modelPoly('${id}')${j.ref?`,ref:'${j.ref}'`:''}};\n`;fs.writeFileSync(FG,fg);console.log('+ figures.js:',id);}
+// рамка кальки — габарит эталона в координатах файла: без неё калька подгонялась бы по габариту правленой фигуры и съезжала
+const fr=j.ref&&j.frame?`,frame:${JSON.stringify(j.frame)}`:'',line=`FIGURES.${id}={name:'${name.replace(/'/g,"\'")}',H:600,poly:true,build:()=>modelPoly('${id}')${j.ref?`,ref:'${j.ref}'`:''}${fr}};`;
+if(!fg.includes('FIGURES.'+id+'=')){fg=fg.replace(/\s*$/,'\n')+`// ${name} — правка в редакторе (${path.basename(file)}), art/tools/plates/fromjson.js\n${line}\n`;fs.writeFileSync(FG,fg);console.log('+ figures.js:',id);}
+else{fg=fg.replace(new RegExp('FIGURES\\.'+id+'=.*'),()=>line);fs.writeFileSync(FG,fg);console.log('~ figures.js:',id,fr?'(рамка кальки)':'');}
 if(!ix.includes(`<option value="${id}">`)){const k=ix.indexOf('</select>',ix.indexOf('id="figSel"'));ix=ix.slice(0,k)+`<option value="${id}">${name}</option>`+ix.slice(k);fs.writeFileSync(IX,ix);console.log('+ index.html: пункт «'+name+'»');}

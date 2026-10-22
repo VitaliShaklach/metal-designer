@@ -15,6 +15,9 @@ module.exports=function(id){id=id||'doberman7';const c={Math,Buffer,atob};c.wind
   const nearN=(p,R=2.5)=>{const g0=p.map(x=>Math.floor(x/CS));let s=[0,0,0],w=0,dmin=1e9;
     for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){const h=H.get(key(g0[0]+dx,g0[1]+dy,g0[2]+dz));if(h)for(const i of h){const d=Math.hypot(TC[i][0]-p[0],TC[i][1]-p[1],TC[i][2]-p[2]);dmin=Math.min(dmin,d);if(d<=R){s=V3.add(s,V3.mul(TN[i],TA[i]));w+=TA[i];}}}
     return w&&dmin<5?V3.norm(s):null;};
+  // расстояние от точки до поверхности эталона (по плоскости ближайшего треугольника, поиск в 9 мм); 99 — далеко
+  const surfD=p=>{const g0=p.map(x=>Math.floor(x/CS));let bi=-1,bd=1e9;for(let dx=-3;dx<=3;dx++)for(let dy=-3;dy<=3;dy++)for(let dz=-3;dz<=3;dz++){const h=H.get(key(g0[0]+dx,g0[1]+dy,g0[2]+dz));if(h)for(const i of h){const d=Math.hypot(TC[i][0]-p[0],TC[i][1]-p[1],TC[i][2]-p[2]);if(d<bd){bd=d;bi=i;}}}
+    return bi<0?99:Math.min(bd,Math.abs(V3.dot(V3.sub(p,TC[bi]),TN[bi]))+Math.max(0,bd-3));};
   const T=g(`traceLoad(TRACE['${id}'])`),tn=g('traceNear');
   // поперёк шва в точке m (u — вдоль шва, n1/n2 — нормали граней, dir — к грани 1): где нормаль эталона переходит от n2 к n1; где ближайшая нарисованная линия
   // знак: + — сторона грани 1; излом — смена знака «похожесть на n1 минус на n2», ближайшая к шву
@@ -36,7 +39,7 @@ module.exports=function(id){id=id||'doberman7';const c={Math,Buffer,atob};c.wind
   // отдельные места шва: [{m — точка, u — вдоль шва, n1, n2 — нормали плит}] (для границ меток в plates.js)
   const samples=S=>sum(S.map(s=>{const r=profile(s.m,s.u,s.n1,s.n2);return {m:s.m,dih:Math.acos(Math.max(-1,Math.min(1,V3.dot(s.n1,s.n2))))*180/Math.PI,crease:r.cross,line:r.line};}));
   const show=(tag,r)=>console.log(`${tag}: рёбер ${r.n}, излом найден у ${r.nc}: в 3 мм ${Math.round(r.in3*100)}% [${r.crease.join('/')}]; линия у ${r.nl}: в 3 мм ${Math.round(r.line3*100)}% [${r.line.join('/')}]  (0-3/3-6/6-9/9-12/12+ мм)`);
-  return {poly,samples,show,nearN,V3};};
+  return {poly,samples,show,nearN,profile,surfD,V3};};
 if(require.main===module){const a=process.argv[2]||'doberman7',K=module.exports(/\.json$/i.test(a)?(process.argv[3]||'doberman7'):a);
   let V,P;if(/\.json$/i.test(a)){const j=JSON.parse(fs.readFileSync(a,'utf8'));V=j.V;P=j.P;}else{const c={Math};vm.createContext(c);vm.runInContext(fs.readFileSync(JS+'mesh.js','utf8')+';'+fs.readFileSync(JS+'edit.js','utf8')+';'+fs.readFileSync(JS+'models-poly.js','utf8'),c);const m=vm.runInContext(`modelPoly('${a}')`,c);V=m.V;P=m.P;}
   const r=K.poly(V,P);K.show(path.basename(a),r);console.log('худшие:',r.worst.map(w=>`${w.at.join(',')} излом ${w.crease} линия ${w.line} (${w.dih}°)`).join(' | '));}

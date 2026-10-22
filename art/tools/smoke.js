@@ -112,4 +112,10 @@ run(`TQ=traceLoad(B64P);VQ=[[0,0,50],[200,0,50],[200,200,50],[0,200,50],[51,5,50
 console.log("     сверка доберман 7: на шве эталона "+run("Math.round(DD.on*100)")+"%, рядом "+run("Math.round(DD.near*100)")+"%, лишних швов "+run("DD.red.length")+", недостающих участков "+run("DD.parts"));
 ok(run("JSON.stringify(dq1.red)")==="[1]"&&run("dq1.parts")===0&&Math.abs(run("dq1.on")-.5)<1e-9&&run("JSON.stringify(dq2.red)")==="[0]"&&run("dq2.parts")===1&&run("dq2.yel.length/3")>=90,"сверка: шов на шве эталона — совпал, далёкий — лишний (красный), шов эталона без нашего — жёлтый участок");
 ok(run("DD.near")>=.65&&run("DD.red.length")<120&&run("DD.parts")>0,"сверка доберман 7: рядом со швами эталона 65%+ наших швов, лишние и недостающие найдены");
+// доберман 8 — правка 7-го по пометкам Виталия; калька — по рамке (габарит 7-го), а не по габариту 8-го: нос стал короче на 11 мм
+run(`D8=figureMesh("doberman8");R8=buildParts(D8,1.5,1.5);F8=FIGURES.doberman8.frame;FB8={min:F8[0],max:F8[1],size:F8[1].map((x,k)=>x-F8[0][k])};
+  DD8=traceDiff(R8.edges,D8.V,D8.F,traceMap(B7,FB8),TT);DB8=traceDiff(R8.edges,D8.V,D8.F,traceMap(B7,meshBox(D8.V)),TT);`);
+console.log("     доберман 8: граней "+run("D8.P.length")+", деталей "+run("R8.parts.length")+", самопересечений "+run("selfXPolys(D8).length")+"; сверка по рамке: на шве "+run("Math.round(DD8.on*100)")+"%, рядом "+run("Math.round(DD8.near*100)")+"% (по габариту 8-го было бы "+run("Math.round(DB8.near*100)")+"%), лишних "+run("DD8.red.length"));
+ok(run("nonPlanar({V:D8.V,P:D8.P},1).length")===0&&run("mirrorMap(D8.V).every(j=>j!==-1)")&&run("selfXPolys(D8).length")<=2&&run("R8.parts.every(p=>p.minW>=14.5)"),"доберман 8: все грани плоские, симметричен, самопересечений не больше 2, узких нет");
+ok(run("DD8.near")>=run("DD.near")&&run("DD8.red.length")<run("DD.red.length")&&run("DD8.on")>run("DD.on"),"доберман 8: калька по рамке — на шве эталона больше, лишних швов меньше, чем у 7-го");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
