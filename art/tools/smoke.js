@@ -118,4 +118,14 @@ run(`D8=figureMesh("doberman8");R8=buildParts(D8,1.5,1.5);F8=FIGURES.doberman8.f
 console.log("     доберман 8: граней "+run("D8.P.length")+", деталей "+run("R8.parts.length")+", самопересечений "+run("selfXPolys(D8).length")+"; сверка по рамке: на шве "+run("Math.round(DD8.on*100)")+"%, рядом "+run("Math.round(DD8.near*100)")+"% (по габариту 8-го было бы "+run("Math.round(DB8.near*100)")+"%), лишних "+run("DD8.red.length"));
 ok(run("nonPlanar({V:D8.V,P:D8.P},1).length")===0&&run("mirrorMap(D8.V).every(j=>j!==-1)")&&run("selfXPolys(D8).length")<=2&&run("R8.parts.every(p=>p.minW>=14.5)"),"доберман 8: все грани плоские, симметричен, самопересечений не больше 2, узких нет");
 ok(run("DD8.near")>=run("DD.near")&&run("DD8.red.length")<run("DD.red.length")&&run("DD8.on")>run("DD.on"),"доберман 8: калька по рамке — на шве эталона больше, лишних швов меньше, чем у 7-го");
+// уголки-шаблоны для сварки: угол рабочих краёв, выемка у вершины, контур без самопересечений, гравировка «У152°»
+run(`TS=[37,90,152,177].map(a=>{const P=tplShape(a,1.2,15),n=P.length,ang=(p,q)=>Math.atan2(q[1]-p[1],q[0]-p[0]),d=(ang(P[n-2],P[n-3])-ang(P[0],P[1]))*180/Math.PI;
+    let x=false;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(segX(P[i],P[(i+1)%n],P[j],P[(j+1)%n]))x=true;}
+    return {a,d,x,area:area2(P),near:Math.min(...P.map(p=>Math.hypot(p[0],p[1]))),eng:!!engraveSegs(tplNo(a),P)};});
+  TP8=weldTemplates(R8,1.2,15);C8=R8.parts.map(p=>({id:p.id,no:p.no,...cutContour(p,1.2,1,true)}));
+  N8=nest(C8.filter(c=>!c.bad).concat(TP8.map(o=>({id:'t'+o.a,no:tplNo(o.a),pts:o.pts}))),2500,1250,3,10,2.5,2,true);`);
+console.log("     уголки доберман 8: "+run("TP8.length")+" шт ("+run("TP8[0].a")+"°…"+run("TP8[TP8.length-1].a")+"°), швов "+run("TP8.reduce((s,o)=>s+o.seams,0)")+"; раскрой с ними: листов "+run("N8.sheets.length")+", "+run("itemsTxt(N8.sheets.flatMap(s=>s.items))"));
+ok(run("TS.every(t=>Math.abs(t.d-t.a)<.05&&!t.x&&t.area>0&&t.near>=4-1e-9&&t.eng)"),"уголок-шаблон: рабочие края точно под углом (37°, 90°, 152°, 177°), у вершины выемка, контур целый, гравировка «У…°» влезает");
+ok(run("TP8.length")>=60&&run("TP8.every(o=>o.a>=TPL_MIN&&o.a<TPL_MAX&&engraveSegs(tplNo(o.a),o.pts))")&&run("new Set(TP8.map(o=>o.a)).size")===run("TP8.length"),"доберман 8: по уголку на каждый угол швов (без почти плоских), на всех гравировка");
+ok(run("N8.too.length")===0&&run("N8.sheets.flatMap(s=>s.items).filter(isTpl).length")===run("TP8.length")&&run(`(()=>{let m=Infinity;N8.sheets.forEach(sh=>sh.items.forEach((a,i)=>sh.items.forEach((b,j)=>{if(j>i)m=Math.min(m,polyGap(a.pts,b.pts));})));return m;})()`)>=3-1e-9,"доберман 8: раскрой с уголками — все на листе, зазор ≥ 3 мм");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

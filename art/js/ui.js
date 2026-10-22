@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={frame:null,edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,trace:false,refId:'',name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,sel:-1,nums:false,small:true};
+const ST={frame:null,edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,trace:false,refId:'',name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,tpl:false,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
@@ -26,7 +26,9 @@ function later(fn,t){loading(true,t||'Считаю…');setTimeout(()=>{try{fn()
 // производство: контуры реза под толщину и шов, раскладка на лист
 function prodCalc(){const R=CUR.R;CUR.C=R.parts.map(p=>cutContour(p,ST.t,ST.gap,ST.useT));
   // раскладка тяжёлая (секунды) — считаем только когда нужна (Итого, Раскрой, Чертежи, DXF) и в фоне; одинаковые контуры — из кэша
-  const [W,H]=sheetWL();NEST.items=R.parts.map(p=>({id:p.id,no:p.no,pts:CUR.C[p.id].pts})).filter((o,i)=>!CUR.C[i].bad);NEST.args=[W,H,ST.ngap,10,2.5,2,ST.engrave];
+  const [W,H]=sheetWL();NEST.items=R.parts.map(p=>({id:p.id,no:p.no,pts:CUR.C[p.id].pts})).filter((o,i)=>!CUR.C[i].bad);
+  // уголки-шаблоны для сварки (галочка) — в раскрой вместе с деталями
+  CUR.TPL=ST.tpl?weldTemplates(R,ST.t,ST.minW):null;if(CUR.TPL)NEST.items.push(...CUR.TPL.map(o=>({id:'t'+o.a,no:tplNo(o.a),pts:o.pts})));NEST.args=[W,H,ST.ngap,10,2.5,2,ST.engrave];
   NEST.want=JSON.stringify([NEST.args,NEST.items.map(o=>[o.no,o.pts.map(q=>q.map(v=>Math.round(v*10)))])]);CUR.N=NEST.key===NEST.want?NEST.N:null;
   CUR.cutLen=CUR.C.reduce((a,c)=>a+c.pts.reduce((s,q,i)=>{const z=c.pts[(i+1)%c.pts.length];return s+Math.hypot(z[0]-q[0],z[1]-q[1]);},0),0);CUR.degen=CUR.C.filter(c=>c.bad).length;SHEETS_OLD=true;}
 function compute(){compute0();prodCalc();}
@@ -95,13 +97,15 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
   if(CUR.small.size)warn.push(`${CUR.small.size} дет. уже ${ST.minW} мм — подсвечены красным. Уменьшите число граней или увеличьте фигуру`);
   const H=ST.dims.H;if(ST.t<=1&&H>350||ST.t<1.5&&H>700)warn.push(`Лист ${ST.t} мм на фигуре ${H} мм — поведёт от сварки. Варите короткими прихватками вразбежку или возьмите толще`);
   if(CUR.degen)warn.push(`${CUR.degen} дет. после учёта толщины и шва выродились (слишком узкие) — уменьшите число граней, увеличьте фигуру или снимите «Учитывать толщину»`);
-  if(CUR.N&&ST.engrave){const sm=CUR.N.sheets.flatMap(sh=>sh.items).filter(o=>!engraveSegs(o.no,o.pts)).map(o=>'№'+o.no);if(sm.length)warn.push(`Номер не влезает гравировкой (детали малы): ${sm.join(', ')} — это щепки от упрощения, их можно убрать: больше граней, «Мин. ширина детали» или крупнее фигура`);}
-  if(CUR.N&&CUR.N.too.length)warn.push(`Не влезают в лист: ${CUR.N.too.map(o=>'№'+o.no).join(', ')} — выберите лист больше`);
+  if(CUR.N&&ST.engrave){const sm=CUR.N.sheets.flatMap(sh=>sh.items).filter(o=>!engraveSegs(o.no,o.pts)).map(itemName);if(sm.length)warn.push(`Номер не влезает гравировкой (детали малы): ${sm.join(', ')} — это щепки от упрощения, их можно убрать: больше граней, «Мин. ширина детали» или крупнее фигура`);}
+  if(CUR.N&&CUR.N.too.length)warn.push(`Не влезают в лист: ${CUR.N.too.map(itemName).join(', ')} — выберите лист больше`);
   const holes=CUR.R.parts.filter(p=>p.holes).length;if(holes)warn.push(`У ${holes} дет. внутри дыра — проверьте модель`);
   $('warn').hidden=!warn.length;$('warn').innerHTML=warn.map(esc).join('<br>');
   const rows=[['Деталей',T.n],['Площадь металла',fmt(T.area/1e6,2)+' м²'],[`Масса (${ST.t} мм, ${MATN[ST.mat]})`,'≈ '+fmt(T.mass,1)+' кг'],['Длина реза (с учётом толщины)',fmt(CUR.cutLen/1000,1)+' м'],
     ['Длина швов',fmt(T.weld/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,CUR.N?`${CUR.N.sheets.length} (детали в полосе ${sw} × ${Math.round(CUR.N.sheets[0]?CUR.N.sheets[0].len:0)} мм)`:'раскладываю…']];
-  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));rows.splice(4,0,['Врезок (по одной на деталь)',cs.pierce]);if(ST.engrave)rows.splice(5,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
+  if(CUR.TPL&&CUR.TPL.length){const tp=CUR.TPL,ta=tp.reduce((a,o)=>a+Math.abs(area2(o.pts)),0),tl=tp.reduce((a,o)=>a+perim(o.pts),0);
+    rows.push(['Уголки-шаблоны для сварки (оснастка, по одному на угол)',`${tp.length} шт · ${tp[0].a}°…${tp[tp.length-1].a}° · ≈ ${fmt(ta*1e-9*ST.t*(DENS[ST.mat]||7850),2)} кг · рез ${fmt(tl/1000,1)} м`]);}
+  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));rows.splice(4,0,[CUR.TPL&&CUR.TPL.length?'Врезок (по одной на деталь и уголок)':'Врезок (по одной на деталь)',cs.pierce]);if(ST.engrave)rows.splice(5,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
   $('sum').innerHTML='<tbody>'+rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('')+'</tbody>';}
 
 /* ---------- загрузка фигур и файлов ---------- */
@@ -112,14 +116,14 @@ function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=
   file.arrayBuffer().then(buf=>later(()=>{let m,o={name};
     if(ext==='obj')m=parseOBJ(new TextDecoder().decode(buf));else if(ext==='stl')m=parseSTL(buf);else if(ext==='glb')m=parseGLB(buf);
     else if(ext==='json'){const j=JSON.parse(new TextDecoder().decode(buf));if(j.type!=='md-art')throw new Error('это не файл фигуры');m=j.P?polyBase(j.V,j.P,j.S):{V:j.V,F:j.F};o={name:j.name||name,dims:j.dims,faces:j.F.length,ref:j.ref,frame:j.frame};
-      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
+      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','tpl','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
     else throw new Error('нужен файл OBJ, STL, GLB или JSON');
     if(!m.F.length)throw new Error('в файле нет граней');ST.refId=o.ref&&typeof MODELS_POLY!=='undefined'&&MODELS_POLY[o.ref]?o.ref:'';ST.frame=o.frame?{min:o.frame[0],max:o.frame[1]}:null;ST.fig='';$('figSel').value='';setBase(m,o);compute();renderAll('instant');
     msg(`Открыто: ${m.F.length} треугольников${isDense()?' — упрощаю до '+ST.faces:''}`);},'Читаю модель…'));}
-function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,diss:0,
+function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,tpl:ST.tpl,diss:0,
     V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly()){j.P=ST.base.P;j.S=ST.base.S||[];}if(ST.refId){j.ref=ST.refId;const fb=traceFrame();j.frame=[fb.min,fb.max].map(p=>p.map(x=>Math.round(x*100)/100));}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
-function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
+function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('cTpl').checked=!!ST.tpl;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
 
 /* ---------- события ---------- */
 let RT=0;const recalc=(fit,heavy)=>{clearTimeout(RT);RT=setTimeout(()=>heavy?later(()=>{compute();renderAll(fit);}):(compute(),renderAll(fit)),heavy?150:60);};
@@ -158,7 +162,7 @@ document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').ad
 function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden;if(!vis||!CUR)return;
   if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}if(!CUR.N){ensureNest(()=>sheetsUI(true));return;}SHEETS_OLD=false;
   if(!$('tab-nest').hidden){const L=sheetsNest(),d=new Date(),date=d.toLocaleDateString('ru-RU');$('nestBox').innerHTML=L.map((b,i)=>`<figure class="sheet"><figcaption>Раскрой ${i+1} из ${L.length}</figcaption>${wrapSheet(b,{n:i+1,N:L.length,date})}</figure>`).join('');
-    const s0=CUR.N.sheets[0];$('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · деталей ${CUR.N.sheets.reduce((a,s)=>a+s.items.length,0)} · зазор ${ST.ngap} мм${s0?` · детали в полосе ${sheetWL()[1]} × ${Math.round(s0.len)} мм (плотность ${Math.round(s0.dense*100)}%), остальное свободно`:''} · ${cutTxt(cutStats(CUR.N.sheets.flatMap(s=>s.items)))}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
+    const s0=CUR.N.sheets[0];$('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · ${itemsTxt(CUR.N.sheets.flatMap(s=>s.items))} · зазор ${ST.ngap} мм${s0?` · детали в полосе ${sheetWL()[1]} × ${Math.round(s0.len)} мм (плотность ${Math.round(s0.dense*100)}%), остальное свободно`:''} · ${cutTxt(cutStats(CUR.N.sheets.flatMap(s=>s.items)))}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
   if(!$('tab-sheets').hidden){const sh=buildSheets();$('sheets').innerHTML=sh.map((s,i)=>`<figure class="sheet" id="sheet${i+1}"><figcaption>Лист ${i+1} из ${sh.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
     $('shGo').innerHTML=sh.map((s,i)=>`<option value="${i+1}">Лист ${i+1} · ${esc(s.title)}</option>`).join('');}}
 $('shGo').addEventListener('change',e=>{const el=$('sheet'+e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});});
@@ -172,6 +176,7 @@ $('sGap').addEventListener('change',e=>{ST.gap=Math.max(0,+e.target.value||0);re
 $('cUseT').addEventListener('change',e=>{ST.useT=e.target.checked;recalc();});
 $('sNGap').addEventListener('change',e=>{ST.ngap=Math.max(1,+e.target.value||3);recalc();});
 $('cEngrave').addEventListener('change',e=>{ST.engrave=e.target.checked;recalc();});
+$('cTpl').addEventListener('change',e=>{ST.tpl=e.target.checked;recalc();});
 
 /* ---------- редактор ---------- */
 const UNDO=[],REDO=[];
@@ -228,7 +233,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.6.4';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.7.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
