@@ -6,9 +6,11 @@ try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingB
 if(ok){scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,5,30000);camera.position.set(700,600,1400);
   labels=new THREE.CSS2DRenderer();labels.domElement.style.cssText='position:absolute;inset:0;pointer-events:none';stage.appendChild(labels.domElement);
   controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,300,0);
-  scene.add(new THREE.HemisphereLight(0xf2f4f5,0x8f8a84,.75));
+  scene.add(new THREE.HemisphereLight(0xf2f4f5,0xb4aea6,.8));
   const d=new THREE.DirectionalLight(0xffffff,.85);d.position.set(900,1600,1800);scene.add(d);
   const d2=new THREE.DirectionalLight(0xbfd0e0,.35);d2.position.set(-1500,500,-900);scene.add(d2);
+  // подсветка снизу-спереди: подбородок и низ шеи не проваливаются в черноту, детали различимы
+  const d3=new THREE.DirectionalLight(0xfff4e8,.45);d3.position.set(400,-1400,1300);scene.add(d3);
   root=new THREE.Group();scene.add(root);
   const grid=new THREE.GridHelper(6000,60,0xb9c0bd,0xd5dad7);grid.material.transparent=true;grid.material.opacity=.5;scene.add(grid);}
 const COL={steel:[0x6b737b,0x8a929a],inox:[0x9aa3ab,0xc2c9cf],corten:[0x8a4a2a,0xa8623a],alu:[0xa9b0b6,0xd0d5d9]};
