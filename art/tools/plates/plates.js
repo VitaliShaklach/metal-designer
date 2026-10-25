@@ -1,5 +1,5 @@
 // конвейер: модель Meshy с текстурой → плиты (геометрия + швы текстуры + глаза), симметрично → многогранник {V,P}
-// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [merge=4] [mina=6e-4] [pen=0.5] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
+// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [merge=4] [mina=6e-4] [pen=0.5] [clean=13] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
 // dump=1 — замеры «швы на изломах эталона» по стадиям (creases.js): метки после VSA, после выпрямления, итог; углы до выравнивания; готовый многогранник
 const fs=require('fs'),vm=require('vm'),path=require('path'),OUT=path.join(__dirname,'out'),JS=path.join(__dirname,'../../js/'),O=f=>path.join(OUT,f);const {render}=require('./rend.js');
 const c={console,Math};vm.createContext(c);vm.runInContext(fs.readFileSync(JS+'mesh.js','utf8')+';'+fs.readFileSync(JS+'edit.js','utf8'),c);
@@ -189,6 +189,9 @@ for(let round=0;round<(ARG.rounds??4);round++){B=build(false);const PB=g('polyBa
   F.forEach((_,t)=>{const l=lab[t];if(l<0)return;const k=rv(l);if(!tgt.has(k))return;const m=fin(k);lab[t]=Cn[t][0]>=0||P[m].mid?m:ML(m);if(P[k].mid&&!P[m].mid&&Cn[t][0]<0)lab[t]=ML(m);});
   tgt.forEach((m,k)=>{if(P[k].mid)P[fin(k)].mid=P[fin(k)].mid;});refitR();}
 B=build(true);const {CLU,polys,E2}=B;c.E2=E2;
+// короткие рёбра (короче clean мм, по умолчанию 13) — в одну точку: хвостики и «ступеньки», где швы сходятся не в точку (clean.js); clean=0 — выключить
+if(ARG.clean!==0){const L=ARG.clean??13,r=require('./clean.js')(g).collapseShort(E2,{maxLen:L,keep:true}),n=r.log.filter(x=>x.done).length;E2.V=r.E.V;E2.P=r.E.P;const kp=r.I.map(i=>polys[i]);polys.length=0;polys.push(...kp);
+  console.log('короткие рёбра <'+L+' мм: схлопнуто',n,', пропущено',r.log.length-n,r.log.filter(x=>!x.done).map(x=>'@'+x.at+' '+x.why).join('; '));}
 if(KZ){stageLab('метки итог');KZ.show('стадия «углы до выравнивания»',KZ.poly(B.EP.V,B.EP.P));KZ.show('стадия «итог»',KZ.poly(E2.V,E2.P));}
 // где выравнивание сильно двигает точки
 {const mv=E2.V.map((p,i)=>V3.len(V3.sub(p,B.EP.V[i])));const bad2=polys.map((p,i)=>({l:p.l,m:Math.max(...p.Q.map(q=>mv[q])),c:g('polyC')(E2.V,p.Q)})).filter(x=>x.m>10).sort((a,b)=>b.m-a.m);

@@ -1,5 +1,5 @@
 // правки Виталия по пометкам (01-спереди, 04-сверху, 06-нос) → Доберман 8
-const fs=require('fs'),{E:E0,g}=require('./base.js'),solve=require('./solve.js')(g),V3=g('V3');
+const fs=require('fs'),{E:E0,g}=require('./base.js'),solve=require('../clean.js')(g).solve,V3=g('V3');
 const only=(process.argv[2]||'bridge,brow,under,crown').split(',');
 let E={V:E0.V.map(p=>p.slice()),P:E0.P.map(Q=>Q.slice()),S:E0.S.map(s=>s.slice())};const pins=new Map(),log=[];
 const sameQ=(Q,R)=>Q.length===R.length&&Q.every((v,k)=>v===R[k]);const idxOf=R=>E.P.findIndex(Q=>sameQ(Q,R));

@@ -135,4 +135,19 @@ run(`PC=partCam([10,300,200],[1,0,0],60,meshBox(D8.V),[0,0,1]);CUR={M3:D8,R:R8};
 console.log("     шаги сборки доберман 8: "+run("AS.map((a,i)=>'шаг '+(i+1)+' ×'+a.k.toFixed(1)+' '+a.txt).join('; ')"));
 ok(run("Math.abs(PC.pos[1]-300)<1e-6&&PC.pos[0]>10&&Math.abs(PC.pos[2]-200)<70&&PC.target[0]===10&&PC.dist>=250&&PC.dist<=Math.max(...meshBox(D8.V).size)*.6/Math.tan(17.5*Math.PI/180)+1e-6"),"деталь из таблицы: камера напротив детали (по её нормали), цель — центр детали, 250 мм … вся фигура");
 ok(run("AS.every(a=>a.dot>.5)")&&run("AS[0].k")>=2,"порядок сборки: каждый шаг смотрит на свои детали, шаг 1 крупнее общего вида в 2+ раза");
+// доберман 9 — 8-й без коротких рёбер и лишних швов (plates/marks/round2.js); короткие рёбра остались только у глаз
+run(`D9=figureMesh("doberman9");R9=buildParts(D9,1.5,1.5);DD9=traceDiff(R9.edges,D9.V,D9.F,traceMap(B7,FB8),TT);OV9=openVerts(D9);
+  SH9=[];D9.P.forEach(Q=>Q.forEach((a,k)=>{const b=Q[(k+1)%Q.length];if(a<b&&V3.len(V3.sub(D9.V[a],D9.V[b]))<13)SH9.push([a,b]);}));`);
+console.log("     доберман 9: граней "+run("D9.P.length")+", деталей "+run("R9.parts.length")+" (у 8-го "+run("R8.parts.length")+"), коротких рёбер "+run("SH9.length")+"; сверка по рамке: на шве "+run("Math.round(DD9.on*100)")+"%, рядом "+run("Math.round(DD9.near*100)")+"%, лишних "+run("DD9.red.length"));
+ok(run("nonPlanar({V:D9.V,P:D9.P},1).length")===0&&run("mirrorMap(D9.V).every(j=>j!==-1)")&&run("selfXPolys(D9).length")<=2&&run("R9.parts.every(p=>p.minW>=14.5)")&&run("R9.parts.length<R8.parts.length"),"доберман 9: плоский, симметричен, самопересечений не больше 2, узких нет, деталей меньше, чем у 8-го");
+ok(run("SH9.every(([a,b])=>OV9.has(a)||OV9.has(b))")&&run("DD9.near")>=run("DD8.near")&&run("DD9.red.length")<run("DD8.red.length"),"доберман 9: рёбра короче 13 мм — только на краю глаз; калька по рамке: рядом со швами эталона не меньше, лишних швов меньше, чем у 8-го");
+// чистка: у куба срезаны два угла крошечными треугольниками (рёбра 4 мм) — сводятся обратно в точку, куб снова из 6 граней
+{const C=require('./plates/clean.js')(run);run(`CB=blankBox(300,400,260);[[6,1],[7,-1]].forEach(([v,s])=>{const p=CB.V[v],n=CB.V.length;CB.V.push([p[0]-s*3,p[1],p[2]],[p[0],p[1]-3,p[2]],[p[0],p[1],p[2]-3]);
+    CB.P=CB.P.map(Q=>{const k=Q.indexOf(v);if(k<0)return Q;const nb=[Q[(k+Q.length-1)%Q.length],Q[(k+1)%Q.length]],pick=w=>{const d=V3.sub(CB.V[w],p);return Math.abs(d[0])>1?n:Math.abs(d[1])>1?n+1:n+2;};
+      const r=Q.slice();r.splice(k,1,pick(nb[0]),pick(nb[1]));return r;});const tri=[n,n+1,n+2];CB.P.push(s>0?tri:tri.reverse());});CB.S=[];`);
+  const r=C.collapseShort(run('CB'));run('CB2='+JSON.stringify(r.E));
+  ok(run("CB.P.length")===8&&run("CB2.P.length")===6&&run("CB2.V.length")===8&&r.log.filter(x=>x.done).length>=1&&run("nonPlanar(CB2,.01).length")===0,"чистка коротких рёбер: срезанные углы куба (рёбра 3–4 мм) сведены в точку, 6 граней и 8 вершин, грани плоские");}
+// гибка: коробка при угле от 90° — одна развёртка, 5 сгибов без налезаний; налезание квадратов находится
+{const B=require('./plates/bend.js')(run),bx=run('blankBox(300,400,260)');bx.S=[];const r=B.plan(bx,{ang:90}),sq=(x,y)=>[[x,y],[x+100,y],[x+100,y+100],[x,y+100]];
+  ok(r.st.blanks===1&&r.st.V===5&&r.st.weld===7&&!B.overlap(sq(0,0),sq(100,0))&&B.overlap(sq(0,0),sq(50,30))&&B.plan(bx,{}).st.blanks===6,"гибка: коробка — одна развёртка из 6 граней, 5 сгибов V, 7 швов; при угле от 135° коробку не гнём; соседние квадраты не налезают, сдвинутые — налезают");}
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
