@@ -41,6 +41,12 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
 // номера — только у граней, повёрнутых к камере
 function lblVis(){const cp=camera.position;LBL.forEach(l=>{const p=l.position,n=l.userData.n,v=(cp.x-p.x)*n[0]+(cp.y-p.y)*n[1]+(cp.z-p.z)*n[2];l.visible=v>0;});}
 function flyTo(p,t){req3D();camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now()};}
+// полёт по дуге вокруг цели, а не по прямой (иначе при повороте на другую сторону камера проходит сквозь фигуру)
+function arcDir(A,e){const d0=A.p0.clone().sub(A.t0),d1=A.p1.clone().sub(A.t1),l=d0.length()*(1-e)+d1.length()*e,u0=d0.normalize(),u1=d1.normalize();let w=u0.angleTo(u1);
+  if(w<1e-3)return u0.lerp(u1,e).normalize().multiplyScalar(l);if(w>3.1){u1.add(new THREE.Vector3(0,.05,0)).normalize();w=u0.angleTo(u1);}
+  return u0.multiplyScalar(Math.sin((1-e)*w)/Math.sin(w)).add(u1.multiplyScalar(Math.sin(e*w)/Math.sin(w))).normalize().multiplyScalar(l);}
+// подлететь к детали: она лицом к зрителю (partCam в mesh.js)
+function focusPart(p,box){if(!ok||!p)return;const cur=camera.position.clone().sub(controls.target).normalize(),r=partCam(p.c,p.n,Math.max(p.L||0,p.W||0),box,[cur.x,cur.y,cur.z],camera.fov);flyTo(new THREE.Vector3(...r.pos),new THREE.Vector3(...r.target));}
 function fitBox(b,instant){if(!ok)return;sizeStage();const c=new THREE.Vector3((b.min[0]+b.max[0])/2,(b.min[1]+b.max[1])/2,(b.min[2]+b.max[2])/2);
   let dir=camera.position.clone().sub(controls.target).normalize();if(!isFinite(dir.x))dir=new THREE.Vector3(.45,.3,.85).normalize();
   // расстояние — чтобы все 8 углов габарита влезли и по высоте, и по ширине кадра
@@ -63,7 +69,7 @@ function dragPoint(ev,p){const r=renderer.domElement.getBoundingClientRect(),m=n
   const n=new THREE.Vector3();camera.getWorldDirection(n);const pl=new THREE.Plane().setFromNormalAndCoplanarPoint(n,new THREE.Vector3(...p)),o=new THREE.Vector3();return rc.ray.intersectPlane(pl,o)?[o.x,o.y,o.z]:null;}
 function sizeStage(){if(!ok)return;req3D();const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);labels.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 if(ok){new ResizeObserver(sizeStage).observe(stage);sizeStage();
-  (function loop(){requestAnimationFrame(loop);if(camAnim){const k=Math.min(1,(performance.now()-camAnim.s)/600),e=k<.5?2*k*k:1-(-2*k+2)**2/2;camera.position.lerpVectors(camAnim.p0,camAnim.p1,e);controls.target.lerpVectors(camAnim.t0,camAnim.t1,e);if(k>=1)camAnim=null;}
+  (function loop(){requestAnimationFrame(loop);if(camAnim){const k=Math.min(1,(performance.now()-camAnim.s)/600),e=k<.5?2*k*k:1-(-2*k+2)**2/2;controls.target.lerpVectors(camAnim.t0,camAnim.t1,e);camera.position.copy(controls.target).add(arcDir(camAnim,e));if(k>=1)camAnim=null;}
     controls.update();if(!camAnim&&need<=0)return;need--;lblVis();renderer.render(scene,camera);labels.render(scene,camera);})();
   // рисуем только когда что-то изменилось
   controls.addEventListener('change',req3D);['pointermove','pointerdown','pointerup','wheel','keydown','input','change','click'].forEach(e=>addEventListener(e,req3D,{passive:true,capture:true}));}

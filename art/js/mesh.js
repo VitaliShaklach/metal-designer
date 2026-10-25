@@ -265,3 +265,10 @@ function earClip(V,Q){const n=Q.length;if(n<4)return [Q.slice()];let nn=[0,0,0];
     if(cut<0){for(let k=1;k+1<R.length;k++)T.push([R[0],R[k],R[k+1]]);return T;}
     T.push([R[(cut+R.length-1)%R.length],R[cut],R[(cut+1)%R.length]]);R.splice(cut,1);}
   T.push(R);return T;}
+
+/* ---------- камера на деталь: деталь лицом к зрителю, занимает около трети кадра ----------
+   c, n — центр и нормаль детали (наружу), size — её наибольший размер, box — габарит фигуры, cur — текущее направление камеры (от цели к камере).
+   Возвращает {pos, target}; ближе 250 мм не подлетаем, дальше вида на всю фигуру — не отлетаем */
+function partCam(c,n,size,box,cur,fov=35){let d=V3.norm(V3.add(n,V3.mul(cur||[0,0,1],.25)));if(Math.abs(d[1])>.97)d=V3.norm(V3.add(d,[0,0,.2]));
+  const tn=Math.tan(fov*Math.PI/360),far=Math.max(...box.size)*.6/tn,dist=Math.min(far,Math.max(250,size*1.5/tn));
+  return {pos:V3.add(c,V3.mul(d,dist)),target:c.slice(),dist};}

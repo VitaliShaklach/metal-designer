@@ -59,11 +59,23 @@ function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=proj
   return {title:'Общий вид',scale:scaleTxt(n),body:s};}
 
 /* ---------- 2. порядок сборки ---------- */
+// вид на детали шага: с их стороны (средняя нормаль по площади + немного изометрии), откуда смотрим — словами
+function stepView(ps){let n=[0,0,0];ps.forEach(p=>{n=V3.add(n,V3.mul(p.n,p.area));});const d=V3.norm(V3.add(V3.norm(n),V3.mul(VIEWS.iso.d,.5)));
+  const up0=Math.abs(d[1])>.9?[0,0,d[1]>0?-1:1]:[0,1,0],r=V3.norm(V3.cross(up0,d)),w=[];
+  if(d[2]>.35)w.push('спереди');if(d[0]>.35)w.push('справа');if(d[0]<-.35)w.push('слева');if(d[1]>.35)w.push('сверху');if(d[1]<-.35)w.push('снизу');
+  return {r,up:V3.cross(d,r),d,txt:w.join(', ')||'сзади'};}
+// рамка шага в проекции: детали шага + 30% с каждой стороны, не меньше MINW мм по месту, не больше всей фигуры
+function stepFrame(view,ps,MINW=150){const b=[1e9,1e9,-1e9,-1e9],add=(B,q)=>{B[0]=Math.min(B[0],q[0]);B[1]=Math.min(B[1],q[1]);B[2]=Math.max(B[2],q[0]);B[3]=Math.max(B[3],q[1]);};
+  ps.forEach(p=>p.full.forEach(i=>add(b,prjV(view,CUR.M3.V[i]))));const all=[1e9,1e9,-1e9,-1e9];CUR.M3.V.forEach(p=>add(all,prjV(view,p)));
+  const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2,hw=Math.max((b[2]-b[0])*.8,MINW/2),hh=Math.max((b[3]-b[1])*.8,MINW/2);
+  return [Math.max(all[0],cx-hw),Math.max(all[1],cy-hh),Math.min(all[2],cx+hw),Math.min(all[3],cy+hh)];}
 function sheetsAssembly(){const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),n=ps.length,g=n<=30?3:n<=90?5:8,steps=[];for(let i=0;i<n;i+=g)steps.push(ps.slice(i,i+g));
-  const bi=projBox(VIEWS.iso),cw=130,ch=124,k=Math.min((cw-10)/(bi[2]-bi[0]),84/(bi[3]-bi[1])),out=[];
+  const cw=130,ch=124,out=[];
   for(let si=0;si<steps.length;si+=6){let s='';steps.slice(si,si+6).forEach((st,j)=>{const cx=25+(j%3)*cw,cy=22+Math.floor(j/3)*ch,hi=st[st.length-1].no,lo=st[0].no,isNew=p=>p.no>=lo&&p.no<=hi;
-      s+=`<rect class="t" x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><text class="h2" x="${cx+3}" y="${cy+6}">Шаг ${si+j+1} · дет. ${lo}${hi>lo?'–'+hi:''}</text>`;
-      s+=facesSVG(VIEWS.iso,k,cx+(cw-(bi[2]-bi[0])*k)/2-bi[0]*k,cy+9-bi[1]*k,{only:p=>p.no<=hi,color:(p,sh)=>isNew(p)?`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`:grey(.55+.4*sh),label:isNew});
+      // каждый шаг — крупно и со стороны своих деталей; собранное раньше — серым вокруг
+      const v=stepView(st),fb=stepFrame(v,st),k=Math.min((cw-10)/(fb[2]-fb[0]),84/(fb[3]-fb[1])),id='asm'+(si+j);
+      s+=`<rect class="t" x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><text class="h2" x="${cx+3}" y="${cy+6}">Шаг ${si+j+1} · дет. ${lo}${hi>lo?'–'+hi:''}</text><text class="sm" x="${cx+cw-3}" y="${cy+6}" text-anchor="end">вид ${v.txt}</text>`;
+      s+=`<clipPath id="${id}"><rect x="${cx+1}" y="${cy+8}" width="${cw-2}" height="86"/></clipPath><g clip-path="url(#${id})">`+facesSVG(v,k,cx+(cw-(fb[2]-fb[0])*k)/2-fb[0]*k,cy+9+(84-(fb[3]-fb[1])*k)/2-fb[1]*k,{only:p=>p.no<=hi,color:(p,sh)=>isNew(p)?`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`:grey(.55+.4*sh),label:isNew})+'</g>';
       let ty=cy+97;st.forEach(p=>{const nb=p.segs.filter(q=>q.nb>=0&&CUR.R.parts[q.nb].no<p.no).map(q=>`${CUR.R.parts[q.nb].no} (${angT(q.dih)})`);
         const t=`№${p.no} → ${nb.length?nb.join(', '):'первая — от неё собираем'}`;s+=`<text class="sm" x="${cx+3}" y="${r2(ty)}">${shEsc(t.length>78?t.slice(0,77)+'…':t)}</text>`;ty+=3.1;});});
     out.push({title:'Порядок сборки',scale:'—',body:s});}

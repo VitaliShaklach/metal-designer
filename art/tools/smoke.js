@@ -1,6 +1,6 @@
 // проверка ядра «Искусства»: node art/tools/smoke.js
 const fs=require('fs'),vm=require('vm'),P=__dirname+'/../js/';const c={console,TextDecoder,Math};vm.createContext(c);
-vm.runInContext(['mesh','edit','models','models-poly','figures','prod'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
+vm.runInContext(['mesh','edit','models','models-poly','figures','prod','sheets'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
 const run=s=>vm.runInContext(s,c);let bad=0;const ok=(b,t)=>{console.log((b?'ok  ':'FAIL')+' '+t);if(!b)bad++;};
 // куб из OBJ: 12 треугольников → 6 деталей-квадратов
 run(`cube=parseOBJ("v 0 0 0\\nv 100 0 0\\nv 100 100 0\\nv 0 100 0\\nv 0 0 100\\nv 100 0 100\\nv 100 100 100\\nv 0 100 100\\nf 1 4 3 2\\nf 5 6 7 8\\nf 1 2 6 5\\nf 2 3 7 6\\nf 3 4 8 7\\nf 4 1 5 8")`);
@@ -128,4 +128,11 @@ console.log("     уголки доберман 8: "+run("TP8.length")+" шт ("
 ok(run("TS.every(t=>Math.abs(t.d-t.a)<.05&&!t.x&&t.area>0&&t.near>=4-1e-9&&t.eng)"),"уголок-шаблон: рабочие края точно под углом (37°, 90°, 152°, 177°), у вершины выемка, контур целый, гравировка «У…°» влезает");
 ok(run("TP8.length")>=60&&run("TP8.every(o=>o.a>=TPL_MIN&&o.a<TPL_MAX&&engraveSegs(tplNo(o.a),o.pts))")&&run("new Set(TP8.map(o=>o.a)).size")===run("TP8.length"),"доберман 8: по уголку на каждый угол швов (без почти плоских), на всех гравировка");
 ok(run("N8.too.length")===0&&run("N8.sheets.flatMap(s=>s.items).filter(isTpl).length")===run("TP8.length")&&run(`(()=>{let m=Infinity;N8.sheets.forEach(sh=>sh.items.forEach((a,i)=>sh.items.forEach((b,j)=>{if(j>i)m=Math.min(m,polyGap(a.pts,b.pts));})));return m;})()`)>=3-1e-9,"доберман 8: раскрой с уголками — все на листе, зазор ≥ 3 мм");
+// клик по детали в таблице — камера на неё лицом; шаги сборки — каждый со стороны своих деталей и крупнее общего вида
+run(`PC=partCam([10,300,200],[1,0,0],60,meshBox(D8.V),[0,0,1]);CUR={M3:D8,R:R8};
+  AS=(()=>{const ps=[...R8.parts].sort((a,b)=>a.no-b.no),all=projBox(VIEWS.iso);return [0,1,2,3,4].map(i=>{const st=ps.slice(i*8,i*8+8),v=stepView(st),fb=stepFrame(v,st);let n=[0,0,0];st.forEach(p=>{n=V3.add(n,V3.mul(p.n,p.area));});
+    return {dot:V3.dot(v.d,V3.norm(n)),k:Math.min(120/(fb[2]-fb[0]),84/(fb[3]-fb[1]))/Math.min(120/(all[2]-all[0]),84/(all[3]-all[1])),txt:v.txt};});})();`);
+console.log("     шаги сборки доберман 8: "+run("AS.map((a,i)=>'шаг '+(i+1)+' ×'+a.k.toFixed(1)+' '+a.txt).join('; ')"));
+ok(run("Math.abs(PC.pos[1]-300)<1e-6&&PC.pos[0]>10&&Math.abs(PC.pos[2]-200)<70&&PC.target[0]===10&&PC.dist>=250&&PC.dist<=Math.max(...meshBox(D8.V).size)*.6/Math.tan(17.5*Math.PI/180)+1e-6"),"деталь из таблицы: камера напротив детали (по её нормали), цель — центр детали, 250 мм … вся фигура");
+ok(run("AS.every(a=>a.dot>.5)")&&run("AS[0].k")>=2,"порядок сборки: каждый шаг смотрит на свои детали, шаг 1 крупнее общего вида в 2+ раза");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
