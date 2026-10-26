@@ -1,6 +1,6 @@
 /* ---------- Гибка (галочка «Гнуть»): соседние детали режутся одной заготовкой и гнутся по линии, а не варятся ----------
    Стык гнём, если угол между гранями после гибки не меньше BEND.ang, линия сгиба BEND.min…BEND.max мм, грань у сгиба не уже BEND.face,
-   на заготовку не больше BEND.bends сгибов, развёртка не налезает сама на себя, без щелей и влезает в лист.
+   на заготовку не больше BEND.bends сгибов, две линии сгиба на одной детали не сходятся в одной вершине (угол коробки гнуть трудно), развёртка не налезает сама на себя, без щелей и влезает в лист.
    Гнутые стыки не замыкаются в кольцо (лес) — так вокруг вершины с дефектом угла хотя бы один стык остаётся сварным.
    V — выпуклый снаружи: смотрим на гравировку (изнутри) — гнуть на себя; m — вогнутый, гнуть от себя. Номера деталей не меняются. */
 const BEND={ang:135,bends:7,face:20,min:20,max:300,slit:3};   // slit — несогнутый стык в развёртке сошёлся ближе — щель
@@ -39,6 +39,8 @@ function bendPlan(R,V,o){o=Object.assign({},BEND,o||{});const [SW,SL]=o.sheet||[
   let T=R.parts.map((_,i)=>({parts:[i],bends:[],pl:new Map([[i,{c:1,s:0,x:0,y:0}]])})),of=R.parts.map((_,i)=>i);
   const at=(t,pi,v)=>{const f=t.pl.get(pi),p=F2[pi].get(v);return [f.c*p[0]-f.s*p[1]+f.x,f.s*p[0]+f.c*p[1]+f.y];},poly=(t,pi)=>R.parts[pi].full.map(v=>at(t,pi,v));
   const tryJoin=(T,of,j)=>{const a=of[j.p],b=of[j.q];if(a===b)return 'кольцо';const ta=T[a],tb=T[b];if(ta.bends.length+tb.bends.length+1>o.bends)return 'много сгибов';
+    // угол коробки: две линии сгиба на одной детали сходятся в вершине — пресс мнёт вершину; полоска между линиями, которые не касаются, — можно
+    if(o.corner!==false)for(const id of ta.bends.concat(tb.bends)){const k=J[id];if((k.p===j.p||k.q===j.p||k.p===j.q||k.q===j.q)&&(k.A===j.A||k.A===j.B||k.B===j.A||k.B===j.B))return 'линии сходятся';}
     const a1=at(ta,j.p,j.A),b1=at(ta,j.p,j.B),a2=at(tb,j.q,j.A),b2=at(tb,j.q,j.B),th=Math.atan2(b1[1]-a1[1],b1[0]-a1[0])-Math.atan2(b2[1]-a2[1],b2[0]-a2[0]),c=Math.cos(th),s=Math.sin(th);
     const pl=new Map(ta.pl);tb.pl.forEach((f,pi)=>{const x0=c*f.x-s*f.y,y0=s*f.x+c*f.y,ax=c*a2[0]-s*a2[1],ay=s*a2[0]+c*a2[1];pl.set(pi,{c:c*f.c-s*f.s,s:s*f.c+c*f.s,x:x0-ax+a1[0],y:y0-ay+a1[1]});});
     const t={parts:ta.parts.concat(tb.parts),bends:ta.bends.concat(tb.bends,[j.id]),pl},inB=new Set(tb.parts);

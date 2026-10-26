@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.9.0">
+<link rel="stylesheet" href="css/style.css?v=0.9.1">
 </head>
 <body>
 <div class="wrap">
@@ -108,6 +108,7 @@
     </div>
     <div class="tabpane" id="tab-parts" role="tabpanel">
       <p class="tabnote">Каждая деталь — плоский кусок листа. Размер — по габариту развёртки, ширина — самая узкая. Соседи — с кем деталь сваривается. Клик по строке — модель повернётся этой деталью к вам; общий вид — кнопки над моделью</p>
+      <p class="tabnote" id="partsVw"></p>
       <div class="tbl"><table id="parts"></table></div>
     </div>
     <div class="tabpane" id="tab-sum" role="tabpanel" hidden>
@@ -128,26 +129,27 @@
   </section>
 
   <footer>
-    <span class="ver">v0.9.0</span>
+    <span class="ver">v0.9.1</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
 
+<div class="zoom" id="zoom" hidden><div class="zoombar"><span id="zoomTtl"></span><button type="button" id="zoomOut" aria-label="Мельче">−</button><span id="zoomK">100%</span><button type="button" id="zoomIn" aria-label="Крупнее">+</button><button type="button" id="zoomFit">Весь лист</button><button type="button" id="zoomX" aria-label="Закрыть">✕</button></div><div class="zoombox" id="zoomBox"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.9.0"></script>
-<script src="js/models.js?v=0.9.0"></script>
-<script src="js/models-poly.js?v=0.9.0"></script>
-<script src="js/figures.js?v=0.9.0"></script>
-<script src="js/edit.js?v=0.9.0"></script>
-<script src="js/trace.js?v=0.9.0"></script>
-<script src="js/view3d.js?v=0.9.0"></script>
-<script src="js/prod.js?v=0.9.0"></script>
-<script src="js/bend.js?v=0.9.0"></script>
-<script src="js/sheets.js?v=0.9.0"></script>
-<script src="js/ui.js?v=0.9.0"></script>
-<script src="js/tips.js?v=0.9.0"></script>
+<script src="js/mesh.js?v=0.9.1"></script>
+<script src="js/models.js?v=0.9.1"></script>
+<script src="js/models-poly.js?v=0.9.1"></script>
+<script src="js/figures.js?v=0.9.1"></script>
+<script src="js/edit.js?v=0.9.1"></script>
+<script src="js/trace.js?v=0.9.1"></script>
+<script src="js/view3d.js?v=0.9.1"></script>
+<script src="js/prod.js?v=0.9.1"></script>
+<script src="js/bend.js?v=0.9.1"></script>
+<script src="js/sheets.js?v=0.9.1"></script>
+<script src="js/ui.js?v=0.9.1"></script>
+<script src="js/tips.js?v=0.9.1"></script>
 <div id="printBox"></div>
 </body>
 </html>

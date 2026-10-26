@@ -336,7 +336,17 @@ svg.flat text.no{font-weight:600;fill:var(--muted)}
 .selh{margin:0 0 8px;font:600 16px var(--f-display);text-transform:uppercase;letter-spacing:.04em}
 .bad{color:#d01f1f}
 .selh .bad{font:500 11px var(--f-mono);border:1px solid #d01f1f;padding:1px 5px;margin-left:6px;vertical-align:middle}
-#parts tr[data-p]{cursor:pointer}
+#parts tr[data-p],#parts tr[data-b]{cursor:pointer}
+/* лист крупно */
+#nestBox .sheet svg,#sheets .sheet svg{cursor:zoom-in}
+.zoom{position:fixed;inset:0;z-index:1000;background:#1c2023;display:flex;flex-direction:column}.zoom[hidden]{display:none}
+.zoombar{display:flex;gap:8px;align-items:center;padding:8px 12px;color:#fff;font-size:14px}.zoombar #zoomTtl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zoombar button{min-width:36px;height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font:inherit;cursor:pointer;border-radius:4px}.zoombar #zoomK{min-width:48px;text-align:center}
+.zoombox{flex:1;overflow:auto;cursor:grab;touch-action:none;padding:2px}.zoombox.drag{cursor:grabbing}.zoombox svg{display:block;height:auto;background:#fff}
+body.noscroll{overflow:hidden}
+svg .bl{fill:none;stroke-width:1.2;stroke-dasharray:5 3}svg.mini .bl{stroke-width:.8;stroke-dasharray:3 2}
+svg .bl.bv{stroke:#c33}svg .bl.bm{stroke:#36c}svg.flat text.bv{fill:#c33}svg.flat text.bm{fill:#36c}
+#partsVw:empty{display:none}.lnk{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
 #parts tr.on td{background:color-mix(in srgb,var(--accent) 14%,transparent)}
 #parts tr.grp td{background:color-mix(in srgb,#e0a020 12%,transparent)}
 #parts tr.bad td:first-child{color:#d01f1f;font-weight:600}

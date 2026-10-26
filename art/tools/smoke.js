@@ -148,18 +148,21 @@ ok(run("SH9.every(([a,b])=>OV9.has(a)||OV9.has(b))")&&run("DD9.near")>=run("DD8.
   const r=C.collapseShort(run('CB'));run('CB2='+JSON.stringify(r.E));
   ok(run("CB.P.length")===8&&run("CB2.P.length")===6&&run("CB2.V.length")===8&&r.log.filter(x=>x.done).length>=1&&run("nonPlanar(CB2,.01).length")===0,"чистка коротких рёбер: срезанные углы куба (рёбра 3–4 мм) сведены в точку, 6 граней и 8 вершин, грани плоские");}
 // гибка: коробка при угле от 90° — одна развёртка, 5 сгибов без налезаний; налезание квадратов находится
-{const B=require('./plates/bend.js')(run),bx=run('blankBox(300,400,260)');bx.S=[];const r=B.plan(bx,{ang:90}),sq=(x,y)=>[[x,y],[x+100,y],[x+100,y+100],[x,y+100]];
+{const B=require('./plates/bend.js')(run),bx=run('blankBox(300,400,260)');bx.S=[];const r=B.plan(bx,{ang:90,corner:false}),sq=(x,y)=>[[x,y],[x+100,y],[x+100,y+100],[x,y+100]];
   ok(r.st.blanks===1&&r.st.V===5&&r.st.weld===7&&!B.overlap(sq(0,0),sq(100,0))&&B.overlap(sq(0,0),sq(50,30))&&B.plan(bx,{}).st.blanks===6,"гибка: коробка — одна развёртка из 6 граней, 5 сгибов V, 7 швов; при угле от 135° коробку не гнём; соседние квадраты не налезают, сдвинутые — налезают");}
 // гибка на сайте: коробка — крест из 6 граней с 5 линиями сгиба; поправка на толщину; Доберман 9 — заготовки, каждая деталь ровно в одной, контуры целые
-run(`BXE=blankBox(300,400,260);BXR=buildParts(polyBase(BXE.V,BXE.P),1.5,1.5);BXP=bendPlan(BXR,BXE.V,{ang:90});BXB=bendBlank(BXP.blanks[0],BXR,BXE.V,BXP,{t:0,gap:0,useT:false})`);
+run(`BXE=blankBox(300,400,260);BXR=buildParts(polyBase(BXE.V,BXE.P),1.5,1.5);BXP=bendPlan(BXR,BXE.V,{ang:90,corner:false});BXB=bendBlank(BXP.blanks[0],BXR,BXE.V,BXP,{t:0,gap:0,useT:false})`);
 ok(run("BXP.blanks.length")===1&&!run("BXB.bad")&&Math.abs(run("BXB.area")-run("BXR.parts.reduce((s,p)=>s+p.area,0)"))<1&&run("BXB.lines.length")===5&&run("BXB.lines.every(l=>l.segs.length===1&&Math.abs(Math.hypot(l.segs[0][2]-l.segs[0][0],l.segs[0][3]-l.segs[0][1])-l.len)<.01)")&&run("BXB.lines.map(l=>l.k).join()")==="1,2,3,4,5",
   "гибка: коробка — контур-крест площадью 6 граней, 5 линий сгиба во всю длину, порядок 1…5");
 run(`BXB2=bendBlank(BXP.blanks[0],BXR,BXE.V,BXP,{t:2,gap:1,useT:true})`);ok(!run("BXB2.bad")&&run("BXB2.area")<run("BXB.area")&&run("BXB2.lines.every(l=>l.segs.length===1)"),"гибка: коробка с толщиной 2 мм и швом — контур целый, меньше креста, линии сгиба внутри");
 ok(Math.abs(run("bendDeduct(1.5,135,'V')")-.92)<.02&&run("bendDeduct(1.5,135,'m')")<0&&run("bendDeduct(2,180,'V')")===0,"гибка: поправка на сгиб 45° при 1,5 мм — 0,9 мм (V), у m — чуть меньше нуля, без сгиба — 0");
 run(`D9=modelPoly('doberman9');R9=buildParts(polyBase(D9.V,D9.P,D9.S),1.5,1.5);P9=bendPlan(R9,D9.V,{sheet:[1250,2500]});B9=P9.blanks.filter(b=>b.parts.length>1).map(b=>bendBlank(b,R9,D9.V,P9,{t:1.5,gap:1,useT:true}))`);
 console.log('     Д9 с гибкой: '+JSON.stringify(run("P9.st"),['parts','blanks','multi','single','V','m','weld']));
-ok(run("P9.st.blanks")>=40&&run("P9.st.blanks")<=44&&run("(()=>{const c=new Array(R9.parts.length).fill(0);P9.blanks.forEach(b=>b.parts.forEach(p=>c[p]++));return c.every(x=>x===1);})()")&&run("B9.every(b=>!b.bad&&b.lines.every(l=>l.segs.length>0))")&&run("P9.st.maxBends")<=7,
-  "гибка: Доберман 9 — 40–44 куска на резку, каждая деталь ровно в одной заготовке, все контуры целые, линии сгиба внутри, сгибов на заготовку ≤ 7");
+ok(run("P9.st.blanks")>=50&&run("P9.st.blanks")<=56&&run("(()=>{const c=new Array(R9.parts.length).fill(0);P9.blanks.forEach(b=>b.parts.forEach(p=>c[p]++));return c.every(x=>x===1);})()")&&run("B9.every(b=>!b.bad&&b.lines.every(l=>l.segs.length>0))")&&run("P9.st.maxBends")<=7,
+  "гибка: Доберман 9 — 50–56 кусков на резку, каждая деталь ровно в одной заготовке, все контуры целые, линии сгиба внутри, сгибов на заготовку ≤ 7");
+// угол коробки: на одной детали две гнутые линии не сходятся в вершине (коробку при 90° — только полосами), на Д9 тоже
+run(`BXC=bendPlan(BXR,BXE.V,{ang:90});corner=P=>{const L=[...P.bent].map(id=>P.J[id]);return L.some((a,i)=>L.some((b,k)=>k>i&&[a.p,a.q].some(x=>x===b.p||x===b.q)&&[a.A,a.B].some(v=>v===b.A||v===b.B)));}`);
+ok(run("BXC.blanks.length")>1&&!run("corner(BXC)")&&!run("corner(P9)"),"гибка: две линии сгиба на одной детали не сходятся в вершине — коробка распадается на полосы, у Д9 таких нет");
 // DXF заготовки: сгибы — на слоях BEND_V / BEND_M, подписи «V144 (2)» — гравировкой
 run(`CUR={R:R9,BL:P9.blanks.filter(b=>b.parts.length>1).map((b,i)=>Object.assign({},b,B9[i]))};ST={engrave:true}`);
 run(`BI={id:'b0',no:'Г1',pts:CUR.BL[0].pts.map(p=>[-p[0],p[1]]),tr:{f:true,c:1,s:0,x:0,y:0}};MK=itemMarks(BI);DXB=[];dxfPoly(DXB,BI.pts,'CUT');dxfMarksOf(DXB,BI,0,0);DXB=dxfDoc(DXB)`);
