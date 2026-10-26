@@ -340,7 +340,6 @@ svg.flat text.no{font-weight:600;fill:var(--muted)}
 #parts tr[data-p],#parts tr[data-b]{cursor:pointer}
 /* лист крупно */
 #nestBox .sheet svg,#sheets .sheet svg,#cards .sheet svg{cursor:zoom-in}
-.cardsh{font-size:15px;margin:26px 0 0}
 .sheets.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
 .zoom{position:fixed;inset:0;z-index:1000;background:#1c2023;display:flex;flex-direction:column}.zoom[hidden]{display:none}
 .zoombar{display:flex;gap:8px;align-items:center;padding:8px 12px;color:#fff;font-size:14px}.zoombar #zoomTtl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
