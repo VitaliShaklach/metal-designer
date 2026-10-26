@@ -99,13 +99,14 @@ function partSVG(p,big){const P=p.pts;if(!P.length)return '';const pad=big?Math.
   return s+'</svg>';}
 // выбранная заготовка: кликнули строку заготовки или деталь, которая в ней
 const selBlank=()=>!CUR.BL||!CUR.BL.length?-1:ST.selB>=0&&CUR.BL[ST.selB]?ST.selB:ST.sel>=0&&CUR.blankOf[ST.sel]>=0?CUR.blankOf[ST.sel]:-1;
-// эскиз заготовки: вид изнутри (со стороны гравировки), контур реза, линии сгиба V — красным, m — синим; крупный — с подписями и номерами деталей
+// эскиз заготовки: вид изнутри (со стороны гравировки), контур реза, линии сгиба V — красным, m — синим; крупный — с подписями и номерами деталей.
+// Классы свои (bk…): стили листов PDF (.no, .bv) действуют на всю страницу
 function blankSVG(b,big){const t=bendAlign(b.pts,true),T=q=>{const z=trPt(t,q);return [z[0],t.W-z[1]];},pad=big?Math.max(t.L,t.W)*.06+4:2,fs=Math.max(t.L,t.W)*.035+2.5,f=v=>v.toFixed(1);
   let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${t.L+2*pad} ${t.W+2*pad}" ${big?'':'width="64" height="40"'}><polygon points="${b.pts.map(q=>T(q).map(f).join(',')).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
-  b.lines.forEach(l=>l.segs.forEach((z,zi)=>{const a=T([z[0],z[1]]),c=T([z[2],z[3]]);s+=`<path class="bl ${l.kind==='V'?'bv':'bm'}" d="M${f(a[0])},${f(a[1])}L${f(c[0])},${f(c[1])}" vector-effect="non-scaling-stroke"/>`;
+  b.lines.forEach(l=>l.segs.forEach((z,zi)=>{const a=T([z[0],z[1]]),c=T([z[2],z[3]]);s+=`<path class="bl ${l.kind==='V'?'bkv':'bkm'}" d="M${f(a[0])},${f(a[1])}L${f(c[0])},${f(c[1])}" vector-effect="non-scaling-stroke"/>`;
     if(!big||zi)return;let an=Math.atan2(c[1]-a[1],c[0]-a[0])*180/Math.PI;if(an>90)an-=180;if(an<-90)an+=180;
-    s+=`<text transform="translate(${f((a[0]+c[0])/2)},${f((a[1]+c[1])/2)}) rotate(${f(an)})" y="${f(-fs*.35)}" font-size="${f(fs*.8)}" text-anchor="middle" class="${l.kind==='V'?'bv':'bm'}">${esc(bendTxt(l))}</text>`;}));
-  if(big)b.regions.forEach(z=>{const ip=innerPoint(z.pts.map(q=>T(q)));if(ip)s+=`<text x="${f(ip.p[0])}" y="${f(ip.p[1])}" font-size="${f(fs)}" text-anchor="middle" dominant-baseline="middle" class="no">${CUR.R.parts[z.pi].no}</text>`;});
+    s+=`<text transform="translate(${f((a[0]+c[0])/2)},${f((a[1]+c[1])/2)}) rotate(${f(an)})" y="${f(-fs*.35)}" font-size="${f(fs*.8)}" text-anchor="middle" class="bkt ${l.kind==='V'?'bkv':'bkm'}">${esc(bendTxt(l))}</text>`;}));
+  if(big)b.regions.forEach(z=>{const ip=innerPoint(z.pts.map(q=>T(q)));if(ip)s+=`<text x="${f(ip.p[0])}" y="${f(ip.p[1])}" font-size="${f(fs)}" text-anchor="middle" dominant-baseline="middle" class="bkt bkno">${CUR.R.parts[z.pi].no}</text>`;});
   return s+'</svg>';}
 // соседи заготовки по сварке (детали вне её)
 function blankWelds(b){const in_=new Set(b.parts),m=new Map();b.parts.forEach(pi=>CUR.R.parts[pi].segs.forEach(g=>{if(g.nb>=0&&!in_.has(g.nb))m.set(CUR.R.parts[g.nb].no,angT(g.dih));}));return [...m].sort((a,b)=>a[0]-b[0]);}
@@ -303,7 +304,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.9.1';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.9.2';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
