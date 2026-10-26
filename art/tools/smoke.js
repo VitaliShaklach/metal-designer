@@ -191,4 +191,15 @@ ok(run("CD.length")===run("CUR.PC.length-CUR.PC.filter(o=>String(o.no).endsWith(
   &&run("BLC.length")>0&&run("BLC.every(c=>c.svg.includes('Гибка — по порядку')&&c.svg.includes('class=\"bnd'))")&&run("CD.every(c=>CNT(c.svg,/class=\"ag\"/g)===c.rows)")&&run("CD.every(c=>!c.svg.includes('транспортиром'))")&&run("CD.some(c=>c.svg.includes('уголок У'))"),
   "карты деталей: Д9 — по карте на кусок (пара «.1» — на той же), А4, у каждой контур, длины сторон, сварка; у заготовок — гибка и линии сгиба; у каждой строки — чертёж угла; при уголках каждый угол — уголком, линейкой или по месту");
 run(`ST.tpl=false;CUR.TPL=null;CD2=buildCards();`);ok(run("CD2.every(c=>CNT(c.svg,/class=\"ag\"/g)===c.rows)")&&run("CD2.some(c=>c.svg.includes('транспортиром'))")&&run("!CD2.some(c=>c.svg.includes('уголок У'))"),"карты деталей без уголков: чертёж угла всё равно у каждой строки, выставлять транспортиром");
+// гравировка заготовок (как в DXF): подписи сгибов не ближе 1 мм к номерам деталей и друг к другу; всё влезло; номер мельчит не меньше 5 мм; на карте — та же гравировка
+run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1],L=vx*vx+vy*vy||1e-9,t=Math.max(0,Math.min(1,((p[0]-s[0])*vx+(p[1]-s[1])*vy)/L));return Math.hypot(s[0]+vx*t-p[0],s[1]+vy*t-p[1]);};
+    const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]),A=[a[0],a[1]],B=[a[2],a[3]],C=[b[0],b[1]],D=[b[2],b[3]];if(cr(A,B,C)*cr(A,B,D)<0&&cr(C,D,A)*cr(C,D,B)<0)return 0;return Math.min(d(A,b),d(B,b),d(C,a),d(D,a));};
+  GD=(G,H)=>{let m=1e9;G.forEach(a=>H.forEach(b=>{m=Math.min(m,SEGD(a,b));}));return m;};HT=g=>{const ys=g.flatMap(q=>[q[1],q[3]]);return Math.max(...ys)-Math.min(...ys);};
+  EG={close:0,miss:0,shrunk:0,tiny:0,labs:0};CUR.BL.forEach((B,i)=>{const t=bendAlign(B.pts,true),P=B.pts.map(q=>trPt(t,q)),m=itemMarks({id:'b'+i,no:'Г'+B.no,pts:P,tr:t});EG.miss+=m.miss.length;EG.labs+=m.labs.length;
+    m.labs.forEach((L,k)=>{m.num.forEach(n=>{if(n.g&&GD(L.g,n.g)<1)EG.close++;});m.labs.forEach((L2,k2)=>{if(k2>k&&GD(L.g,L2.g)<1)EG.close++;});});
+    m.num.forEach((n,j)=>{const g0=engraveSegs(n.no,B.regions[j].pts.map(q=>trPt(t,q)));if(!n.g||!g0)return;const h=HT(n.g),h0=HT(g0);if(h<h0-.01){EG.shrunk++;if(h<Math.min(h0,5)-.01)EG.tiny++;}});});
+  ST.tpl=true;CD3=buildCards();`);
+console.log('     гравировка заготовок Д9: подписей сгибов '+run('EG.labs')+', номеров уменьшено '+run('EG.shrunk'));
+ok(run("EG.close")===0&&run("EG.miss")===0&&run("EG.tiny")===0&&run("EG.labs")===run("CUR.BL.reduce((a,b)=>a+b.lines.filter(l=>l.segs.length).length,0)")&&run("CD3.filter(c=>c.svg.includes('Карта заготовки')).every(c=>c.svg.includes('eng engb'))"),
+  "гравировка заготовок: Д9 — каждая подпись сгиба выгравирована и не ближе 1 мм к номерам деталей и другим подписям, номер мельчит не меньше 5 мм; на карте — та же гравировка, подписи сгибов бледно");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

@@ -141,10 +141,16 @@ const DXF_COL={ENGRAVE:1,BEND_V:3,BEND_M:5};   // красный, зелёный
 function textSegs(t,cx,cy,h,ang){const u=h/2,uw=t.length*1.5-.5,c=Math.cos(ang),s=Math.sin(ang),T=(x,y)=>{const X=(x-uw/2)*u,Y=(y-1)*u;return [cx+c*X-s*Y,cy+s*X+c*Y];},out=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++){const a=T(i*1.5+L[k][0],L[k][1]),b=T(i*1.5+L[k+1][0],L[k+1][1]);out.push([a[0],a[1],b[0],b[1]]);}}));return out;}
 // подпись сгиба вдоль линии z = [x1,y1,x2,y2], рядом с ней, целиком внутри контура P (может быть длиннее линии); h — высота знаков:
+// busy — занятые места (четырёхугольники: номера деталей, другие подписи), подпись от них не ближе 1 мм; у результата .box — рамка подписи с запасом 0,5 мм.
 // пробуем середину и места ближе к концам, с обеих сторон, дальше от линии (там, где деталь шире), от h до 2,5 мм; мельче — не подписываем
-function bendLabel(t,z,P,h=4){const uw=t.length*1.5-.5,d=polyDist(P);let ang=Math.atan2(z[3]-z[1],z[2]-z[0]);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;const c=Math.cos(ang),s=Math.sin(ang);
+// выпуклые многоугольники A и B пересекаются (проверка по разделяющим осям)
+function quadHit(A,B){for(const Q of [A,B])for(let i=0;i<Q.length;i++){const p=Q[i],q=Q[(i+1)%Q.length],nx=q[1]-p[1],ny=p[0]-q[0],pr=Z=>{let a=1e9,b=-1e9;Z.forEach(z=>{const v=z[0]*nx+z[1]*ny;a=Math.min(a,v);b=Math.max(b,v);});return [a,b];},[a0,a1]=pr(A),[b0,b1]=pr(B);if(a1<b0||b1<a0)return false;}return true;}
+// рамка отрезков гравировки (по осям) с запасом pad — четырёхугольником
+const segBox=(S,pad=0)=>{const xs=S.flatMap(z=>[z[0],z[2]]),ys=S.flatMap(z=>[z[1],z[3]]),x0=Math.min(...xs)-pad,x1=Math.max(...xs)+pad,y0=Math.min(...ys)-pad,y1=Math.max(...ys)+pad;return [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];};
+function bendLabel(t,z,P,h=4,busy=[]){const uw=t.length*1.5-.5,d=polyDist(P);let ang=Math.atan2(z[3]-z[1],z[2]-z[0]);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;const c=Math.cos(ang),s=Math.sin(ang);
   for(let hh=h;hh>=2.5-1e-9;hh-=.5)for(const off of [1.2,4,8])for(const f of [.5,.35,.65,.2,.8])for(const sd of [1,-1]){const w=uw*hh/2,k=sd*(hh/2+off),cx=z[0]+(z[2]-z[0])*f-s*k,cy=z[1]+(z[3]-z[1])*f+c*k,box=[[-w/2,-hh/2],[w/2,-hh/2],[w/2,hh/2],[-w/2,hh/2],[0,0]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
-    if(box.every(q=>inPoly(q,P)&&d(q)>.8))return textSegs(t,cx,cy,hh,ang);}
+    if(!box.every(q=>inPoly(q,P)&&d(q)>.8))continue;const R=[[-w/2-.5,-hh/2-.5],[w/2+.5,-hh/2-.5],[w/2+.5,hh/2+.5],[-w/2-.5,hh/2+.5]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
+    if(busy.some(b=>quadHit(R,b)))continue;const g=textSegs(t,cx,cy,hh,ang);g.box=R;return g;}
   return null;}
 // точка куска в координатах листа: зеркало по x (f), поворот, сдвиг — как положил раскрой
 const trPt=(t,p)=>{const x=t.f?-p[0]:p[0];return [t.c*x-t.s*p[1]+t.x,t.s*x+t.c*p[1]+t.y];};
