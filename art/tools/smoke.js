@@ -173,4 +173,9 @@ run(`MP=figureMesh('doberman9',12);MP3={V:MP.V,F:MP.F,T:MP.T,S:MP.S};RP=buildPar
 console.log('     Д9 пары: деталей '+run('NP0')+', номеров '+run('NUM')+', «.1» — '+run('TW.length'));
 ok(run("NUM")>=64&&run("NUM")<=70&&run("TW.every(p=>{const q=RP.parts[p.twin];return q&&q.no===Math.floor(p.no)&&Math.abs(q.area-p.area)<.01*p.area&&q.c[0]<=p.c[0];})")&&run("new Set(RP.parts.map(p=>p.no)).size")===run("NP0")&&run("String(RP.parts.find(p=>p.no%1).no)").endsWith('.1')&&run("!!engraveSegs('7.1',[[0,0],[60,0],[60,30],[0,30]])"),
   "зеркальные пары: Д9 — 64–70 номеров на 126 деталей, у каждой «.1» пара слева, площади равны (±1%), номера не повторяются, гравировка «7.1»");
+// шаги сборки: каждый кусок ровно в одном шаге, пара — в одном шаге, каждый шаг (кроме первого и подложек) варится к собранному раньше
+run(`CUR={R:RP,M3:MP3,blankOf:null,BL:[]};AS=asmSteps();ASU=AS.steps.flatMap(s=>s.u.flatMap(u=>u.ps.map(p=>p.id)))`);
+ok(run("ASU.length")===run("RP.parts.length")&&run("new Set(ASU).size")===run("RP.parts.length")&&run("AS.steps.filter((s,i)=>i&&s.w.some(w=>!w.length)&&!s.u[0].ps[0].back).length")<=2&&run("AS.steps.filter(s=>s.u.length===2).length")>=50&&run("AS.steps.length")<=75,
+  "шаги сборки: Д9 — каждая деталь ровно в одном шаге, зеркальные пары — вместе, почти каждый шаг варится к собранному раньше (новых начал не больше 2)");
+console.log('     шагов сборки Д9 без гибки: '+run('AS.steps.length'));
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
