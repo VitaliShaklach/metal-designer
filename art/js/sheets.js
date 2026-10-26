@@ -116,12 +116,14 @@ function sheetsTpl(){const T=CUR.TPL||[],n=2.5,k=1/n,cw=43,ch=33,cols=9,rows=7,o
   return out;}
 
 /* ---------- 4. спецификация ---------- */
-function sheetsSpec(){const dens=DENS[ST.mat]||7850,R=CUR.R,cols=[{t:'№',w:9,r:1},{t:'Габарит реза, мм',w:28},{t:'Площ., см²',w:17,r:1},{t:'Масса, кг',w:16,r:1},{t:'Рез, мм',w:15,r:1},{t:'Кол.',w:9,r:1},{t:'Сваривается с (угол)',w:91}];
-  const rows=CUR.PC.map(o=>{const xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]),a=Math.abs(area2(o.pts)),in_=new Set(o.parts),nb=new Map();
+function sheetsSpec(){const dens=DENS[ST.mat]||7850,R=CUR.R,cols=[{t:'№',w:15,r:1},{t:'Габарит реза, мм',w:24},{t:'Площ., см²',w:17,r:1},{t:'Масса, кг',w:16,r:1},{t:'Рез, мм',w:15,r:1},{t:'Кол.',w:9,r:1},{t:'Сваривается с (угол)',w:91}];
+  // зеркальная пара (две отдельные детали или две заготовки) — одной строкой «7 / 7.1», кол. 2
+  const pc=new Map(CUR.PC.map(o=>[String(o.no),o])),twinOf=o=>{const nm=String(o.no);return nm.endsWith('.1')?null:pc.get(nm+'.1')||null;};
+  const rows=CUR.PC.filter(o=>!String(o.no).endsWith('.1')||!pc.has(String(o.no).slice(0,-2))).map(o=>{const tw=twinOf(o),xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]),a=Math.abs(area2(o.pts)),in_=new Set(o.parts),nb=new Map();
     o.parts.forEach(pi=>R.parts[pi].segs.forEach(g=>{if(g.nb>=0&&!in_.has(g.nb))nb.set(R.parts[g.nb].no+' '+angT(g.dih),1);}));
     // заготовка — одной строкой: габарит по развёртке, детали в ней
     const gab=o.B?`${Math.round(o.B.L)} × ${Math.round(o.B.W)}`:`${Math.round(Math.max(...xs)-Math.min(...xs))} × ${Math.round(Math.max(...ys)-Math.min(...ys))}`;
-    return [o.no,gab,fmt(a/100,1),fmt(a*1e-9*ST.t*dens,3),Math.round(perim(o.pts)),1,(o.B?`дет. ${o.parts.map(pi=>R.parts[pi].no).join(', ')}; `:'')+[...nb.keys()].join(', ')];});
+    return [tw?`${o.no} / ${tw.no}`:o.no,gab,fmt(a/100,1),fmt(a*1e-9*ST.t*dens,3),Math.round(perim(o.pts)),tw?2:1,(tw?'зеркально; ':'')+(o.B?`дет. ${o.parts.map(pi=>R.parts[pi].no).join(', ')}; `:'')+[...nb.keys()].join(', ')];});
   const per=38,out=[];for(let i=0;i<rows.length;i+=per*2){let s=svgTable(25,22,cols,rows.slice(i,i+per),6.2);if(rows.length>i+per)s+=svgTable(222,22,cols,rows.slice(i+per,i+per*2),6.2);
     if(CUR.BL&&CUR.BL.length)s+=`<text class="sm" x="25" y="272">Г — заготовка со сгибами (гнутая) (развёртка и порядок гибки — на листах «Гибка»).</text>`;out.push({title:'Спецификация деталей',scale:'—',body:s});}
   return out;}

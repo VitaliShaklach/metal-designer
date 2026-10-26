@@ -37,6 +37,15 @@ function openLoops(V,F){const E=new Set();F.forEach(f=>{for(let k=0;k<3;k++)E.ad
 function growConvex(P,d){const n=P.length,ccw=area2(P)>0?1:-1,L=P.map((a,i)=>{const b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1;return {p:[a[0]+dy/l*ccw*d,a[1]-dx/l*ccw*d],d:[dx/l,dy/l]};});
   return L.map((cur,i)=>{const pr=L[(i+n-1)%n],den=pr.d[0]*cur.d[1]-pr.d[1]*cur.d[0];if(Math.abs(den)<1e-9)return cur.p.slice();const w=[cur.p[0]-pr.p[0],cur.p[1]-pr.p[1]],k=(w[0]*cur.d[1]-w[1]*cur.d[0])/den;return [pr.p[0]+pr.d[0]*k,pr.p[1]+pr.d[1]*k];});}
 // добавить подложки в R.parts; вернуть длину их швов (по краю прорези)
+/* ---------- зеркальные пары под одним номером: «7» — левая сторона (смотрим спереди), «7.1» — её зеркальная справа ----------
+   Номер остаётся числом (7.1): сортировка и «собрано раньше» работают как были. Деталь на середине и без пары — просто номер */
+// зеркальная деталь для каждой: id пары, сама себе (на середине) или −1
+function partTwins(R,V){const mm=mirrorMap(V),key=Q=>Q.slice().sort((a,b)=>a-b).join(),K=new Map(R.parts.map(p=>[key(p.full),p.id]));
+  return R.parts.map(p=>{if(!p.full.length||p.full.some(i=>mm[i]===-1))return -1;const q=K.get(key(p.full.map(i=>mm[i]===-2?i:mm[i])));return q===undefined?-1:q;});}
+function pairNumbers(R,V){const tw=partTwins(R,V),seen=new Set();let n=0;
+  [...R.parts].sort((a,b)=>a.no-b.no).forEach(p=>{if(seen.has(p.id))return;seen.add(p.id);n++;const q=tw[p.id];
+    if(q>=0&&q!==p.id&&!seen.has(q)){seen.add(q);const Q=R.parts[q],L=p.c[0]<=Q.c[0]?p:Q,Rt=L===p?Q:p;L.no=n;Rt.no=n+.1;L.twin=Rt.id;Rt.twin=L.id;}else p.no=n;});
+  return tw;}
 function addBacking(R,M3){const {V,F}=M3;if(!V.length)return 0;const ctr=V3.mul(V.reduce((s,p)=>V3.add(s,p),[0,0,0]),1/V.length);let wl=0;
   openLoops(V,F).forEach(Q=>{if(Q.every(i=>Math.abs(V[i][2])<1))return;   // край у стены — не прорезь
     let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});n=V3.norm(n);
@@ -114,7 +123,8 @@ const DIGITS={0:[[[0,0],[1,0],[1,2],[0,2],[0,0]]],1:[[[.5,0],[.5,2],[.2,1.7]],[[
   4:[[[0,2],[0,1],[1,1]],[[1,2],[1,0]]],5:[[[1,2],[0,2],[0,1],[1,1],[1,0],[0,0]]],6:[[[1,2],[0,2],[0,0],[1,0],[1,1],[0,1]]],7:[[[0,2],[1,2],[1,0]]],
   8:[[[0,0],[1,0],[1,2],[0,2],[0,0]],[[0,1],[1,1]]],9:[[[1,1],[0,1],[0,2],[1,2],[1,0]]],
   'У':[[[0,2],[.5,1]],[[1,2],[.3,0]]],'°':[[[.2,2],[.8,2],[.8,1.4],[.2,1.4],[.2,2]]],   // У152° — уголок-шаблон
-  V:[[[0,2],[.5,0],[1,2]]],m:[[[0,0],[0,1.2]],[[0,.9],[.25,1.2],[.5,.9],[.5,0]],[[.5,.9],[.75,1.2],[1,.9],[1,0]]],'(':[[[.7,2],[.35,1.4],[.35,.6],[.7,0]]],')':[[[.3,2],[.65,1.4],[.65,.6],[.3,0]]]};   // V144 (2) — сгиб
+  V:[[[0,2],[.5,0],[1,2]]],'.':[[[.35,0],[.65,0],[.65,.3],[.35,.3],[.35,0]]],   // 7.1 — зеркальная пара
+  m:[[[0,0],[0,1.2]],[[0,.9],[.25,1.2],[.5,.9],[.5,0]],[[.5,.9],[.75,1.2],[1,.9],[1,0]]],'(':[[[.7,2],[.35,1.4],[.35,.6],[.7,0]]],')':[[[.3,2],[.65,1.4],[.65,.6],[.3,0]]]};   // V144 (2) — сгиб
 // самое просторное место внутри детали: точка, дальше всего от кромок (перебор по сетке + уточнение)
 function innerPoint(P){const d=polyDist(P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;
   for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
@@ -130,11 +140,11 @@ const DXF_COL={ENGRAVE:1,BEND_V:3,BEND_M:5};   // красный, зелёный
 // надпись t по направлению ang (рад) с центром (cx, cy), высота знаков h → отрезки
 function textSegs(t,cx,cy,h,ang){const u=h/2,uw=t.length*1.5-.5,c=Math.cos(ang),s=Math.sin(ang),T=(x,y)=>{const X=(x-uw/2)*u,Y=(y-1)*u;return [cx+c*X-s*Y,cy+s*X+c*Y];},out=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++){const a=T(i*1.5+L[k][0],L[k][1]),b=T(i*1.5+L[k+1][0],L[k+1][1]);out.push([a[0],a[1],b[0],b[1]]);}}));return out;}
-// подпись сгиба вдоль линии z = [x1,y1,x2,y2], рядом с ней, целиком внутри контура P; h — высота знаков, мельче 2,5 мм — не подписываем
-function bendLabel(t,z,P,h=4){const len=Math.hypot(z[2]-z[0],z[3]-z[1]),uw=t.length*1.5-.5;h=Math.min(h,(len-6)/(uw/2));if(h<2.5)return null;
-  let ang=Math.atan2(z[3]-z[1],z[2]-z[0]);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;const c=Math.cos(ang),s=Math.sin(ang),mx=(z[0]+z[2])/2,my=(z[1]+z[3])/2,w=uw*h/2,d=polyDist(P);
-  for(const sd of [1,-1]){const k=sd*(h/2+1.2),cx=mx-s*k,cy=my+c*k,box=[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2],[0,0]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
-    if(box.every(q=>inPoly(q,P)&&d(q)>.8))return textSegs(t,cx,cy,h,ang);}
+// подпись сгиба вдоль линии z = [x1,y1,x2,y2], рядом с ней, целиком внутри контура P (может быть длиннее линии); h — высота знаков:
+// пробуем середину и места ближе к концам, с обеих сторон, дальше от линии (там, где деталь шире), от h до 2,5 мм; мельче — не подписываем
+function bendLabel(t,z,P,h=4){const uw=t.length*1.5-.5,d=polyDist(P);let ang=Math.atan2(z[3]-z[1],z[2]-z[0]);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;const c=Math.cos(ang),s=Math.sin(ang);
+  for(let hh=h;hh>=2.5-1e-9;hh-=.5)for(const off of [1.2,4,8])for(const f of [.5,.35,.65,.2,.8])for(const sd of [1,-1]){const w=uw*hh/2,k=sd*(hh/2+off),cx=z[0]+(z[2]-z[0])*f-s*k,cy=z[1]+(z[3]-z[1])*f+c*k,box=[[-w/2,-hh/2],[w/2,-hh/2],[w/2,hh/2],[-w/2,hh/2],[0,0]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
+    if(box.every(q=>inPoly(q,P)&&d(q)>.8))return textSegs(t,cx,cy,hh,ang);}
   return null;}
 // точка куска в координатах листа: зеркало по x (f), поворот, сдвиг — как положил раскрой
 const trPt=(t,p)=>{const x=t.f?-p[0]:p[0];return [t.c*x-t.s*p[1]+t.x,t.s*x+t.c*p[1]+t.y];};

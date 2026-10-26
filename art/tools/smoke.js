@@ -167,4 +167,10 @@ ok(run("BXC.blanks.length")>1&&!run("corner(BXC)")&&!run("corner(P9)"),"гибк
 run(`CUR={R:R9,BL:P9.blanks.filter(b=>b.parts.length>1).map((b,i)=>Object.assign({},b,B9[i]))};ST={engrave:true}`);
 run(`BI={id:'b0',no:'Г1',pts:CUR.BL[0].pts.map(p=>[-p[0],p[1]]),tr:{f:true,c:1,s:0,x:0,y:0}};MK=itemMarks(BI);DXB=[];dxfPoly(DXB,BI.pts,'CUT');dxfMarksOf(DXB,BI,0,0);DXB=dxfDoc(DXB)`);
 ok(run("MK.V.length+MK.M.length")===run("CUR.BL[0].lines.reduce((a,l)=>a+l.segs.length,0)")&&run("MK.eng.length")>0&&run("/BEND_(V|M)/.test(DXB)&&/POLYLINE\\r\\n8\\r\\nCUT/.test(DXB)&&/LINE\\r\\n8\\r\\nENGRAVE/.test(DXB)"),"гибка: DXF заготовки — контур полилинией CUT, линии сгиба на BEND_V/BEND_M, номера и подписи — ENGRAVE");
+// зеркальные пары: «7» слева (смотрим спереди), «7.1» — её зеркальная справа, площади равны; номеров почти вдвое меньше; гравировка с точкой
+run(`MP=figureMesh('doberman9',12);MP3={V:MP.V,F:MP.F,T:MP.T,S:MP.S};RP=buildParts(MP3,1.5,1.5);addBacking(RP,MP3);NP0=RP.parts.length;pairNumbers(RP,MP3.V);
+  NUM=new Set(RP.parts.map(p=>Math.floor(p.no))).size;TW=RP.parts.filter(p=>p.no%1);`);
+console.log('     Д9 пары: деталей '+run('NP0')+', номеров '+run('NUM')+', «.1» — '+run('TW.length'));
+ok(run("NUM")>=64&&run("NUM")<=70&&run("TW.every(p=>{const q=RP.parts[p.twin];return q&&q.no===Math.floor(p.no)&&Math.abs(q.area-p.area)<.01*p.area&&q.c[0]<=p.c[0];})")&&run("new Set(RP.parts.map(p=>p.no)).size")===run("NP0")&&run("String(RP.parts.find(p=>p.no%1).no)").endsWith('.1')&&run("!!engraveSegs('7.1',[[0,0],[60,0],[60,30],[0,30]])"),
+  "зеркальные пары: Д9 — 64–70 номеров на 126 деталей, у каждой «.1» пара слева, площади равны (±1%), номера не повторяются, гравировка «7.1»");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
