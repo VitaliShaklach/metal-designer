@@ -37,12 +37,22 @@ function wrapSheet(b,o){const x=230,y=276,c=[95,30,30,30],cell=(i,row,lab,val)=>
 function projBox(view){const b=[1e9,1e9,-1e9,-1e9];CUR.M3.V.forEach(p=>{const q=prjV(view,p);b[0]=Math.min(b[0],q[0]);b[1]=Math.min(b[1],q[1]);b[2]=Math.max(b[2],q[0]);b[3]=Math.max(b[3],q[1]);});return b;}
 const grey=v=>{const c=Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0');return '#'+c+c+c;};
 function facesSVG(view,k,ox,oy,o={}){const V=CUR.M3.V,L=V3.norm(V3.add(V3.add(view.d,V3.mul(view.up,.7)),V3.mul(view.r,-.4)));
-  const P=(p)=>{const q=prjV(view,p);return [ox+q[0]*k,oy+q[1]*k];};let s='',lb='';
+  const P=(p)=>{const q=prjV(view,p);return [ox+q[0]*k,oy+q[1]*k];};let s='';const lb=[];
   CUR.R.parts.filter(p=>(!o.only||o.only(p))&&V3.dot(p.n,view.d)>.02).sort((a,b)=>V3.dot(a.c,view.d)-V3.dot(b.c,view.d)).forEach(p=>{
     const pts=p.full.map(i=>P(V[i])),sh=.5+.45*Math.max(0,V3.dot(p.n,L));const fill=o.color?o.color(p,sh):grey(.35+.6*sh);
     s+=`<polygon class="fc" fill="${fill}" points="${pts.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
-    if(o.label&&o.label(p)){const c=P(p.c),a=Math.abs(area2(pts));if(a>12)lb+=`<text class="no" x="${r2(c[0])}" y="${r2(c[1]+.9)}" text-anchor="middle">${p.no}</text>`;}});
-  return s+lb;}
+    if(o.label&&o.label(p)){const a=Math.abs(area2(pts));if(a>12)lb.push({t:String(p.no),pts,a});}});
+  return s+placeLabels(lb,2.6).map(l=>`<text class="no" x="${r2(l.x)}" y="${r2(l.y+l.h*.35)}" text-anchor="middle"${l.f<1?` style="font-size:${r2(l.h)}px"`:''}>${l.t}</text>`).join('');}
+// подписи без наложений (L — {t, pts, a}, fs — высота букв): большие грани — первыми; место — самая просторная точка грани,
+// занято — точки вокруг неё внутри грани, потом мельче, потом рядом снаружи; некуда — без номера. cw — ширина буквы к высоте. avoid — уже занятые прямоугольники
+function placeLabels(L,fs,cw=.52,avoid=[]){const box=avoid.slice(),out=[],hit=b=>box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]);
+  L.sort((a,b)=>b.a-a.a).forEach(l=>{const ip=innerPoint(l.pts);if(!ip)return;
+    for(const f of [1,.8,.65]){const h=fs*f,w=l.t.length*h*cw,st=Math.max(w,h)*.4,cand=[ip.p];for(let r=1;r<=5;r++)for(let a=0;a<8;a++)cand.push([ip.p[0]+Math.cos(a*Math.PI/4)*st*r,ip.p[1]+Math.sin(a*Math.PI/4)*st*r]);
+      for(const c of cand){if(!inPoly(c,l.pts))continue;const b=[c[0]-w/2-.2,c[1]-h/2-.1,c[0]+w/2+.2,c[1]+h/2+.1];if(hit(b))continue;box.push(b);out.push({t:l.t,x:c[0],y:c[1],h,f});return;}}
+    // грань узкая (видна вскользь) — рядом с ней снаружи, мельче; и там тесно — без номера: лучше, чем номера друг на друге
+    const h=fs*.65,w=l.t.length*h*cw;for(let r=1;r<=4;r++)for(let a=0;a<8;a++){const c=[ip.p[0]+Math.cos(a*Math.PI/4)*w*.55*r,ip.p[1]+Math.sin(a*Math.PI/4)*h*.9*r],b=[c[0]-w/2-.2,c[1]-h/2-.1,c[0]+w/2+.2,c[1]+h/2+.1];
+      if(!hit(b)){box.push(b);out.push({t:l.t,x:c[0],y:c[1],h,f:.65});return;}}});
+  return out;}
 
 /* ---------- 1. общий вид ---------- */
 function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=projBox(VIEWS.front),bl=projBox(VIEWS.left),bt=projBox(VIEWS.top);

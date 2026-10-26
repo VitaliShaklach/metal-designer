@@ -104,12 +104,21 @@ function partSVG(p,big){const P=p.pts;if(!P.length)return '';const pad=big?Math.
 const selBlank=()=>!CUR.BL||!CUR.BL.length?-1:ST.selB>=0&&CUR.BL[ST.selB]?ST.selB:ST.sel>=0&&CUR.blankOf[ST.sel]>=0?CUR.blankOf[ST.sel]:-1;
 // эскиз заготовки: вид изнутри (со стороны гравировки), контур реза, линии сгиба V — красным, m — синим; крупный — с подписями и номерами деталей.
 // Классы свои (bk…): стили листов PDF (.no, .bv) действуют на всю страницу
-function blankSVG(b,big){const t=bendAlign(b.pts,true),T=q=>{const z=trPt(t,q);return [z[0],t.W-z[1]];},pad=big?Math.max(t.L,t.W)*.06+4:2,fs=Math.max(t.L,t.W)*.035+2.5,f=v=>v.toFixed(1);
+function blankSVG(b,big){const t=bendAlign(b.pts,true),T=q=>{const z=trPt(t,q);return [z[0],t.W-z[1]];},pad=big?Math.max(t.L,t.W)*.1+8:2,fs=Math.max(t.L,t.W)*.035+2.5,f=v=>v.toFixed(1);
   let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${t.L+2*pad} ${t.W+2*pad}" ${big?'':'width="64" height="40"'}><polygon points="${b.pts.map(q=>T(q).map(f).join(',')).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
-  b.lines.forEach(l=>l.segs.forEach((z,zi)=>{const a=T([z[0],z[1]]),c=T([z[2],z[3]]);s+=`<path class="bl ${l.kind==='V'?'bkv':'bkm'}" d="M${f(a[0])},${f(a[1])}L${f(c[0])},${f(c[1])}" vector-effect="non-scaling-stroke"/>`;
-    if(!big||zi)return;let an=Math.atan2(c[1]-a[1],c[0]-a[0])*180/Math.PI;if(an>90)an-=180;if(an<-90)an+=180;
-    s+=`<text transform="translate(${f((a[0]+c[0])/2)},${f((a[1]+c[1])/2)}) rotate(${f(an)})" y="${f(-fs*.35)}" font-size="${f(fs*.8)}" text-anchor="middle" class="bkt ${l.kind==='V'?'bkv':'bkm'}">${esc(bendTxt(l))}</text>`;}));
-  if(big)b.regions.forEach(z=>{const ip=innerPoint(z.pts.map(q=>T(q)));if(ip)s+=`<text x="${f(ip.p[0])}" y="${f(ip.p[1])}" font-size="${f(fs)}" text-anchor="middle" dominant-baseline="middle" class="bkt bkno">${CUR.R.parts[z.pi].no}</text>`;});
+  b.lines.forEach(l=>l.segs.forEach(z=>{const a=T([z[0],z[1]]),c=T([z[2],z[3]]);s+=`<path class="bl ${l.kind==='V'?'bkv':'bkm'}" d="M${f(a[0])},${f(a[1])}L${f(c[0])},${f(c[1])}" vector-effect="non-scaling-stroke"/>`;}));
+  if(!big)return s+'</svg>';
+  // номера деталей, потом подписи сгибов — без наложений: подпись ищет место вдоль линии, по обе стороны, дальше от неё; внутри тесно — снаружи контура
+  const P=b.pts.map(T),NL=placeLabels(b.regions.map(z=>{const Q=z.pts.map(T);return {t:String(CUR.R.parts[z.pi].no),pts:Q,a:Math.abs(area2(Q))};}),fs,.62),box=NL.map(l=>{const w=l.t.length*l.h*.62;return [l.x-w/2,l.y-l.h/2,l.x+w/2,l.y+l.h/2];});
+  const hit=b2=>box.some(c=>b2[0]<c[2]&&b2[2]>c[0]&&b2[1]<c[3]&&b2[3]>c[1]);
+  b.lines.forEach(l=>{if(!l.segs.length)return;const z=l.segs.reduce((x,y)=>Math.hypot(y[2]-y[0],y[3]-y[1])>Math.hypot(x[2]-x[0],x[3]-x[1])?y:x),a=T([z[0],z[1]]),c=T([z[2],z[3]]),t=bendTxt(l);
+    let an=Math.atan2(c[1]-a[1],c[0]-a[0]);if(an>Math.PI/2)an-=Math.PI;if(an<-Math.PI/2)an+=Math.PI;const cs=Math.cos(an),sn=Math.sin(an);let best=null;
+    for(const ins of [true,false])for(const hh of [fs*.8,fs*.65])for(const off of [.15,.8,1.6,2.6])for(const q of [.5,.35,.65,.2,.8])for(const sd of [-1,1]){if(best)break;const w=t.length*hh*.62,d=sd*(hh/2+off*hh),cx=a[0]+(c[0]-a[0])*q-sn*d,cy=a[1]+(c[1]-a[1])*q+cs*d;
+      const K=[[-w/2,-hh/2],[w/2,-hh/2],[w/2,hh/2],[-w/2,hh/2]].map(([x,y])=>[cx+cs*x-sn*y,cy+sn*x+cs*y]),bb=[Math.min(...K.map(k=>k[0])),Math.min(...K.map(k=>k[1])),Math.max(...K.map(k=>k[0])),Math.max(...K.map(k=>k[1]))];
+      if((!ins||K.every(k=>inPoly(k,P)))&&!hit(bb))best={cx,cy,hh,bb};}   // внутри не нашлось места — рядом снаружи
+    if(!best){const hh=fs*.65;best={cx:(a[0]+c[0])/2,cy:(a[1]+c[1])/2,hh,bb:null};}if(best.bb)box.push(best.bb);
+    s+=`<text transform="translate(${f(best.cx)},${f(best.cy)}) rotate(${f(an*180/Math.PI)})" font-size="${f(best.hh)}" text-anchor="middle" dominant-baseline="middle" class="bkt ${l.kind==='V'?'bkv':'bkm'}">${esc(t)}</text>`;});
+  NL.forEach(l=>{s+=`<text x="${f(l.x)}" y="${f(l.y)}" font-size="${f(l.h)}" text-anchor="middle" dominant-baseline="middle" class="bkt bkno">${l.t}</text>`;});
   return s+'</svg>';}
 // соседи заготовки по сварке (детали вне её)
 function blankWelds(b){const in_=new Set(b.parts),m=new Map();b.parts.forEach(pi=>CUR.R.parts[pi].segs.forEach(g=>{if(g.nb>=0&&!in_.has(g.nb))m.set(CUR.R.parts[g.nb].no,angT(g.dih));}));return [...m].sort((a,b)=>a[0]-b[0]);}
@@ -308,7 +317,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.9.3';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.9.4';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
