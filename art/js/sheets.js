@@ -24,12 +24,14 @@ function svgTable(x,y,cols,rows,rh=7){const W=cols.reduce((s,c)=>s+c.w,0),H=rh*(
     s+=`<text class="td" x="${r2(ri===0?cx+c.w/2:c.r?cx+c.w-1.2:cx+1.2)}" y="${r2(y+ri*rh+rh-2)}"${ri===0?' text-anchor="middle"':c.r?' text-anchor="end"':''}>${shEsc(t)}</text>`;cx+=c.w;});});
   return s;}
 // стили листа — только внутри svg.shs: иначе .no, .bv и др. действуют на всю страницу (эскизы в панели и таблице)
-const SH_STYLE='<style>'+`.l{fill:none;stroke:#000;stroke-width:.35;stroke-linejoin:round}.t{fill:none;stroke:#000;stroke-width:.18}.dash{fill:none;stroke:#000;stroke-width:.15;stroke-dasharray:1.2 .8}.fr{fill:none;stroke:#000;stroke-width:.7}.eng{fill:none;stroke:#c33;stroke-width:.12}.seam{fill:none;stroke:#d01f1f;stroke-width:.8;stroke-linecap:round}.bnd{fill:none;stroke:#000;stroke-width:.18;stroke-dasharray:4 1 .4 1 .4 1}.bv{stroke:#c33}.bm{stroke:#33c}.small{fill:none;stroke:#c33;stroke-width:.35}.fc{stroke:#000;stroke-width:.15;stroke-linejoin:round}.ar{fill:#000}text{font-family:"Arial Narrow",Arial,sans-serif;font-style:italic;fill:#000;font-size:3.5px}.hd{font-size:6px}.h2{font-size:4.5px}.sm,.lb{font-size:2.3px}.td{font-size:2.8px}.no{font-size:2.6px;font-style:normal;font-weight:bold}.nb{font-size:2.1px;fill:#a33}.big{font-size:5px;font-style:normal;font-weight:bold}`.replace(/([^{}]+)\{/g,(m,sel)=>sel.split(',').map(x=>'svg.shs '+x.trim()).join(',')+'{')+'</style>';
+const SH_STYLE='<style>'+`.l{fill:none;stroke:#000;stroke-width:.35;stroke-linejoin:round}.t{fill:none;stroke:#000;stroke-width:.18}.dash{fill:none;stroke:#000;stroke-width:.15;stroke-dasharray:1.2 .8}.fr{fill:none;stroke:#000;stroke-width:.7}.eng{fill:none;stroke:#c33;stroke-width:.12}.seam{fill:none;stroke:#d01f1f;stroke-width:.8;stroke-linecap:round}.ag{fill:none;stroke:#000;stroke-width:.3;stroke-linecap:round}.bl3{fill:none;stroke:#1f5fd0;stroke-width:.45;stroke-dasharray:1.6 .8}.bnd{fill:none;stroke:#000;stroke-width:.18;stroke-dasharray:4 1 .4 1 .4 1}.bv{stroke:#c33}.bm{stroke:#33c}.small{fill:none;stroke:#c33;stroke-width:.35}.fc{stroke:#000;stroke-width:.15;stroke-linejoin:round}.ar{fill:#000}text{font-family:"Arial Narrow",Arial,sans-serif;font-style:italic;fill:#000;font-size:3.5px}.hd{font-size:6px}.h2{font-size:4.5px}.sm,.lb{font-size:2.3px}.td{font-size:2.8px}.no{font-size:2.6px;font-style:normal;font-weight:bold}.nb{font-size:2.1px;fill:#a33}.big{font-size:5px;font-style:normal;font-weight:bold}`.replace(/([^{}]+)\{/g,(m,sel)=>sel.split(',').map(x=>'svg.shs '+x.trim()).join(',')+'{')+'</style>';
 // рамка и основная надпись (только email — по просьбе автора)
-function wrapSheet(b,o){const x=230,y=276,c=[95,30,30,30],cell=(i,row,lab,val)=>{const xx=x+c.slice(0,i).reduce((s,v)=>s+v,0),yy=y+row*8;return `<text class="lb" x="${xx+1}" y="${yy+2.6}">${lab}</text><text class="td" x="${xx+1.2}" y="${yy+6.6}">${shEsc(val)}</text>`;};
+// основная надпись 185 × 16, x, y — левый верхний угол; b.mass — масса куска (на карте), иначе всей фигуры
+function stamp(x,y,b,o){const c=[95,30,30,30],cell=(i,row,lab,val)=>{const xx=x+c.slice(0,i).reduce((s,v)=>s+v,0),yy=y+row*8;return `<text class="lb" x="${xx+1}" y="${yy+2.6}">${lab}</text><text class="td" x="${xx+1.2}" y="${yy+6.6}">${shEsc(val)}</text>`;};
   let xs=x,v='';c.slice(0,-1).forEach(w=>{xs+=w;v+=`M${xs},${y}V${y+16}`;});const nm=ST.name||'Фигура';
-  const tb=`<rect class="fr" x="${x}" y="${y}" width="185" height="16"/><path class="t" d="M${x},${y+8}H415${v}"/>`+cell(0,0,'Изделие',nm)+cell(1,0,'Масштаб',b.scale||'—')+cell(2,0,'Масса',`≈ ${fmt(CUR.T.mass,1)} кг`)+cell(3,0,'Металл',`${ST.t} мм`)
-    +cell(0,1,'email',SH_EMAIL)+cell(1,1,'Дата',o.date)+cell(2,1,'Лист',String(o.n))+cell(3,1,'Листов',String(o.N));
+  return `<rect class="fr" x="${x}" y="${y}" width="185" height="16"/><path class="t" d="M${x},${y+8}H${x+185}${v}"/>`+cell(0,0,'Изделие',nm)+cell(1,0,'Масштаб',b.scale||'—')+cell(2,0,'Масса',`≈ ${b.mass||fmt(CUR.T.mass,1)+' кг'}`)+cell(3,0,'Металл',`${ST.t} мм`)
+    +cell(0,1,'email',SH_EMAIL)+cell(1,1,'Дата',o.date)+cell(2,1,'Лист',String(o.n))+cell(3,1,'Листов',String(o.N));}
+function wrapSheet(b,o){const nm=ST.name||'Фигура',tb=stamp(230,276,b,o);
   return `<svg xmlns="http://www.w3.org/2000/svg" class="shs" viewBox="0 0 420 297" width="420mm" height="297mm">${SH_STYLE}<rect width="420" height="297" fill="#fff"/><rect class="fr" x="20" y="5" width="395" height="287"/><path class="l" d="M20,17H415"/>`
     +`<text class="hd" x="25" y="13.5">${shEsc(nm)}</text><text class="h2" x="410" y="13.5" text-anchor="end">${shEsc(b.title)}</text>${b.body}${tb}<text class="sm" x="415" y="295.6" text-anchor="end">Формат А3</text></svg>`;}
 
@@ -66,7 +68,7 @@ function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=proj
     ['Длина реза',fmt(CUR.cutLen/1000,1)+' м'],['Длина швов',fmt((T.weld-(BS?BS.len:0))/1000,1)+' м'],['Зазор шва',ST.gap+' мм'],[`Листов ${sw}×${sl}`,CUR.N.sheets.length+` (заполнение ${Math.round(CUR.N.used*100)}%)`]];
   s+=svgTable(300,22,[{t:'Параметр',w:58},{t:'Значение',w:55}],rows,6.5);
   const bi=projBox(VIEWS.iso),ih=BS?128:160,ki=Math.min(110/(bi[2]-bi[0]),(ih-10)/(bi[3]-bi[1]));s+=facesSVG(VIEWS.iso,ki,300+(113-(bi[2]-bi[0])*ki)/2-bi[0]*ki,95+(ih-(bi[3]-bi[1])*ki)/2-bi[1]*ki);   // с гибкой — ниже технические требования
-  s+=`<text class="sm" x="300" y="268">Номера на гранях — номера деталей (вид спереди). Порядок сборки — следующие листы.</text>`;
+  s+=`<text class="sm" x="300" y="268">Номера на гранях — номера деталей (вид спереди). Порядок сборки — следующие листы, каждый кусок — на своей карте (PDF А4).</text>`;
   // технические требования к гибке
   if(BS)s+=['Технические требования','1. V — гнуть на себя, m — от себя, глядя на сторону','    с гравировкой (внутреннюю). Число у линии — угол между','    гранями после гибки, в скобках — порядок гибки.',
     '2. Линии сгиба — в DXF на слоях BEND_V и BEND_M. Глубину','    (разметка, гравировка в несколько проходов, перфорация)','    выбирает цех. Глубокая канавка — только на V.','3. Толстый лист: пропил болгаркой — только по V и только изнутри.']
@@ -86,13 +88,16 @@ function stepFrame(view,ps,MINW=150){const b=[1e9,1e9,-1e9,-1e9],add=(B,q)=>{B[0
   return [Math.max(all[0],cx-hw),Math.max(all[1],cy-hh),Math.min(all[2],cx+hw),Math.min(all[3],cy+hh)];}
 // единицы сборки: отдельная деталь или заготовка (её детали — вместе, уже согнутые), по номеру первой детали
 function asmUnits(){const R=CUR.R,u=new Map();[...R.parts].sort((a,b)=>a.no-b.no).forEach(p=>{const bi=CUR.blankOf?CUR.blankOf[p.id]:-1,k=bi>=0?'b'+bi:'p'+p.id;if(!u.has(k))u.set(k,{bi,ps:[]});u.get(k).ps.push(p);});
-  const L=[...u.values()],of=new Map();L.forEach((x,i)=>{x.name=x.bi>=0?'Г'+CUR.BL[x.bi].no:'№'+x.ps[0].no;x.ps.forEach(p=>of.set(p.id,i));});return {L,of};}
+  const L=[...u.values()],of=new Map();L.forEach((x,i)=>{x.name=x.bi>=0?'Г'+CUR.BL[x.bi].no:'№'+x.ps[0].no;x.ps.forEach(p=>of.set(p.id,i));});
+  // tw — зеркальный кусок: его детали — пары деталей этого, и только они; нет — −1
+  L.forEach((x,i)=>{const tw=x.ps.map(p=>p.twin),j=tw.every(t=>t!=null)?of.get(tw[0]):undefined;x.tw=j!==undefined&&j!==i&&L[j].ps.length===x.ps.length&&tw.every(t=>of.get(t)===j)?j:-1;});
+  return {L,of};}
 // шаги сборки: кусок (деталь или заготовка); следующий — с меньшим номером из тех, что касаются собранного (ничего не касается — новое начало).
 // Зеркальная пара — один шаг, если и зеркальный кусок есть к чему приварить (или оба — начало). w — к чему варить: [{nb, dih, ed}], done — собрано после шага
 function asmSteps(){const {L:U,of}=asmUnits(),R=CUR.R,n=U.length,placed=new Set(),pu=new Set(),steps=[],own=U.map(x=>new Set(x.ps.map(p=>p.id))),UE=U.map(()=>[]);
   R.edges.forEach(e=>{if(e.p.length!==2)return;const a=of.get(e.p[0]),b=of.get(e.p[1]);if(a===b)return;UE[a].push(e);UE[b].push(e);});
   const weldTo=(i,set)=>{const m=new Map();UE[i].forEach(e=>{const b=own[i].has(e.p[0])?e.p[1]:e.p[0];if(!set.has(b))return;if(!m.has(b))m.set(b,{nb:b,dih:e.dih,ed:[]});m.get(b).ed.push([e.a,e.b]);});return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);};
-  const twinOf=i=>{const x=U[i],tw=x.ps.map(p=>p.twin),j=tw.every(t=>t!=null)?of.get(tw[0]):undefined;return j!==undefined&&j!==i&&U[j].ps.length===x.ps.length&&tw.every(t=>of.get(t)===j)?j:-1;};
+  const twinOf=i=>U[i].tw;
   while(pu.size<n){let i=-1;for(let k=0;k<n&&i<0;k++)if(!pu.has(k)&&(!placed.size||U[k].ps[0].back||weldTo(k,placed).length))i=k;
     for(let k=0;k<n&&i<0;k++)if(!pu.has(k))i=k;
     const w=weldTo(i,placed),j=twinOf(i),st={u:[U[i]],ix:[i],w:[w]};pu.add(i);
@@ -102,7 +107,7 @@ function asmSteps(){const {L:U,of}=asmUnits(),R=CUR.R,n=U.length,placed=new Set(
 // перенос строки по словам
 const wrapTxt=(t,n)=>{const out=[];let l='';t.split(' ').forEach(w=>{if((l+' '+w).trim().length>n&&l){out.push(l);l=w;}else l=(l+' '+w).trim();});if(l)out.push(l);return out;};
 function sheetsAssembly(){const {steps}=asmSteps(),R=CUR.R,V=CUR.M3.V,cw=130,ch=124,out=[];
-  const say=(x,w)=>{const bl=x.bi>=0;if(x.ps[0].back)return `${x.name}: подложка за прорезью глаза — приварить изнутри по краю прорези`;return `${x.name}${bl?` (дет. ${x.ps.map(p=>p.no).join(', ')})`:''}: ${bl?'согнуть по листу «Гибка», ':''}${w.length?'приварить к '+w.map(q=>`№ ${R.parts[q.nb].no} (${angT(q.dih)})`).join(', '):'первый кусок — от него собираем'}`;};
+  const say=(x,w)=>{const bl=x.bi>=0;if(x.ps[0].back)return `${x.name}: подложка за прорезью глаза — приварить изнутри по краю прорези`;return `${x.name}${bl?` (дет. ${x.ps.map(p=>p.no).join(', ')})`:''}: ${bl?`согнуть по карте ${x.name}, `:''}${w.length?'приварить к '+w.map(q=>`№ ${R.parts[q.nb].no} (${angT(q.dih)})`).join(', '):'первый кусок — от него собираем'}`;};
   for(let si=0;si<steps.length;si+=6){let s='';steps.slice(si,si+6).forEach((st,j)=>{const cx=25+(j%3)*cw,cy=22+Math.floor(j/3)*ch,[x,tw]=st.u,now=new Set(st.u.flatMap(u=>u.ps.map(p=>p.id)));
       const W=st.w[0],nbs=new Set(W.map(q=>q.nb)),mine=new Set(x.ps.map(p=>p.id));
       // крупно и со стороны нового куска; собранное раньше — светло-серым, новый — оранжевым; номера — только у нового и тех, к кому варим
@@ -121,27 +126,13 @@ function sheetsAssembly(){const {steps}=asmSteps(),R=CUR.R,V=CUR.M3.V,cw=130,ch=
     out.push({title:'Порядок сборки',scale:'—',body:s});}
   return out;}
 
-/* ---------- 3. детали: развёртки с контуром реза ---------- */
-function sheetsParts(){const ps=[...CUR.R.parts].filter(p=>!CUR.blankOf||CUR.blankOf[p.id]<0).sort((a,b)=>a.no-b.no);if(!ps.length)return [];const maxL=Math.max(...ps.map(p=>p.L)),maxW=Math.max(...ps.map(p=>p.W));
-  const n=pickScale([maxL,maxW],[150,100]),k=1/n,out=[];let s='',x=25,y=24,rowH=0;const flush=()=>{out.push({title:'Детали — развёртки',scale:scaleTxt(n),body:s+`<text class="sm" x="25" y="272">Жирная линия — контур реза (с учётом толщины ${ST.t} мм и шва ${ST.gap} мм), пунктир — грань по поверхности. У сторон: длина реза, мм; красным — номер соседа и угол между листами.${CUR.BL&&CUR.BL.length?' Детали заготовок со сгибами — на листах «Гибка».':''}</text>`});s='';x=25;y=24;rowH=0;};
-  ps.forEach(p=>{const w=p.L*k+18,h=p.W*k+16;if(x+w>415){x=25;y+=rowH;rowH=0;}if(y+h>268){flush();}
-    const ox=x+9,oy=y+8,T=q=>[ox+q[0]*k,oy+(p.W-q[1])*k],c=CUR.C[p.id],P=p.pts.map(T),Q=c.pts.map(T);
-    s+=`<polygon class="dash" points="${P.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/><polygon class="l" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
-    const cx=Q.reduce((a,q)=>a+q[0],0)/Q.length,cy=Q.reduce((a,q)=>a+q[1],0)/Q.length;s+=`<text class="big" x="${r2(cx)}" y="${r2(cy+1.7)}" text-anchor="middle">${p.no}</text>`;
-    Q.forEach((a,i)=>{const b=Q[(i+1)%Q.length],mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,dx=mx-cx,dy=my-cy,l=Math.hypot(dx,dy)||1,len=Math.hypot(c.pts[(i+1)%Q.length][0]-c.pts[i][0],c.pts[(i+1)%Q.length][1]-c.pts[i][1]);
-      const pl=Math.hypot(b[0]-a[0],b[1]-a[1]);if(pl>5)s+=`<text class="sm" x="${r2(mx+dx/l*3)}" y="${r2(my+dy/l*3+.8)}" text-anchor="middle">${Math.round(len)}</text>`;const g=p.segs[i];
-      if(g&&g.nb>=0&&pl>16)s+=`<text class="nb" x="${r2(mx-dx/l*3.2)}" y="${r2(my-dy/l*3.2+.7)}" text-anchor="middle">→${CUR.R.parts[g.nb].no} ${angT(g.dih)}</text>`;});
-    if(c.bad)s+=`<text class="nb" x="${r2(ox)}" y="${r2(oy-2)}">выродилась — проверьте</text>`;
-    x+=w;rowH=Math.max(rowH,h);});
-  if(s)flush();return out;}
-
 /* ---------- уголки-шаблоны для сварки (галочка): все уголки 1:2 с надписью, как ставить ---------- */
 function sheetsTpl(){const T=CUR.TPL||[],n=2.5,k=1/n,cw=43,ch=33,cols=9,rows=7,out=[];
   for(let i=0;i<T.length;i+=cols*rows){let s='';T.slice(i,i+cols*rows).forEach((o,j)=>{
       // буквой V: биссектриса угла — вверх, выемка у вершины — внизу
       const r=Math.PI/2-o.a*Math.PI/360,c=Math.cos(r),sn=Math.sin(r),R=o.pts.map(q=>[c*q[0]-sn*q[1],sn*q[0]+c*q[1]]),xs=R.map(q=>q[0]),ys=R.map(q=>q[1]),x0=Math.min(...xs),y1=Math.max(...ys),w=(Math.max(...xs)-x0)*k,h=(y1-Math.min(...ys))*k;
       const cx=25+(j%cols)*cw,cy=24+Math.floor(j/cols)*ch,ox=cx+(cw-w)/2,oy=cy+1+(ch-10-h)/2,Q=R.map(q=>[ox+(q[0]-x0)*k,oy+(y1-q[1])*k]);
-      s+=`<polygon class="l" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/><text class="big" x="${r2(cx+cw/2)}" y="${r2(cy+ch-5)}" text-anchor="middle">${tplNo(o.a)}</text><text class="sm" x="${r2(cx+cw/2)}" y="${r2(cy+ch-1.8)}" text-anchor="middle">швов ${o.seams}${o.out?` (${o.out} снаружи)`:''}</text>`;});
+      s+=`<polygon class="l" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/><text class="big" x="${r2(cx+cw/2)}" y="${r2(cy+ch-5)}" text-anchor="middle">${tplNo(o.a)}</text><text class="sm" x="${r2(cx+cw/2)}" y="${r2(cy+ch-1.8)}" text-anchor="middle">${[o.seams?`швов ${o.seams}${o.out?` (${o.out} снаружи)`:''}`:'',o.bends?`сгибов ${o.bends}`:''].filter(Boolean).join(', ')}</text>`;});
     s+=`<text class="sm" x="25" y="263">Уголок вырезан из того же листа, на нём гравировка «У» и угол. В чертежах у шва написан угол: «152°» — выпуклый шов, уголок У152° вставить в стык изнутри фигуры; «152° внутрь» — вогнутый, приложить снаружи.</text><text class="sm" x="25" y="268">Прижать обе детали к рабочим краям уголка (выемка — к шву), прихватить в 2–3 точках, снять уголок и переставить на следующий шов с тем же углом. Швы почти плоские (${TPL_MAX}–180°) — по линейке.</text>`;
     out.push({title:'Уголки-шаблоны для сварки',scale:scaleTxt(n),body:s});}
   return out;}
@@ -156,24 +147,13 @@ function sheetsSpec(){const dens=DENS[ST.mat]||7850,R=CUR.R,cols=[{t:'№',w:15,
     const gab=o.B?`${Math.round(o.B.L)} × ${Math.round(o.B.W)}`:`${Math.round(Math.max(...xs)-Math.min(...xs))} × ${Math.round(Math.max(...ys)-Math.min(...ys))}`;
     return [tw?`${o.no} / ${tw.no}`:o.no,gab,fmt(a/100,1),fmt(a*1e-9*ST.t*dens,3),Math.round(perim(o.pts)),tw?2:1,(tw?'зеркально; ':'')+(o.B?`дет. ${o.parts.map(pi=>R.parts[pi].no).join(', ')}; `:'')+[...nb.keys()].join(', ')];});
   const per=38,out=[];for(let i=0;i<rows.length;i+=per*2){let s=svgTable(25,22,cols,rows.slice(i,i+per),6.2);if(rows.length>i+per)s+=svgTable(222,22,cols,rows.slice(i+per,i+per*2),6.2);
-    if(CUR.BL&&CUR.BL.length)s+=`<text class="sm" x="25" y="272">Г — заготовка со сгибами (гнутая) (развёртка и порядок гибки — на листах «Гибка»).</text>`;out.push({title:'Спецификация деталей',scale:'—',body:s});}
+    if(CUR.BL&&CUR.BL.length)s+=`<text class="sm" x="25" y="272">Г — заготовка со сгибами: развёртка с размерами, гибка и швы — на её карте (PDF А4), порядок гибки — лист «Гибка — порядок».</text>`;out.push({title:'Спецификация деталей',scale:'—',body:s});}
   return out;}
 
-/* ---------- гибка: заготовки с линиями сгиба (вид изнутри — со стороны гравировки) и порядок гибки ---------- */
-function sheetsBend(){const BL=CUR.BL||[];if(!BL.length)return [];const R=CUR.R,A=BL.map(b=>bendAlign(b.pts,true)),n=pickScale([Math.max(...A.map(t=>t.L)),Math.max(...A.map(t=>t.W))],[185,105]),k=1/n,out=[];
-  const note=`<text class="sm" x="25" y="264">Вид изнутри — со стороны гравировки. V — гнуть на себя, m — от себя; число — угол между гранями после гибки, в скобках — порядок гибки (сначала крайние). Линия сгиба — тонкая штрихпунктирная с двумя точками (ГОСТ 2.303).</text>`
-    +`<text class="sm" x="25" y="268">${ST.useT?`Контур — с поправкой на толщину ${ST.t} мм у сгиба (r = t, K = 0,33) и отступом под шов на свариваемых сторонах.`:'Без поправки на толщину листа.'} Внутри заготовки — номера её деталей по спецификации и порядку сборки.</text>`;
-  let s='',x=25,y=24,rowH=0;const flush=()=>{out.push({title:'Гибка — заготовки',scale:scaleTxt(n),body:s+note});s='';x=25;y=24;rowH=0;};
-  BL.forEach((b,i)=>{const t=A[i],w=t.L*k+16,h=t.W*k+18;if(x+w>415){x=25;y+=rowH;rowH=0;}if(y+h>258)flush();
-    const ox=x+8,oy=y+9,P=q=>{const z=trPt(t,q);return [ox+z[0]*k,oy+(t.W-z[1])*k];},pts=b.pts.map(P),pl=Q=>Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ');
-    s+=`<text class="h2" x="${r2(x+2)}" y="${r2(y+5)}">Г${b.no} · ${Math.round(t.L)} × ${Math.round(t.W)} мм · сгибов: ${b.lines.length}</text><polygon class="l" points="${pl(pts)}"/>`;
-    b.lines.forEach(l=>l.segs.forEach((z,zi)=>{const a=P([z[0],z[1]]),c=P([z[2],z[3]]);s+=`<path class="bnd" d="M${r2(a[0])},${r2(a[1])}L${r2(c[0])},${r2(c[1])}"/>`;
-      if(zi)return;let an=Math.atan2(c[1]-a[1],c[0]-a[0])*180/Math.PI;if(an>90)an-=180;if(an<-90)an+=180;const mx=(a[0]+c[0])/2,my=(a[1]+c[1])/2;
-      s+=`<text class="nb" transform="translate(${r2(mx)},${r2(my)}) rotate(${r2(an)})" y="-.8" text-anchor="middle">${shEsc(bendTxt(l))}</text>`;}));
-    b.regions.forEach(z=>{const ip=innerPoint(z.pts.map(q=>trPt(t,q)));if(!ip)return;const c=[ox+ip.p[0]*k,oy+(t.W-ip.p[1])*k];s+=`<text class="no" x="${r2(c[0])}" y="${r2(c[1]+.9)}" text-anchor="middle">${R.parts[z.pi].no}</text>`;});
-    x+=w;rowH=Math.max(rowH,h);});
-  if(s)flush();
-  // порядок гибки — таблицей
+/* ---------- гибка: порядок таблицей (развёртки с размерами — на картах деталей А4) ---------- */
+function sheetsBend(){const BL=CUR.BL||[];if(!BL.length)return [];const R=CUR.R,out=[];
+  const note=`<text class="sm" x="25" y="264">V — гнуть на себя, m — от себя, глядя на сторону с гравировкой (внутреннюю); число — угол между гранями после гибки, в скобках на гравировке — порядок гибки (сначала крайние).</text>`
+    +`<text class="sm" x="25" y="268">${ST.useT?`Контур — с поправкой на толщину ${ST.t} мм у сгиба (r = t, K = 0,33) и отступом под шов на свариваемых сторонах. `:''}Развёртка каждой заготовки с размерами, вид после гибки и швы — на картах деталей (PDF А4).</text>`;
   const nm=pi=>R.parts[pi].no,rows=BL.map(b=>['Г'+b.no,b.parts.map(nm).join(', '),`${Math.round(b.L)} × ${Math.round(b.W)}`,b.lines.map(l=>`${l.k}) ${l.kind}${l.ang} ${nm(l.p)}–${nm(l.q)}`).join('   ')]);
   const cols=[{t:'Загот.',w:12},{t:'Детали',w:64},{t:'Габарит, мм',w:22},{t:'Сгибы по порядку: вид, угол между гранями, между деталями',w:292}];
   for(let i=0;i<rows.length;i+=36)out.push({title:'Гибка — порядок',scale:'—',body:svgTable(25,22,cols,rows.slice(i,i+36),6.2)+note});
@@ -208,8 +188,85 @@ function sheetsNest(){const N=CUR.N,n=N.sheets.length===1?pickScale([N.W,N.H],[3
   if(N.too.length)out.push({title:'Раскрой листа',scale:'—',body:`<text class="h2" x="25" y="40">Не влезают в лист: ${N.too.map(itemName).join(', ')} — выберите лист больше или уменьшите фигуру</text>`});
   return out;}
 
-function buildSheets(){if(!CUR||!CUR.R.parts.length)return [];const L=[sheetGeneral(),...sheetsAssembly(),...sheetsParts(),...sheetsBend(),...sheetsSpec(),...(CUR.TPL&&CUR.TPL.length?sheetsTpl():[]),...sheetsNest()],d=new Date(),date=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+const shDate=()=>{const d=new Date();return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;};
+function buildSheets(){if(!CUR||!CUR.R.parts.length)return [];const L=[sheetGeneral(),...sheetsAssembly(),...sheetsBend(),...sheetsSpec(),...(CUR.TPL&&CUR.TPL.length?sheetsTpl():[]),...sheetsNest()],date=shDate();
   return L.map((b,i)=>({title:b.title,svg:wrapSheet(b,{n:i+1,N:L.length,date})}));}
+
+/* ---------- карты деталей: лист А4 книжный на каждый кусок (деталь или заготовка), зеркальная пара — одна карта ----------
+   Глянул на лист — понял, что за кусок, где он на фигуре, как резать, гнуть и к чему варить */
+function wrapA4(b,o){return `<svg xmlns="http://www.w3.org/2000/svg" class="shs" viewBox="0 0 210 297" width="210mm" height="297mm">${SH_STYLE}<rect width="210" height="297" fill="#fff"/><rect class="fr" x="20" y="5" width="185" height="287"/><path class="l" d="M20,17H205"/>`
+  +`<text class="hd" x="24" y="13.5">${shEsc(b.head)}</text><text class="h2" x="201" y="13.5" text-anchor="end">${shEsc(b.title)}</text>${b.body}${stamp(20,276,b,o)}<text class="sm" x="205" y="295.6" text-anchor="end">Формат А4</text></svg>`;}
+// швы куска (own — его детали): по каждому соседу снаружи — длина, угол (по самому длинному ребру), рёбра
+function pieceWelds(own){const R=CUR.R,V=CUR.M3.V,m=new Map();R.edges.forEach(e=>{if(e.p.length!==2)return;const i=own.has(e.p[0]);if(i===own.has(e.p[1]))return;const nb=i?e.p[1]:e.p[0],l=V3.len(V3.sub(V[e.a],V[e.b]));
+    if(!m.has(nb))m.set(nb,{nb,len:0,dih:e.dih,ml:0,ed:[]});const w=m.get(nb);w.len+=l;w.ed.push([e.a,e.b]);if(l>w.ml){w.ml=l;w.dih=e.dih;}});
+  return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);}
+// чертёж угла: две стороны и дуга, вершина внизу; нет нашего уголка — сварщик выставит по нему транспортиром. x — левый край, y — низ
+function angGlyph(x,y,a,s){const r=a*Math.PI/180,c=Math.cos(r),sn=Math.sin(r),q=s*.5,vx=x+s*Math.max(0,-c);
+  return `<path class="ag" d="M${r2(vx+s)},${r2(y)}L${r2(vx)},${r2(y)}L${r2(vx+s*c)},${r2(y-s*sn)}M${r2(vx+q)},${r2(y)}A${r2(q)},${r2(q)} 0 0 0 ${r2(vx+q*c)},${r2(y-q*sn)}"/>`;}
+// чем выставить угол: уголок из комплекта (галочка «Уголки»), почти плоский — линейкой, совсем острый — по месту, иначе — транспортиром
+function tplSay(d,bend){const a=Math.round(d>180.5?360-d:d);if(a>=TPL_MAX)return 'по линейке';if(a<TPL_MIN)return 'по месту';
+  return CUR.TPL&&CUR.TPL.some(o=>o.a===a)?`уголок ${tplNo(a)}${bend?'':d>180.5?' снаружи':' изнутри'}`:'транспортиром';}
+// x — кусок (из asmUnits), y — его зеркальный или null
+function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=CUR.PC.find(c=>c.id===(B?'b'+x.bi:x.ps[0].id)),own=new Set(x.ps.map(p=>p.id)),nm=pi=>R.parts[pi].no;
+  const t=bendAlign(o.pts,true),P=o.pts.map(q=>trPt(t,q)),a=Math.abs(area2(o.pts)),mass=a*1e-9*ST.t*(DENS[ST.mat]||7850),W=pieceWelds(own),back=x.ps[0].back;
+  // строки: гибка по порядку, потом сварка по соседям; у каждой — чертёж угла
+  const rows=[];if(B){rows.push({h:'Гибка — по порядку · V — на себя, m — от себя (глядя на гравировку) · угол между гранями после гибки'});
+    B.lines.forEach(l=>rows.push({t:`${l.k}) ${l.kind}${l.ang} — ${l.kind==='V'?'на себя':'от себя'}, между № ${nm(l.p)} и ${nm(l.q)} · линия ${Math.round(l.len)} мм`,a:l.ang,at:l.ang+'°',tp:tplSay(l.ang,true)}));}
+  rows.push({h:back?'Сварка — подложка за прорезью глаза: приварить изнутри по краю прорези':`Сварка — к чему варить · угол между листами по шву${y?` · ${y.name} — к зеркальным (с «.1»), детали посередине — те же`:''}`});
+  W.forEach(w=>rows.push({w:1,t:`к № ${nm(w.nb)} · шов ${Math.round(w.len)} мм`,a:Math.round(w.dih>180.5?360-w.dih:w.dih),at:angT(w.dih),tp:tplSay(w.dih)}));
+  // строки по ширине листа; соседей много — швы в две колонки
+  const wc=W.length>8?2:1,ln=[];rows.forEach(r=>{const l=ln[ln.length-1];if(r.w&&l&&l[0].w&&l.length<wc)l.push(r);else ln.push([r]);});
+  const maxT=112,rh=Math.max(3.8,Math.min(5.4,maxT/ln.length)),nl=Math.min(ln.length,Math.floor(maxT/rh)),ty0=274-nl*rh,fy0=y?31:28,mh=pickScale([t.L,t.W],[160,ty0-fy0-78])>pickScale([t.L,t.W],[160,ty0-fy0-68])?56:66,my0=ty0-mh;
+  // шапка: что внутри, металл, габарит, масса, рез, сколько штук
+  let s=`<text class="td" x="23" y="22.5">${shEsc([B?`детали № ${x.ps.map(p=>p.no).join(', ')}`:back?'подложка глаза':'',`${MATN[ST.mat]||ST.mat} ${ST.t} мм`,`габарит реза ${Math.round(t.L)} × ${Math.round(t.W)} мм`,`масса ${fmt(mass,2)} кг/шт`,`рез ${Math.round(perim(o.pts))} мм`,`кол. ${y?2:1}`].filter(Boolean).join(' · '))}</text>`;
+  if(y)s+=`<text class="sm" x="23" y="26.5">${shEsc(`${y.name} — зеркальная копия: развёртка зеркально (в DXF и раскрое уже так), гнуть и варить так же — на другой стороне фигуры`)}</text>`;
+  // 1. развёртка, как режут: контур, линии сгиба с подписью, номера деталей, гравировка, длины сторон и габарит
+  const fh=my0-2-fy0,n=pickScale([t.L,t.W],[160,fh-20]),k=1/n,ox=20+(185-t.L*k)/2,oy=fy0+7+(fh-17-t.W*k)/2,T=q=>[ox+q[0]*k,oy+(t.W-q[1])*k],Q=P.map(T),box=[],hit=b=>box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]);   // box — занятые места
+  s+=`<text class="h2" x="23" y="${r2(fy0+3.5)}">Развёртка — как режут</text><text class="sm" x="202" y="${r2(fy0+3.5)}" text-anchor="end">вид со стороны гравировки (изнутри фигуры) · М ${scaleTxt(n)}</text><polygon class="l" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
+  const segP=(S,c)=>S.length?`<path class="${c}" d="${S.map(z=>{const A=T([z[0],z[1]]),C=T([z[2],z[3]]);return `M${r2(A[0])},${r2(A[1])}L${r2(C[0])},${r2(C[1])}`;}).join('')}"/>`:'';
+  const lb=[],eng=[];   // гравировка — номера деталей (подписи сгибов — текстом у линии: гравировкой мелко)
+  (B?B.regions.map(z=>({no:nm(z.pi),pts:z.pts.map(q=>trPt(t,q))})):[{no:o.no,pts:P}]).forEach(z=>{const g=ST.engrave?engraveSegs(z.no,z.pts):null;if(g){eng.push(...g);const Z=g.flatMap(q=>[T([q[0],q[1]]),T([q[2],q[3]])]);box.push([Math.min(...Z.map(q=>q[0]))-.3,Math.min(...Z.map(q=>q[1]))-.3,Math.max(...Z.map(q=>q[0]))+.3,Math.max(...Z.map(q=>q[1]))+.3]);}
+    if(!g)lb.push({t:String(z.no),pts:z.pts.map(T),a:Math.abs(area2(z.pts))*k*k});});   // гравировки нет (выкл. или не влезла) — номер текстом
+  if(B)B.lines.forEach(l=>l.segs.forEach((z,zi)=>{const A=T(trPt(t,[z[0],z[1]])),C=T(trPt(t,[z[2],z[3]]));s+=`<path class="bnd ${l.kind==='V'?'bv':'bm'}" d="M${r2(A[0])},${r2(A[1])}L${r2(C[0])},${r2(C[1])}"/>`;
+    // подпись — за контуром, у конца линии: кружок с номером по порядку и «V141» (внутри узких полос налезала бы на гравировку номеров)
+    if(zi)return;const col=l.kind==='V'?'#c33':'#33c',tx=l.kind+l.ang;let done=false;
+    for(const r of [2.6,4.6])for(const [E,O] of [[C,A],[A,C]]){if(done)break;const d=Math.hypot(E[0]-O[0],E[1]-O[1])||1,u=[(E[0]-O[0])/d,(E[1]-O[1])/d],c=[E[0]+u[0]*r,E[1]+u[1]*r],rt=u[0]>=-.2,w=tx.length*1.15;
+      const b=[Math.min(c[0]-1.9,rt?c[0]:c[0]-2.2-w),c[1]-1.9,Math.max(c[0]+1.9,rt?c[0]+2.2+w:c[0]),c[1]+1.9];if(r<4&&hit(b))continue;box.push(b);done=true;
+      s+=`<path class="t" style="stroke:${col}" d="M${r2(E[0])},${r2(E[1])}L${r2(c[0]-u[0]*1.7)},${r2(c[1]-u[1]*1.7)}"/><circle cx="${r2(c[0])}" cy="${r2(c[1])}" r="1.7" fill="#fff" stroke="${col}" stroke-width=".25"/><text class="no" x="${r2(c[0])}" y="${r2(c[1]+.9)}" text-anchor="middle" style="font-size:2.4px;fill:${col}">${l.k}</text>`
+        +`<text class="nb" x="${r2(rt?c[0]+2.2:c[0]-2.2)}" y="${r2(c[1]+.8)}"${rt?'':' text-anchor="end"'} style="font-size:2.4px;fill:${col}">${tx}</text>`;}}));
+  s+=segP(eng,'eng')+placeLabels(lb,4.2,.55,box).map(l=>{box.push([l.x-l.t.length*l.h*.3,l.y-l.h/2,l.x+l.t.length*l.h*.3,l.y+l.h/2]);return `<text class="no" x="${r2(l.x)}" y="${r2(l.y+l.h*.35)}" text-anchor="middle" style="font-size:${r2(l.h)}px">${l.t}</text>`;}).join('');
+  Q.forEach((A,i)=>{const C=Q[(i+1)%Q.length],L=Math.hypot(P[(i+1)%P.length][0]-P[i][0],P[(i+1)%P.length][1]-P[i][1]),pl=Math.hypot(C[0]-A[0],C[1]-A[1]);if(L<10||pl<4)return;
+    let nx=(C[1]-A[1])/pl,ny=-(C[0]-A[0])/pl;const mx=(A[0]+C[0])/2,my=(A[1]+C[1])/2;if(inPoly([mx+nx*.6,my+ny*.6],Q)){nx=-nx;ny=-ny;}
+    const tx=String(Math.round(L)),w=tx.length*1.3,c=[mx+nx*(2+Math.abs(ny)*.4),my+ny*2.4],b=[c[0]-w/2,c[1]-1.3,c[0]+w/2,c[1]+1];if(hit(b))return;box.push(b);s+=`<text class="sm" x="${r2(c[0])}" y="${r2(c[1]+.8)}" text-anchor="middle">${tx}</text>`;});
+  s+=dimH(ox,oy+t.W*k,ox+t.L*k,oy+t.W*k,oy+t.W*k+8,Math.round(t.L))+dimV(ox+t.L*k,oy,ox+t.L*k,oy+t.W*k,ox+t.L*k+9,Math.round(t.W));
+  // 2. где на фигуре: вся фигура со стороны куска, кусок — оранжевым, зеркальный — синим
+  const v=stepView(x.ps),bf=projBox(v),tw=new Set(y?y.ps.map(p=>p.id):[]),kf=Math.min(84/(bf[2]-bf[0]),(mh-14)/(bf[3]-bf[1])),orng=sh=>`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`;
+  s+=`<path class="t" d="M20,${r2(my0)}H205M112,${r2(my0)}V${r2(ty0)}M20,${r2(ty0)}H205"/><text class="h2" x="23" y="${r2(my0+4.5)}">Где на фигуре</text><text class="sm" x="109" y="${r2(my0+4.5)}" text-anchor="end">вид ${v.txt}</text>`;
+  s+=facesSVG(v,kf,20+(92-(bf[2]-bf[0])*kf)/2-bf[0]*kf,my0+7+(mh-12-(bf[3]-bf[1])*kf)/2-bf[1]*kf,{color:(p,sh)=>own.has(p.id)?orng(sh):tw.has(p.id)?`rgb(${Math.round(90+50*sh)},${Math.round(130+50*sh)},${Math.round(200+40*sh)})`:grey(.72+.25*sh)});
+  // 3. готовый кусок крупно: все грани (изнанка — серо-голубым), номера деталей, сгибы синим пунктиром с номером по порядку, швы красным с номером соседа
+  const bx=[1e9,1e9,-1e9,-1e9];x.ps.forEach(p=>p.full.forEach(i=>{const q=prjV(v,V[i]);bx[0]=Math.min(bx[0],q[0]);bx[1]=Math.min(bx[1],q[1]);bx[2]=Math.max(bx[2],q[0]);bx[3]=Math.max(bx[3],q[1]);}));
+  const kp=Math.min(80/(bx[2]-bx[0]||1),(mh-22)/(bx[3]-bx[1]||1)),px=112+(93-(bx[2]-bx[0])*kp)/2-bx[0]*kp,py=my0+9+(mh-18-(bx[3]-bx[1])*kp)/2-bx[1]*kp,Pp=i=>{const q=prjV(v,V[i]);return [px+q[0]*kp,py+q[1]*kp];};
+  const Lt=V3.norm(V3.add(V3.add(v.d,V3.mul(v.up,.7)),V3.mul(v.r,-.4))),fl=[];
+  s+=`<text class="h2" x="115" y="${r2(my0+4.5)}">${B?'Готовый кусок — после гибки':'Деталь — швы и соседи'}</text>`;
+  x.ps.slice().sort((a,b)=>V3.dot(a.c,v.d)-V3.dot(b.c,v.d)).forEach(p=>{const pts=p.full.map(Pp),sh=.5+.45*Math.abs(V3.dot(p.n,Lt)),fr=V3.dot(p.n,v.d)>0;
+    s+=`<polygon class="fc" fill="${fr?orng(sh):`rgb(${Math.round(170+60*sh)},${Math.round(178+55*sh)},${Math.round(190+50*sh)})`}" points="${pts.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;if(Math.abs(area2(pts))>10)fl.push({t:String(p.no),pts,a:Math.abs(area2(pts))});});
+  const cen=x.ps.reduce((c,p)=>V3.add(c,V3.mul(p.c,1/x.ps.length)),[0,0,0]),cc=(q=>[px+q[0]*kp,py+q[1]*kp])(prjV(v,cen)),bb=[];
+  if(B)B.lines.forEach(l=>{const j=CUR.BP.J[l.id],A=Pp(j.A),C=Pp(j.B),m=[(A[0]+C[0])/2,(A[1]+C[1])/2];bb.push([m[0]-1.8,m[1]-1.8,m[0]+1.8,m[1]+1.8]);
+    s+=`<path class="bl3" d="M${r2(A[0])},${r2(A[1])}L${r2(C[0])},${r2(C[1])}"/><circle cx="${r2(m[0])}" cy="${r2(m[1])}" r="1.7" fill="#fff" stroke="#1f5fd0" stroke-width=".25"/><text class="no" x="${r2(m[0])}" y="${r2(m[1]+.9)}" text-anchor="middle" style="font-size:2.4px;fill:#1f5fd0">${l.k}</text>`;});
+  W.forEach(w=>{const ln=w.ed.map(([a,b])=>[Pp(a),Pp(b)]);s+=`<path class="seam" style="stroke-width:.55" d="${ln.map(([A,C])=>`M${r2(A[0])},${r2(A[1])}L${r2(C[0])},${r2(C[1])}`).join('')}"/>`;
+    const [A,C]=ln.reduce((a,b)=>Math.hypot(b[1][0]-b[0][0],b[1][1]-b[0][1])>Math.hypot(a[1][0]-a[0][0],a[1][1]-a[0][1])?b:a),m=[(A[0]+C[0])/2,(A[1]+C[1])/2],d=Math.hypot(m[0]-cc[0],m[1]-cc[1])||1,tx='→'+nm(w.nb),hw=tx.length*.6;
+    for(const r of [3,5,7.5]){const c=[m[0]+(m[0]-cc[0])/d*r,m[1]+(m[1]-cc[1])/d*r],b=[c[0]-hw,c[1]-1.2,c[0]+hw,c[1]+1];if(bb.some(z=>b[0]<z[2]&&b[2]>z[0]&&b[1]<z[3]&&b[3]>z[1]))continue;bb.push(b);s+=`<text class="nb" x="${r2(c[0])}" y="${r2(c[1]+.7)}" text-anchor="middle">${shEsc(tx)}</text>`;break;}});
+  s+=placeLabels(fl,3,.52,bb).map(l=>`<text class="no" x="${r2(l.x)}" y="${r2(l.y+l.h*.35)}" text-anchor="middle" style="font-size:${r2(l.h)}px">${l.t}</text>`).join('');
+  s+=`<text class="sm" x="115" y="${r2(ty0-2)}">${B?'синий пунктир — сгиб (номер по порядку), ':''}красное — шов, →№ — к какой детали</text>`;
+  // 4. гибка и сварка — строками, у каждой чертёж угла и чем его выставить
+  let yy=ty0;ln.slice(0,nl).forEach((l,i)=>{const by=r2(yy+rh*.78),cw=l[0].w?185/wc:185,X=cw<100?[33,45,64]:[106,122,144];l.forEach((r,j)=>{const x0=20+j*cw;
+      if(r.h)s+=`<text class="h2" x="23" y="${by}" style="font-size:3.2px">${shEsc(r.h)}</text>`;
+      else s+=`<text class="td" x="${r2(x0+3)}" y="${by}">${shEsc(r.t)}</text>`+angGlyph(x0+X[0],yy+rh*.85,r.a,rh*.72)+`<text class="no" x="${r2(x0+X[1])}" y="${by}" style="font-size:3.1px">${shEsc(r.at)}</text><text class="td" x="${r2(x0+X[2])}" y="${by}">${shEsc(r.tp)}</text>`;});
+    if(l[0].w&&wc>1)s+=`<path class="t" style="stroke-width:.08" d="M112.5,${r2(yy)}V${r2(yy+rh)}"/>`;yy+=rh;if(i<nl-1)s+=`<path class="t" style="stroke-width:.08" d="M20,${r2(yy)}H205"/>`;});
+  if(nl<ln.length)s+=`<text class="sm" x="202" y="${r2(ty0-0.8)}" text-anchor="end">не влезло строк: ${ln.slice(nl).flat().length} — см. спецификацию</text>`;
+  return {head:x.name+(y?` и ${y.name}`:''),title:B?'Карта заготовки со сгибами':'Карта детали',scale:scaleTxt(n),mass:fmt(mass*(y?2:1),2)+' кг',body:s,rows:rows.filter(r=>!r.h).length};}
+function buildCards(){if(!CUR||!CUR.PC||!CUR.R.parts.length)return [];const {L}=asmUnits(),C=L.filter((x,i)=>(x.tw<0||x.tw>i)&&CUR.PC.some(c=>c.id===(x.bi>=0?'b'+x.bi:x.ps[0].id)&&c.pts.length>2)).map(x=>cardPiece(x,x.tw>=0?L[x.tw]:null)),date=shDate();
+  return C.map((b,i)=>({title:b.head,rows:b.rows,svg:wrapA4(b,{n:i+1,N:C.length,date})}));}
 
 /* ---------- DXF: раскрой (все листы) и детали (сеткой) ---------- */
 function segNbOf(p){return p.segs.map(g=>g.nb>=0?CUR.R.parts[g.nb].no:null);}

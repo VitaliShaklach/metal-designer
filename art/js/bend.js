@@ -116,4 +116,8 @@ function clipSeg(a,b,P){const ts=[0,1],d=[b[0]-a[0],b[1]-a[1]];P.forEach((p,i)=>
 function bendAlign(P,f){const Q=f?P.map(p=>[-p[0],p[1]]):P,h=convexHull(Q);let bw=Infinity,ba=0;h.forEach((p,i)=>{const q=h[(i+1)%h.length],a=Math.atan2(q[1]-p[1],q[0]-p[0]),c=Math.cos(a),s=Math.sin(a);let mn=1e9,mx=-1e9;h.forEach(z=>{const y=-s*z[0]+c*z[1];mn=Math.min(mn,y);mx=Math.max(mx,y);});if(mx-mn<bw){bw=mx-mn;ba=a;}});
   const c=Math.cos(-ba),s=Math.sin(-ba),R=Q.map(p=>[c*p[0]-s*p[1],s*p[0]+c*p[1]]),x0=Math.min(...R.map(p=>p[0])),y0=Math.min(...R.map(p=>p[1]));
   return {f:!!f,c,s,x:-x0,y:-y0,L:Math.max(...R.map(p=>p[0]))-x0,W:Math.max(...R.map(p=>p[1]))-y0};}
+// зеркальные заготовки — парой под одним номером: Г3 и Г3.1 (Г3 — с меньшими номерами деталей), остальные — по порядку
+function blankNumbers(BL,R){let n=0;const done=new Set(),of=new Map();BL.forEach((b,i)=>b.parts.forEach(pi=>of.set(pi,i)));
+  BL.forEach((b,i)=>{if(done.has(i))return;done.add(i);n++;const tw=b.parts.map(pi=>R.parts[pi].twin),k=tw.every(x=>x!=null)?of.get(tw[0]):undefined;
+    if(k!==undefined&&k!==i&&!done.has(k)&&BL[k].parts.length===b.parts.length&&tw.every(x=>of.get(x)===k)){done.add(k);const c=Math.min(...b.parts.map(pi=>R.parts[pi].no))%1?[k,i]:[i,k];BL[c[0]].no=n;BL[c[1]].no=n+.1;}else b.no=n;});}
 const bendTxt=l=>l.kind+l.ang+' ('+l.k+')';   // «V144 (2)»: вид, угол между гранями, номер в порядке гибки

@@ -160,9 +160,10 @@ function tplShape(a,t,minW){const r=a*Math.PI/180,c=Math.max(4,2*t),w=Math.max(2
   // острый угол: внутренний край ушёл бы за полки — тогда треугольник
   if(w/Math.tan(r/2)>TPL_L-8)return [C1,P1,P2,C2,N];
   return [C1,P1,[TPL_L,w],at(bi,w/Math.sin(r/2)),add(P2,at(n2,w)),P2,C2,N];}
-// углы швов фигуры (bent(p, q) — стык гнётся, уголок не нужен) → [{a, pts, seams, out}] по возрастанию; seams — сколько швов с этим углом, out — из них вогнутых (уголок снаружи)
-function weldTemplates(R,t,minW,bent){const M=new Map();R.parts.forEach((p,pi)=>(p.segs||[]).forEach(g=>{if(g.nb<0||g.nb<pi||g.dih==null||bent&&bent(pi,g.nb))return;const d=g.dih,a=Math.round(d>180.5?360-d:d);if(a>=TPL_MAX||a<TPL_MIN)return;
-    const o=M.get(a)||{a,seams:0,out:0};o.seams++;if(d>180.5)o.out++;M.set(a,o);}));
+// углы швов фигуры (bent(p, q) — стык гнётся, уголок не нужен) и углы сгибов bends → [{a, pts, seams, out, bends}] по возрастанию; seams — сколько швов с этим углом, out — из них вогнутых (уголок снаружи), bends — сгибов
+function weldTemplates(R,t,minW,bent,bends=[]){const M=new Map();R.parts.forEach((p,pi)=>(p.segs||[]).forEach(g=>{if(g.nb<0||g.nb<pi||g.dih==null||bent&&bent(pi,g.nb))return;const d=g.dih,a=Math.round(d>180.5?360-d:d);if(a>=TPL_MAX||a<TPL_MIN)return;
+    const o=M.get(a)||{a,seams:0,out:0,bends:0};o.seams++;if(d>180.5)o.out++;M.set(a,o);}));
+  bends.forEach(d=>{const a=Math.round(d);if(a>=TPL_MAX||a<TPL_MIN)return;const o=M.get(a)||{a,seams:0,out:0,bends:0};o.bends++;M.set(a,o);});
   return [...M.values()].sort((x,y)=>x.a-y.a).map(o=>({...o,pts:tplShape(o.a,t,minW)}));}
 const tplNo=a=>'У'+a+'°',isTpl=o=>typeof o.id==='string'&&o.id[0]==='t',isBlank=o=>typeof o.id==='string'&&o.id[0]==='b',itemName=o=>isTpl(o)?'уголок '+o.no:isBlank(o)?'заготовка '+o.no:'№'+o.no;
 // «деталей 136 + уголков 82», с гибкой — «заготовок 30 + деталей 10»

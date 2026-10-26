@@ -178,4 +178,17 @@ run(`CUR={R:RP,M3:MP3,blankOf:null,BL:[]};AS=asmSteps();ASU=AS.steps.flatMap(s=>
 ok(run("ASU.length")===run("RP.parts.length")&&run("new Set(ASU).size")===run("RP.parts.length")&&run("AS.steps.filter((s,i)=>i&&s.w.some(w=>!w.length)&&!s.u[0].ps[0].back).length")<=2&&run("AS.steps.filter(s=>s.u.length===2).length")>=50&&run("AS.steps.length")<=75,
   "шаги сборки: Д9 — каждая деталь ровно в одном шаге, зеркальные пары — вместе, почти каждый шаг варится к собранному раньше (новых начал не больше 2)");
 console.log('     шагов сборки Д9 без гибки: '+run('AS.steps.length'));
+// карты деталей: по карте на кусок, зеркальная пара — одна карта; у каждой — контур, размеры, сварка; у заготовки — гибка; у каждой строки — чертёж угла, при уголках — чем выставить
+run(`fmt=(x,d=0)=>Number(x).toFixed(d).replace('.',',');angT=d=>d>180.5?Math.round(360-d)+'° внутрь':Math.round(d)+'°';MATN={steel:'сталь'};
+  ST={t:2,gap:1,useT:true,engrave:true,mat:'steel',name:'Д9',tpl:true,bend:true,pairs:true,minW:15};CUR={R:RP,M3:MP3,T:{mass:1},C:RP.parts.map(p=>cutContour(p,2,1,true))};
+  CUR.BP=bendPlan(RP,MP3.V,{sheet:[1250,2500]});CUR.BL=CUR.BP.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,RP,MP3.V,CUR.BP,{t:2,gap:1,useT:true}))).filter(b=>!b.bad);blankNumbers(CUR.BL,RP);
+  CUR.blankOf=new Int32Array(RP.parts.length).fill(-1);CUR.BL.forEach((b,i)=>b.parts.forEach(pi=>CUR.blankOf[pi]=i));CUR.bentKey=new Set(CUR.BL.flatMap(b=>b.bends.map(id=>bendKey(CUR.BP.J[id].p,CUR.BP.J[id].q))));
+  CUR.PC=RP.parts.filter(p=>CUR.blankOf[p.id]<0).map(p=>({id:p.id,no:p.no,pts:CUR.C[p.id].pts,parts:[p.id],key:p.no})).concat(CUR.BL.map((b,i)=>({id:'b'+i,no:'Г'+b.no,pts:b.pts,parts:b.parts,key:RP.parts[b.parts[0]].no,B:b}))).sort((a,b)=>a.key-b.key);
+  CUR.TPL=weldTemplates(RP,2,15,(p,q)=>CUR.bentKey.has(bendKey(p,q)),CUR.BL.flatMap(b=>b.lines.map(l=>l.ang)));CD=buildCards();
+  CNT=(s,re)=>(s.match(re)||[]).length;BLC=CD.filter(c=>c.svg.includes('Карта заготовки'));`);
+console.log('     карты Д9: '+run('CD.length')+' (кусков '+run('CUR.PC.length')+', «.1» '+run("CUR.PC.filter(o=>String(o.no).endsWith('.1')).length")+', заготовок на картах '+run('BLC.length')+'), уголков '+run('CUR.TPL.length')+' (под сгибы '+run('CUR.TPL.filter(o=>o.bends).length')+')');
+ok(run("CD.length")===run("CUR.PC.length-CUR.PC.filter(o=>String(o.no).endsWith('.1')).length")&&run("CD.every(c=>c.svg.includes('viewBox=\"0 0 210 297\"')&&c.svg.includes('<polygon class=\"l\"')&&c.svg.includes('Развёртка')&&c.svg.includes('Сварка')&&CNT(c.svg,/<text class=\"sm\"[^>]*text-anchor=\"middle\">[0-9]+</g)>=2)")
+  &&run("BLC.length")>0&&run("BLC.every(c=>c.svg.includes('Гибка — по порядку')&&c.svg.includes('class=\"bnd'))")&&run("CD.every(c=>CNT(c.svg,/class=\"ag\"/g)===c.rows)")&&run("CD.every(c=>!c.svg.includes('транспортиром'))")&&run("CD.some(c=>c.svg.includes('уголок У'))"),
+  "карты деталей: Д9 — по карте на кусок (пара «.1» — на той же), А4, у каждой контур, длины сторон, сварка; у заготовок — гибка и линии сгиба; у каждой строки — чертёж угла; при уголках каждый угол — уголком, линейкой или по месту");
+run(`ST.tpl=false;CUR.TPL=null;CD2=buildCards();`);ok(run("CD2.every(c=>CNT(c.svg,/class=\"ag\"/g)===c.rows)")&&run("CD2.some(c=>c.svg.includes('транспортиром'))")&&run("!CD2.some(c=>c.svg.includes('уголок У'))"),"карты деталей без уголков: чертёж угла всё равно у каждой строки, выставлять транспортиром");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.9.5">
+<link rel="stylesheet" href="css/style.css?v=0.10.0">
 </head>
 <body>
 <div class="wrap">
@@ -123,14 +123,16 @@
       <div class="sheets" id="nestBox"></div>
     </div>
     <div class="tabpane" id="tab-sheets" role="tabpanel" hidden>
-      <p class="tabnote">Листы А3 для производства: общий вид, порядок сборки, развёртки деталей, спецификация, раскрой. Размеры в мм</p>
-      <div class="dimbar"><button id="shPdf" type="button">Скачать PDF</button><button id="bDxfParts" type="button">DXF детали</button><select id="shGo" aria-label="Перейти к листу"></select><span class="dxfmsg">PDF: в окне печати выберите «Сохранить как PDF», формат A3, альбомная</span></div>
+      <p class="tabnote">Листы А3 для производства: общий вид, порядок сборки, гибка, спецификация, раскрой. Ниже — карты деталей А4: на каждый кусок свой лист (развёртка с размерами, где он на фигуре, как гнуть и к чему варить). Размеры в мм</p>
+      <div class="dimbar"><button id="shPdf" type="button">Скачать PDF (А3)</button><button id="shCards" type="button">Карты деталей (PDF, А4)</button><button id="bDxfParts" type="button">DXF детали</button><select id="shGo" aria-label="Перейти к листу"></select><span class="dxfmsg">PDF: в окне печати выберите «Сохранить как PDF»; формат листа уже задан</span></div>
       <div class="sheets" id="sheets"></div>
+      <h3 class="cardsh" id="cardsH" hidden>Карты деталей — лист А4 на каждый кусок (зеркальная пара — на одном)</h3>
+      <div class="sheets cards" id="cards"></div>
     </div>
   </section>
 
   <footer>
-    <span class="ver">v0.9.5</span>
+    <span class="ver">v0.10.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -139,18 +141,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.9.5"></script>
-<script src="js/models.js?v=0.9.5"></script>
-<script src="js/models-poly.js?v=0.9.5"></script>
-<script src="js/figures.js?v=0.9.5"></script>
-<script src="js/edit.js?v=0.9.5"></script>
-<script src="js/trace.js?v=0.9.5"></script>
-<script src="js/view3d.js?v=0.9.5"></script>
-<script src="js/prod.js?v=0.9.5"></script>
-<script src="js/bend.js?v=0.9.5"></script>
-<script src="js/sheets.js?v=0.9.5"></script>
-<script src="js/ui.js?v=0.9.5"></script>
-<script src="js/tips.js?v=0.9.5"></script>
+<script src="js/mesh.js?v=0.10.0"></script>
+<script src="js/models.js?v=0.10.0"></script>
+<script src="js/models-poly.js?v=0.10.0"></script>
+<script src="js/figures.js?v=0.10.0"></script>
+<script src="js/edit.js?v=0.10.0"></script>
+<script src="js/trace.js?v=0.10.0"></script>
+<script src="js/view3d.js?v=0.10.0"></script>
+<script src="js/prod.js?v=0.10.0"></script>
+<script src="js/bend.js?v=0.10.0"></script>
+<script src="js/sheets.js?v=0.10.0"></script>
+<script src="js/ui.js?v=0.10.0"></script>
+<script src="js/tips.js?v=0.10.0"></script>
 <div id="printBox"></div>
 </body>
 </html>

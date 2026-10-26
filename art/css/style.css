@@ -313,6 +313,7 @@ svg.hsk{display:block;max-width:100%;height:auto;color:var(--muted)}
   #printBox{display:block}
   #printBox svg{display:block;width:420mm;height:296mm;break-after:page;page-break-after:always}
   #printBox svg:last-child{break-after:auto;page-break-after:auto}
+  #printBox.a4 svg{width:210mm;height:296mm}
 }
 
 /* ---------- Искусство ---------- */
@@ -338,7 +339,9 @@ svg.flat text.no{font-weight:600;fill:var(--muted)}
 .selh .bad{font:500 11px var(--f-mono);border:1px solid #d01f1f;padding:1px 5px;margin-left:6px;vertical-align:middle}
 #parts tr[data-p],#parts tr[data-b]{cursor:pointer}
 /* лист крупно */
-#nestBox .sheet svg,#sheets .sheet svg{cursor:zoom-in}
+#nestBox .sheet svg,#sheets .sheet svg,#cards .sheet svg{cursor:zoom-in}
+.cardsh{font-size:15px;margin:26px 0 0}
+.sheets.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
 .zoom{position:fixed;inset:0;z-index:1000;background:#1c2023;display:flex;flex-direction:column}.zoom[hidden]{display:none}
 .zoombar{display:flex;gap:8px;align-items:center;padding:8px 12px;color:#fff;font-size:14px}.zoombar #zoomTtl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zoombar button{min-width:36px;height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font:inherit;cursor:pointer;border-radius:4px}.zoombar #zoomK{min-width:48px;text-align:center}
@@ -384,6 +387,7 @@ body.og #stage{position:fixed!important;inset:0;width:100vw!important;height:100
   #printBox{display:block!important}
   #printBox svg{display:block;width:420mm;height:296mm;break-after:page;page-break-after:always}
   #printBox svg:last-child{break-after:auto;page-break-after:auto}
+  #printBox.a4 svg{width:210mm;height:296mm}
 }
 .dimbar{flex-wrap:wrap;align-items:center}
 .dxfmsg{font-size:12px;color:var(--muted)}
