@@ -1,0 +1,28 @@
+#!/bin/sh
+# Проверки перед коммитом — только для разделов, чьи файлы в коммите:
+#   версия раздела одна везде (?v= в index.html, v= в js, <span class="ver">),
+#   новая версия записана в CHANGELOG.md, smoke раздела зелёный.
+# Включение один раз на клон: git config core.hooksPath .githooks
+fail=0
+say(){ echo "✗ $*" >&2; fail=1; }
+staged=$(git diff --cached --name-only)
+log=$(git show :CHANGELOG.md 2>/dev/null)
+
+for s in mangal karkas art; do
+  echo "$staged" | grep -q "^$s/" || continue
+  case $s in mangal) name='(Мангал )?'; lbl='';; karkas) name='Каркасы '; lbl=$name;; art) name='Искусство '; lbl=$name;; esac
+  # версии из того, что уходит в коммит (индекс), а не из рабочей папки
+  vers=$( { git show ":$s/index.html" | grep -o -E '\?v=[0-9]+\.[0-9]+\.[0-9]+|class="ver">v[0-9]+\.[0-9]+\.[0-9]+' ;
+            for f in $(git ls-files "$s/js/*.js"); do git show ":$f" | grep -o -E 'v=[0-9]+\.[0-9]+\.[0-9]+'; done ; } \
+          | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+$' | sort -u)
+  n=$(echo "$vers" | grep -c .)
+  if [ "$n" -ne 1 ]; then say "$s: версии разные — $(echo $vers) (поднять все ?v=, v= в js и <span class=\"ver\">)"; continue; fi
+  old=$(git show "HEAD:$s/index.html" 2>/dev/null | grep -o -E 'class="ver">v[0-9.]+' | grep -o -E '[0-9.]+$')
+  if [ "$vers" != "$old" ] && ! echo "$log" | grep -q -E "^## $name""v$vers( |$)"; then
+    say "$s: версия $vers, а в CHANGELOG.md нет заголовка «## ${name%%\?}v$vers»"
+  fi
+  echo "smoke $s…" >&2
+  out=$(cd "$s" && node tools/smoke.js 2>&1) || { echo "$out" | grep -E 'FAIL|Error|ОШИБОК' | head -20 >&2; say "$s: smoke не прошёл"; }
+done
+
+[ $fail -eq 0 ] || { echo "коммит отменён" >&2; exit 1; }
