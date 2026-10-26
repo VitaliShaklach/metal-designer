@@ -1,6 +1,6 @@
 // проверка ядра «Искусства»: node art/tools/smoke.js
 const fs=require('fs'),vm=require('vm'),P=__dirname+'/../js/';const c={console,TextDecoder,Math};vm.createContext(c);
-vm.runInContext(['mesh','edit','models','models-poly','figures','prod','sheets'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
+vm.runInContext(['mesh','edit','models','models-poly','figures','prod','sheets','bend'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
 const run=s=>vm.runInContext(s,c);let bad=0;const ok=(b,t)=>{console.log((b?'ok  ':'FAIL')+' '+t);if(!b)bad++;};
 // куб из OBJ: 12 треугольников → 6 деталей-квадратов
 run(`cube=parseOBJ("v 0 0 0\\nv 100 0 0\\nv 100 100 0\\nv 0 100 0\\nv 0 0 100\\nv 100 0 100\\nv 100 100 100\\nv 0 100 100\\nf 1 4 3 2\\nf 5 6 7 8\\nf 1 2 6 5\\nf 2 3 7 6\\nf 3 4 8 7\\nf 4 1 5 8")`);
@@ -55,7 +55,7 @@ ok(run("N3.sheets[0].dense")>.55,"доберман 3: плотность рас�
 run(`EG=N3.sheets[0].items.map(o=>({o,g:engraveSegs(o.no,o.pts)}))`);
 ok(run("EG.filter(x=>x.g).length")>=run("EG.length")*.9&&run("EG.every(x=>!x.g||x.g.every(s=>inPoly([s[0],s[1]],x.o.pts)&&inPoly([s[2],s[3]],x.o.pts)))"),"гравировка номера: у 90%+ деталей, все линии внутри детали");
 run(`DE=[];C3.forEach((c,i)=>{dxfPoly(DE,c.pts,"CUT",i*300,0);const g=engraveSegs(i+1,c.pts);if(g)dxfSegs(DE,g,"ENGRAVE",i*300,0);});DX=dxfDoc(DE)`);
-ok(run("(DX.match(/LINE\\r\\n8\\r\\nCUT\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("/LINE\\r\\n8\\r\\nENGRAVE\\r\\n/.test(DX)&&DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')"),"DXF: все стороны контуров — линии CUT, номера — линии ENGRAVE, файл замкнут");
+ok(run("(DX.match(/POLYLINE\\r\\n8\\r\\nCUT\\r\\n66\\r\\n1\\r\\n10\\r\\n0\\r\\n20\\r\\n0\\r\\n30\\r\\n0\\r\\n70\\r\\n1\\r\\n/g)||[]).length")===run("C3.length")&&run("(DX.match(/VERTEX\\r\\n8\\r\\nCUT\\r\\n/g)||[]).length")===run("C3.reduce((a,c)=>a+c.pts.length,0)")&&run("(DX.match(/SEQEND/g)||[]).length")===run("C3.length")&&run("/LINE\\r\\n8\\r\\nENGRAVE\\r\\n/.test(DX)&&DX.startsWith('0\\r\\nSECTION')&&DX.trimEnd().endsWith('EOF')"),"DXF: контур каждой детали — одна замкнутая полилиния CUT со всеми углами, номера — линии ENGRAVE, файл замкнут");
 {const t0=Date.now();run(`D4=figureMesh("doberman4");S4=simplify(D4,200);F4=fitMesh(S4,(b=>({W:b.size[0]*600/b.size[1],H:600,D:b.size[2]*600/b.size[1]}))(meshBox(S4.V)));F4=fixSlivers(F4,30);R4=buildParts(F4);T4=totals(R4,{t:2,mat:"steel",sheet:[2500,1250]})`);
 console.log("     доберман 4 (Meshy): запас "+run("D4.F.length")+" тр → 200 за "+(Date.now()-t0)+" мс → деталей "+run("R4.parts.length")+", габарит "+run("meshBox(F4.V).size.map(Math.round).join('×')")+", масса "+run("T4.mass").toFixed(1)+" кг, швы "+(run("T4.weld")/1000).toFixed(1)+" м, открытый край "+Math.round(run("T4.open"))+" мм");
 ok(run("R4.parts.length")>=90&&run("R4.parts.length")<=200&&run("T4.open")===0,"доберман 4: 90–200 деталей, сетка замкнута");}
@@ -150,4 +150,18 @@ ok(run("SH9.every(([a,b])=>OV9.has(a)||OV9.has(b))")&&run("DD9.near")>=run("DD8.
 // гибка: коробка при угле от 90° — одна развёртка, 5 сгибов без налезаний; налезание квадратов находится
 {const B=require('./plates/bend.js')(run),bx=run('blankBox(300,400,260)');bx.S=[];const r=B.plan(bx,{ang:90}),sq=(x,y)=>[[x,y],[x+100,y],[x+100,y+100],[x,y+100]];
   ok(r.st.blanks===1&&r.st.V===5&&r.st.weld===7&&!B.overlap(sq(0,0),sq(100,0))&&B.overlap(sq(0,0),sq(50,30))&&B.plan(bx,{}).st.blanks===6,"гибка: коробка — одна развёртка из 6 граней, 5 сгибов V, 7 швов; при угле от 135° коробку не гнём; соседние квадраты не налезают, сдвинутые — налезают");}
+// гибка на сайте: коробка — крест из 6 граней с 5 линиями сгиба; поправка на толщину; Доберман 9 — заготовки, каждая деталь ровно в одной, контуры целые
+run(`BXE=blankBox(300,400,260);BXR=buildParts(polyBase(BXE.V,BXE.P),1.5,1.5);BXP=bendPlan(BXR,BXE.V,{ang:90});BXB=bendBlank(BXP.blanks[0],BXR,BXE.V,BXP,{t:0,gap:0,useT:false})`);
+ok(run("BXP.blanks.length")===1&&!run("BXB.bad")&&Math.abs(run("BXB.area")-run("BXR.parts.reduce((s,p)=>s+p.area,0)"))<1&&run("BXB.lines.length")===5&&run("BXB.lines.every(l=>l.segs.length===1&&Math.abs(Math.hypot(l.segs[0][2]-l.segs[0][0],l.segs[0][3]-l.segs[0][1])-l.len)<.01)")&&run("BXB.lines.map(l=>l.k).join()")==="1,2,3,4,5",
+  "гибка: коробка — контур-крест площадью 6 граней, 5 линий сгиба во всю длину, порядок 1…5");
+run(`BXB2=bendBlank(BXP.blanks[0],BXR,BXE.V,BXP,{t:2,gap:1,useT:true})`);ok(!run("BXB2.bad")&&run("BXB2.area")<run("BXB.area")&&run("BXB2.lines.every(l=>l.segs.length===1)"),"гибка: коробка с толщиной 2 мм и швом — контур целый, меньше креста, линии сгиба внутри");
+ok(Math.abs(run("bendDeduct(1.5,135,'V')")-.92)<.02&&run("bendDeduct(1.5,135,'m')")<0&&run("bendDeduct(2,180,'V')")===0,"гибка: поправка на сгиб 45° при 1,5 мм — 0,9 мм (V), у m — чуть меньше нуля, без сгиба — 0");
+run(`D9=modelPoly('doberman9');R9=buildParts(polyBase(D9.V,D9.P,D9.S),1.5,1.5);P9=bendPlan(R9,D9.V,{sheet:[1250,2500]});B9=P9.blanks.filter(b=>b.parts.length>1).map(b=>bendBlank(b,R9,D9.V,P9,{t:1.5,gap:1,useT:true}))`);
+console.log('     Д9 с гибкой: '+JSON.stringify(run("P9.st"),['parts','blanks','multi','single','V','m','weld']));
+ok(run("P9.st.blanks")>=40&&run("P9.st.blanks")<=44&&run("(()=>{const c=new Array(R9.parts.length).fill(0);P9.blanks.forEach(b=>b.parts.forEach(p=>c[p]++));return c.every(x=>x===1);})()")&&run("B9.every(b=>!b.bad&&b.lines.every(l=>l.segs.length>0))")&&run("P9.st.maxBends")<=7,
+  "гибка: Доберман 9 — 40–44 куска на резку, каждая деталь ровно в одной заготовке, все контуры целые, линии сгиба внутри, сгибов на заготовку ≤ 7");
+// DXF заготовки: сгибы — на слоях BEND_V / BEND_M, подписи «V144 (2)» — гравировкой
+run(`CUR={R:R9,BL:P9.blanks.filter(b=>b.parts.length>1).map((b,i)=>Object.assign({},b,B9[i]))};ST={engrave:true}`);
+run(`BI={id:'b0',no:'Г1',pts:CUR.BL[0].pts.map(p=>[-p[0],p[1]]),tr:{f:true,c:1,s:0,x:0,y:0}};MK=itemMarks(BI);DXB=[];dxfPoly(DXB,BI.pts,'CUT');dxfMarksOf(DXB,BI,0,0);DXB=dxfDoc(DXB)`);
+ok(run("MK.V.length+MK.M.length")===run("CUR.BL[0].lines.reduce((a,l)=>a+l.segs.length,0)")&&run("MK.eng.length")>0&&run("/BEND_(V|M)/.test(DXB)&&/POLYLINE\\r\\n8\\r\\nCUT/.test(DXB)&&/LINE\\r\\n8\\r\\nENGRAVE/.test(DXB)"),"гибка: DXF заготовки — контур полилинией CUT, линии сгиба на BEND_V/BEND_M, номера и подписи — ENGRAVE");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

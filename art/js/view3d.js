@@ -20,7 +20,7 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
   const {V,F}=M3,pos=new Float32Array(F.length*9),col=new Float32Array(F.length*9),[c0,c1]=(COL[o.mat]||COL.steel).map(x=>new THREE.Color(x)),sel=new THREE.Color(0xd0561f),red=new THREE.Color(0xd01f1f),amb=new THREE.Color(0xe0a020),blu=new THREE.Color(0x3a6fe0),tmp=new THREE.Color();
   // калька (o.tex): грани белые — цвет даёт текстура; выделения — подкраска поверх рисунка
   const tx=o.tex,wh=new THREE.Color(1,1,1),tint=c=>tx?tmp.copy(wh).lerp(c,.6):tmp.copy(c);
-  F.forEach((f,fi)=>{const pi=R.partOf[fi],h=((pi*2654435761)>>>0)/4294967296;if(tx)tmp.copy(wh);else tmp.copy(c0).lerp(c1,h);if(o.small&&o.small.has(pi))tint(red);if(o.warn&&o.warn.has(fi))tint(amb);if(o.blue&&o.blue.has(fi))tint(blu);if(o.hi?o.hi.has(fi):pi===o.sel)tint(sel);
+  F.forEach((f,fi)=>{const pi=R.partOf[fi],h=((pi*2654435761)>>>0)/4294967296;if(tx)tmp.copy(wh);else tmp.copy(c0).lerp(c1,h);if(o.small&&o.small.has(pi))tint(red);if(o.warn&&o.warn.has(fi))tint(amb);if(o.blue&&o.blue.has(fi))tint(blu);if(o.grp&&o.grp.has(pi)&&pi!==o.sel)tint(amb);if(o.hi?o.hi.has(fi):pi===o.sel)tint(sel);
     f.forEach((v,k)=>{pos.set(V[v],fi*9+k*3);col.set([tmp.r,tmp.g,tmp.b],fi*9+k*3);});});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
   let map=null;if(tx){g.setAttribute('uv',new THREE.BufferAttribute(tx.uv,2));if(!tx.tex){tx.tex=new THREE.DataTexture(tx.data,tx.W,tx.H,THREE.RGBAFormat);tx.tex.magFilter=tx.tex.minFilter=THREE.LinearFilter;tx.tex.generateMipmaps=false;tx.tex.needsUpdate=true;}map=tx.tex;}
@@ -30,9 +30,11 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
     const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.computeVertexNormals();root.add(new THREE.Mesh(bg,new THREE.MeshStandardMaterial({color:0x1c1e20,metalness:.3,roughness:.8,side:THREE.DoubleSide})));}
   // швы между деталями — тёмные линии; открытый край — светлее
   // с калькой (o.diff): лишние швы — красные, недостающие швы эталона — жёлтые точки
-  const L=[],Lo=[],Lr=[],RS=new Set(o.diff?o.diff.red:[]);R.edges.forEach((e,i)=>(e.open?Lo:RS.has(i)?Lr:L).push(...V[e.a],...V[e.b]));
+  // с гибкой: гнутые стыки — тонким пунктиром
+  const L=[],Lo=[],Lr=[],Lb=[],RS=new Set(o.diff?o.diff.red:[]);R.edges.forEach((e,i)=>(e.open?Lo:RS.has(i)?Lr:o.bent&&o.bent(e)?Lb:L).push(...V[e.a],...V[e.b]));
   const seg=(arr,c,op)=>{if(!arr.length)return;const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));root.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:op})));};
   seg(L,0x15191b,.8);seg(Lo,0xd0561f,.9);seg(Lr,0xe01818,1);
+  if(Lb.length){const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x2a6fd0,dashSize:4,gapSize:3,transparent:true,opacity:.9}));ln.computeLineDistances();root.add(ln);}
   if(o.diff&&o.diff.yel.length){const yg=new THREE.BufferGeometry();yg.setAttribute('position',new THREE.BufferAttribute(o.diff.yel,3));root.add(new THREE.Points(yg,new THREE.PointsMaterial({color:0xffc400,size:5,sizeAttenuation:false})));}
   // редактор: точки; выбранная — крупная оранжевая
   if(o.verts){const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.Float32BufferAttribute(V.flat(),3));root.add(new THREE.Points(pg,new THREE.PointsMaterial({color:0x1f8fe0,size:7,sizeAttenuation:false})));

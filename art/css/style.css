@@ -338,6 +338,7 @@ svg.flat text.no{font-weight:600;fill:var(--muted)}
 .selh .bad{font:500 11px var(--f-mono);border:1px solid #d01f1f;padding:1px 5px;margin-left:6px;vertical-align:middle}
 #parts tr[data-p]{cursor:pointer}
 #parts tr.on td{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+#parts tr.grp td{background:color-mix(in srgb,#e0a020 12%,transparent)}
 #parts tr.bad td:first-child{color:#d01f1f;font-weight:600}
 #parts td.nbs{font-family:var(--f-mono);font-size:12px}
 #parts td.nbs small{color:var(--muted)}

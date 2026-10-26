@@ -39,7 +39,7 @@ node art/tools/smoke.js
 node art/tools/plates/check.js bull1
 node art/tools/plates/creases.js bull1   # швы на изломах эталона: доля в 3 мм (Доберман 7: 73%), худшие рёбра
 node art/tools/plates/plates.js dump=1   # то же по стадиям конвейера
-node art/tools/plates/bend.js doberman9 trace=1 png=bend_trace   # расчёт гибки: заготовки, сгибы V/m, швы; картинка out/bend_trace.png (convex=1 — только выпуклые)
+node art/tools/plates/bend.js doberman9 png=bend_d9   # гибка как на сайте (art/js/bend.js): заготовки, сгибы V/m, швы; картинка out/bend_d9.png — контуры реза и линии сгиба (t=1.5 gap=1 — толщина и шов, trace=1 — гнуть сначала где у эталона нет шва, convex=1 — только выпуклые)
 ```
 
 `make.js` по шагам, если нужно по отдельности:
