@@ -94,31 +94,70 @@ function shotScene(){const R=CUR.R,M3=CUR.M3;if(!SHOT){const r=new THREE.WebGLRe
   const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0x15191b,transparent:true,opacity:.8})));
   if(Lb.length){const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x2a6fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
   SHOT.sc.add(grp);Object.assign(SHOT,{key:M3,R,grp,mesh,base});return SHOT;}
-// только кусок, в 3D с 4 сторон: лицо — оранжевым, изнанка — серо-голубым, край (швы к соседям) — красным, сгибы — синим пунктиром
-// own — номера деталей куска; asp — ширина/высота клетки. → [{url, txt}]; нет WebGL → null
-function pieceShots(own,tw,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScene();}catch(e){return null;}
-  const {R}=CUR,{V,F}=CUR.M3,pos=[],L=[],Lb=[];F.forEach((f,fi)=>{if(own.has(R.partOf[fi]))f.forEach(v=>pos.push(...V[v]));});
+// элемент отдельно: лицо — оранжевым, изнанка — серо-голубым, край (швы к соседям) — красным, сгибы — синим пунктиром; hl — свет от камеры, ms — сетки (для луча)
+function pieceGroup(own){const {R}=CUR,{V,F}=CUR.M3,pos=[],L=[],Lb=[];F.forEach((f,fi)=>{if(own.has(R.partOf[fi]))f.forEach(v=>pos.push(...V[v]));});
   R.edges.forEach(e=>{const a=e.p.filter(p=>own.has(p)).length;if(!a)return;(a===2?Lb:L).push(...V[e.a],...V[e.b]);});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();
-  const grp=new THREE.Group(),m=(c,side)=>new THREE.MeshStandardMaterial({color:c,metalness:.1,roughness:.7,side,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+  const grp=new THREE.Group(),m=c=>new THREE.MeshStandardMaterial({color:c,metalness:.1,roughness:.7,side:THREE.FrontSide,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
   // изнанка — те же треугольники в обратном обходе (BackSide на общей геометрии не рисовался)
   const rv=[];for(let i=0;i<pos.length;i+=9)rv.push(...pos.slice(i,i+3),...pos.slice(i+6,i+9),...pos.slice(i+3,i+6));const gb=new THREE.BufferGeometry();gb.setAttribute('position',new THREE.Float32BufferAttribute(rv,3));gb.computeVertexNormals();
-  grp.add(new THREE.Mesh(g,m(0xe07a35,THREE.FrontSide)),new THREE.Mesh(gb,m(0x6f7f92,THREE.FrontSide)));
-  // свет от камеры (слева сверху от неё) — кусок одинаково освещён с любой стороны
+  const ms=[new THREE.Mesh(g,m(0xe07a35)),new THREE.Mesh(gb,m(0x6f7f92))];grp.add(...ms);
+  // свет от камеры (слева сверху от неё) — элемент одинаково освещён с любой стороны
   const hl=new THREE.DirectionalLight(0xffffff,.9);grp.add(hl,hl.target);
-  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xd01f1f})));
-  if(Lb.length){const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x1f5fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
-  S.grp.visible=false;S.sc.add(grp);
-  // общий свет сцены приглушаем — иначе со светом от камеры пересвечено (изнанка уходила в белое)
-  const lt=S.sc.children.filter(o=>o.isLight);lt.forEach(o=>{o.userData.i=o.intensity;o.intensity*=.55;});
-  // кадр — кусок целиком; ракурсы: основной, слева и справа сверху, сзади (изнанка); почти с ребра — поворот поменьше
-  const ps=R.parts.filter(p=>own.has(p.id)),vs=[...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]),c=vs.reduce((s,q)=>V3.add(s,V3.mul(q,1/vs.length)),[0,0,0]),rad=Math.max(...vs.map(q=>V3.len(V3.sub(q,c)))); // расстояние — по месту: кусок заполняет кадр с полем ~10%
+  const lg=new THREE.BufferGeometry(),G=[g,gb,lg];lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xd01f1f})));
+  if(Lb.length){const bg=new THREE.BufferGeometry();G.push(bg);bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x1f5fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
+  return {grp,hl,ms,G};}
+// снимаем только элемент: фигуру прячем, общий свет сцены приглушаем (со светом от камеры иначе пересвечено); → вернуть как было
+function shotBegin(S,P,W,H){S.grp.visible=false;S.sc.add(P.grp);const lt=S.sc.children.filter(o=>o.isLight);lt.forEach(o=>{o.userData.i=o.intensity;o.intensity*=.55;});
+  S.r.setSize(W,H,false);S.cam.aspect=W/H;S.cam.updateProjectionMatrix();
+  return ()=>{S.sc.remove(P.grp);S.grp.visible=true;lt.forEach(o=>{o.intensity=o.userData.i;});P.G.forEach(g=>g.dispose());};}
+// камера: вид v (d — от точки c к глазу), расстояние dist; свет — от камеры
+function shotCam(S,P,v,c,dist){const eye=V3.add(c,V3.mul(v.d,dist+5));P.hl.position.set(...V3.add(eye,V3.add(V3.mul(v.up,dist*.6),V3.mul(v.r,-dist*.4))));P.hl.target.position.set(...c);
+  S.cam.position.set(...eye);S.cam.up.set(...v.up);S.cam.lookAt(...c);S.cam.updateMatrixWorld();return eye;}
+// расстояние, чтобы точки vs заполнили кадр с полем ~10% (asp — ширина/высота)
+const shotFit=(vs,c,v,asp)=>{const tv=Math.tan(17.5*Math.PI/180);let d=0;vs.forEach(q=>{const o=V3.sub(q,c),z=V3.dot(o,v.d);d=Math.max(d,Math.abs(V3.dot(o,v.r))/(tv*asp*.88)+z,Math.abs(V3.dot(o,v.up))/(tv*.88)+z);});return d;};
+// только элемент, в 3D с 4 сторон. own — номера деталей элемента; asp — ширина/высота клетки. → [{url, txt}]; нет WebGL → null
+function pieceShots(own,tw,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScene();}catch(e){return null;}
+  const {R}=CUR,{V}=CUR.M3,P=pieceGroup(own),W=820,done=shotBegin(S,P,W,Math.round(W/asp));
+  // ракурсы: основной, слева и справа сверху, сзади (изнанка); почти с ребра — поворот поменьше
+  const ps=R.parts.filter(p=>own.has(p.id)),vs=[...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]),c=vs.reduce((s,q)=>V3.add(s,V3.mul(q,1/vs.length)),[0,0,0]);
   const v0=stepView(ps),A=ps.reduce((s,p)=>s+p.area,0)||1,sc=v=>ps.reduce((s,p)=>s+p.area*Math.abs(V3.dot(p.n,v.d)),0)/A;
   const vw=[[0,0],[65,25],[-65,25],[180,0]].map(([t,u])=>{for(const k of [1,.6,.35]){const v=viewTilt(viewTurn(v0,t*k),u);if(sc(v)>.4||t===0)return v;}return viewTilt(viewTurn(v0,t*.35),u);});
-  const W=640,H=Math.round(W/asp);S.r.setSize(W,H,false);S.cam.aspect=W/H;S.cam.updateProjectionMatrix();
-  // кадр: кусок длинной стороной вдоль клетки (камеру можно повернуть на 90°), расстояние — чтобы кусок заполнил кадр с полем ~10%
-  const tv=Math.tan(17.5*Math.PI/180),fit=v=>{let d=0;vs.forEach(q=>{const o=V3.sub(q,c),z=V3.dot(o,v.d);d=Math.max(d,Math.abs(V3.dot(o,v.r))/(tv*asp*.88)+z,Math.abs(V3.dot(o,v.up))/(tv*.88)+z);});return d;};
-  const out=vw.map((v0,i)=>{const v1={...v0,r:v0.up,up:V3.mul(v0.r,-1)},v=fit(v1)<fit(v0)?v1:v0,dist=fit(v);
-    const eye=V3.add(c,V3.mul(v.d,dist+5));hl.position.set(...V3.add(eye,V3.add(V3.mul(v.up,dist*.6),V3.mul(v.r,-dist*.4))));hl.target.position.set(...c);S.cam.position.set(...eye);S.cam.up.set(...v.up);S.cam.lookAt(...c);S.r.render(S.sc,S.cam);
-    return {url:S.r.domElement.toDataURL('image/jpeg',.85),txt:i===3?'сзади — изнанка':'вид '+v.txt};});
-  S.sc.remove(grp);S.grp.visible=true;lt.forEach(o=>{o.intensity=o.userData.i;});g.dispose();gb.dispose();lg.dispose();return out;}
+  // элемент длинной стороной вдоль клетки (камеру можно повернуть на 90°)
+  const out=vw.map((v0,i)=>{const v1={...v0,r:v0.up,up:V3.mul(v0.r,-1)},v=shotFit(vs,c,v1,asp)<shotFit(vs,c,v0,asp)?v1:v0;shotCam(S,P,v,c,shotFit(vs,c,v,asp));S.r.render(S.sc,S.cam);
+    return {url:S.r.domElement.toDataURL('image/jpeg',.9),txt:i===3?'сзади — изнанка':'вид '+v.txt};});
+  done();return out;}
+/* сгиб l элемента own — крупно, элемент уже согнут; в угол вставлен уголок «У141°» (≥178° — приложена линейка, уголка нет — ничего).
+   Смотрим вдоль линии сгиба под ≈35° (в сторону и со стороны клина — видны и угол, и грани), «верх» — по биссектрисе угла; кадр — уголок и грани рядом (до ~10 см от него).
+   → {url, labs: [{x, y, t, k}] — подписи в долях кадра (k: no — номер детали, bend — номер сгиба, tpl — уголок), hit — уголок не встаёт}; нет WebGL → null */
+function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;try{S=shotScene();}catch(e){return null;}
+  const {R}=CUR,{V}=CUR.M3,j=CUR.BP.J[l.id],a=Math.round(l.ang),tp=CUR.TPL&&CUR.TPL.find(o=>o.a===a),T=bendTpl(R,CUR.M3,j,own,tp?tp.pts:null),{M,u,e1,w2,b}=T,R0=95;
+  const P=pieceGroup(own),W=1600,H=Math.round(W/asp),done=shotBegin(S,P,W,H),col=l.kind==='V'?0xd03030:0x3030d0;
+  // линия этого сгиба — толстой (линии WebGL всегда в 1 пиксель)
+  const LA=V[j.A],LB=V[j.B],ll=V3.len(V3.sub(LB,LA)),cg=new THREE.CylinderGeometry(1.1,1.1,ll,10),cy=new THREE.Mesh(cg,new THREE.MeshBasicMaterial({color:col}));P.G.push(cg);
+  cy.position.set(...V3.mul(V3.add(LA,LB),.5));cy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...u));P.grp.add(cy);
+  // уголок: контур толщиной 2 мм поперёк линии, с зазором ~3 мм до граней (не вплотную), светлая сталь, тёмная кромка; линейка — полоса поперёк линии на гранях
+  let tc=null;if(tp){// базис правый (иначе обход граней зеркальный и уголок тёмный): третья ось — u или −u
+    const uz=V3.dot(V3.cross(e1,T.e2),u)>0?u:V3.mul(u,-1),sh=new THREE.Shape(tp.pts.map(([x,y])=>new THREE.Vector2(x,y))),eg=new THREE.ExtrudeGeometry(sh,{depth:2,bevelEnabled:false}),O=V3.sub(V3.add(M,T.o),uz);
+    eg.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3(...e1),new THREE.Vector3(...T.e2),new THREE.Vector3(...uz)).setPosition(...O));const ed=new THREE.EdgesGeometry(eg);P.G.push(eg,ed);
+    P.grp.add(new THREE.Mesh(eg,new THREE.MeshStandardMaterial({color:0xb4bac0,metalness:.25,roughness:.5,side:THREE.DoubleSide})),new THREE.LineSegments(ed,new THREE.LineBasicMaterial({color:0x2b2f33})));
+    const c2=tp.pts.reduce((s,q)=>[s[0]+q[0]/tp.pts.length,s[1]+q[1]/tp.pts.length],[0,0]);tc=V3.add(V3.add(M,T.o),V3.add(V3.mul(e1,c2[0]),V3.mul(T.e2,c2[1])));}
+  else if(a>=TPL_MAX){const dx=V3.norm(V3.sub(e1,w2)),bx=new THREE.BoxGeometry(120,1.5,20),m4=new THREE.Matrix4().makeBasis(new THREE.Vector3(...dx),new THREE.Vector3(...b),new THREE.Vector3(...u)).setPosition(...V3.add(M,V3.mul(b,1.2)));
+    bx.applyMatrix4(m4);P.G.push(bx);P.grp.add(new THREE.Mesh(bx,new THREE.MeshStandardMaterial({color:0xe8cf6a,metalness:.1,roughness:.6})));tc=V3.add(M,V3.mul(b,2));}
+  // кадр: уголок, грани p и q от линии до ~R0, линия сгиба, вершины элемента рядом
+  const ext=(pi,w)=>Math.max(10,...R.parts[pi].full.map(i=>V3.dot(V3.sub(V[i],M),w))),Ep=Math.min(ext(j.p,e1),R0),Eq=Math.min(ext(j.q,w2),R0),near=q=>V3.len(V3.sub(q,M))<R0;
+  const ps=R.parts.filter(p=>own.has(p.id)),vs=T.P3.concat([V3.add(M,V3.mul(e1,Ep)),V3.add(M,V3.mul(w2,Eq)),V3.add(M,V3.mul(u,Math.max(-R0,-ll*T.at))),V3.add(M,V3.mul(u,Math.min(R0,ll*(1-T.at))))],
+    [...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]).filter(near));
+  // откуда смотреть: с обоих концов линии, в обе стороны — где уголок и обе грани у вершины не заслонены
+  const n=V3.norm(V3.cross(u,b)),eyeHit=(eye,q)=>{const dv=V3.sub(q,eye),dl=V3.len(dv);S.ray.set(new THREE.Vector3(...eye),new THREE.Vector3(...V3.mul(dv,1/dl)));const h=S.ray.intersectObjects(P.ms);return h.length&&h[0].distance<dl-Math.max(1.5,dl*.006);};
+  const probe=[tc||V3.add(M,V3.mul(b,15)),V3.add(M,V3.add(V3.mul(e1,Ep*.5),V3.mul(b,1))),V3.add(M,V3.add(V3.mul(w2,Eq*.5),V3.mul(b,1)))];
+  let best=null;for(const s of [1,-1])for(const sd of [1,-1]){const d=V3.norm(V3.add(V3.add(V3.mul(u,s),V3.mul(n,sd*.5)),V3.mul(b,.42))),up=V3.norm(V3.sub(b,V3.mul(d,V3.dot(b,d)))),v={d,up,r:V3.norm(V3.cross(up,d))};
+    const xs=vs.map(q=>V3.dot(V3.sub(q,M),v.r)),ys=vs.map(q=>V3.dot(V3.sub(q,M),v.up)),c=V3.add(M,V3.add(V3.mul(v.r,(Math.min(...xs)+Math.max(...xs))/2),V3.mul(v.up,(Math.min(...ys)+Math.max(...ys))/2))),dist=shotFit(vs,c,v,asp);
+    const eye=V3.add(c,V3.mul(d,dist+5)),sc=probe.filter(q=>!eyeHit(eye,q)).length;if(!best||sc>best.sc)best={v,c,dist,sc};if(sc===probe.length)break;}
+  const eye=shotCam(S,P,best.v,best.c,best.dist);S.r.render(S.sc,S.cam);const url=S.r.domElement.toDataURL('image/jpeg',.9);
+  // подписи: номера деталей (видимые и в кадре), номер сгиба у линии, уголок
+  const prj=q=>{const p=new THREE.Vector3(...q).project(S.cam);return [(p.x+1)/2,(1-p.y)/2];},inF=f=>f[0]>.05&&f[0]<.95&&f[1]>.06&&f[1]<.94,labs=[];
+  ps.forEach(p=>{const q=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):p.c,f=prj(q);if(inF(f)&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
+  const fb=prj(V3.sub(M,V3.mul(b,6)));labs.push({x:fb[0],y:fb[1],t:String(l.k),k:'bend'});
+  if(tp){const f=prj(tc);labs.push({x:f[0],y:f[1],t:tplNo(a),k:'tpl'});}
+  done();return {url,labs,hit:T.hit,how:tp?'tpl':a>=TPL_MAX?'ruler':'none'};}

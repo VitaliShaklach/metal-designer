@@ -226,7 +226,7 @@ document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').ad
 /* ---------- раскрой, чертежи, карты: строим только открытую вкладку, через 0,5 с после правки; картам раскладка не нужна ---------- */
 function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden||!$('tab-cards').hidden;if(!vis||!CUR)return;
   if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}
-  if(!$('tab-cards').hidden){const cd=buildCards();$('cards').innerHTML=cd.map((s,i)=>`<figure class="sheet" id="card${i+1}"><figcaption>Карта ${i+1} из ${cd.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
+  if(!$('tab-cards').hidden){const cd=buildCards();$('cards').innerHTML=cd.map((s,i)=>`<figure class="sheet" id="card${i+1}"><figcaption>Лист ${i+1} из ${cd.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
     $('cdGo').innerHTML=cd.map((s,i)=>`<option value="card${i+1}">Карта ${i+1} · ${esc(s.title)}</option>`).join('');$('cdMsg').textContent=cd.length?`Карт: ${cd.length} · позиций на резку: ${CUR.PC.length}`:'';return;}
   if(!CUR.N){ensureNest(()=>sheetsUI(true));return;}SHEETS_OLD=false;
   if(!$('tab-nest').hidden){const L=sheetsNest(),d=new Date(),date=d.toLocaleDateString('ru-RU');$('nestBox').innerHTML=L.map((b,i)=>`<figure class="sheet"><figcaption>Раскрой ${i+1} из ${L.length}</figcaption>${wrapSheet(b,{n:i+1,N:L.length,date})}</figure>`).join('');
@@ -320,7 +320,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.13.6';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.14.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть

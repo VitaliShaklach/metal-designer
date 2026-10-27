@@ -201,6 +201,22 @@ run(`ST.tpl=true;CUR.TPL=weldTemplates(RP,2,15,(p,q)=>CUR.bentKey.has(bendKey(p,
   BS.lines=asmUnits().L.filter((x,i,L)=>(x.tw<0||x.tw>i)&&x.bi>=0).reduce((a,x)=>a+CUR.BL[x.bi].lines.length,0);`);
 console.log('     гибка строками: '+run('BS.cells')+' (сгибов на картах '+run('BS.lines')+'); швов «внутрь» с уголком '+run('BS.wo')+', уголок сварки не с той стороны '+run('BS.wbad'));
 ok(run('BS.cells===BS.lines&&BS.wo>0&&BS.wbad===0&&BS.pv&&BS.sh'),'карты: гибка — строка на каждый сгиб; в профиле шва уголок сверху (изнутри), у шва «внутрь» — снизу (снаружи); «Где на фигуре» — 4 снимка 3D-модели (без WebGL — схема)');
+// v0.14.0: гибка картинками — уголок в угле готового элемента: кромки в плоскостях граней, угол между ними = угол сгиба, у V — изнутри (против наружных нормалей), у m — снаружи
+run(`BT={n:0,plane:0,ang:0,side:0,hit:0,none:0};CUR.BL.forEach(B=>{const own=new Set(B.parts);B.lines.forEach(l=>{const j=CUR.BP.J[l.id],tp=CUR.TPL.find(o=>o.a===Math.round(l.ang));if(!tp){BT.none++;return;}BT.n++;
+    const T=bendTpl(RP,MP3,j,own,tp.pts),np=RP.parts[j.p].n,nq=RP.parts[j.q].n;if(Math.abs(V3.dot(np,T.e1))>.02||Math.abs(V3.dot(nq,T.w2))>.02||Math.abs(V3.dot(T.u,T.e1))>.02||Math.abs(V3.dot(T.u,T.e2))>.02)BT.plane++;
+    if(Math.abs(Math.acos(Math.max(-1,Math.min(1,V3.dot(T.e1,T.w2))))*180/Math.PI-l.ang)>1)BT.ang++;const sg=l.kind==='V'?-1:1;if(V3.dot(T.b,np)*sg<=0||V3.dot(T.b,nq)*sg<=0)BT.side++;if(T.hit)BT.hit++;
+    const a2=tp.pts[1],q=T.P3[1],o=V3.sub(V3.sub(q,T.M),T.o),gp=V3.len(T.o)*Math.sin(Math.acos(V3.dot(T.e1,T.w2))/2);if(Math.abs(gp-3)>.05)BT.plane++;if(Math.abs(V3.dot(o,T.e1)-a2[0])>.01||Math.abs(V3.dot(o,T.u))>.01)BT.plane++;});});`);
+console.log('     уголки в углах сгибов Д9: '+run('BT.n')+' (без уголка '+run('BT.none')+'), не встают в готовом элементе '+run('BT.hit'));
+ok(run('BT.n>0&&BT.plane===0&&BT.ang===0&&BT.side===0'),'гибка картинками: уголок в угле сгиба — кромки по граням, угол = углу сгиба, у V изнутри фигуры, у m снаружи, зазор до граней 3 мм');
+// снимки сгибов (заглушка вместо WebGL): 1–2 сгиба — на карте элемента, 3 и больше — лист «Гибка» сразу после карты (до 8 на лист); номера листов в штампе — по порядку
+run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[{x:.5,y:.5,t:'7',k:'no'},{x:.4,y:.6,t:String(l.k),k:'bend'}],hit:false,how:'tpl'});CD5=buildCards();delete globalThis.bendShot;
+  BG={img:0,bad:0,sheets:0,want:0,num:0,rows:0};const U=asmUnits().L.filter((x,i,L)=>(x.tw<0||x.tw>i)&&CUR.PC.some(c=>c.id===(x.bi>=0?'b'+x.bi:x.ps[0].id)&&c.pts.length>2));
+  CD5.forEach((c,i)=>{BG.img+=CNT(c.svg,/<image class="bsh"/g);const m=c.svg.match(/>Лист<\\/text><text[^>]*>([0-9]+)</);if(!m||+m[1]!==i+1||!c.svg.includes('>'+CD5.length+'</text>'))BG.num++;if(CNT(c.svg,/class="wg"/g)+CNT(c.svg,/class="br"/g)!==c.rows)BG.rows++;});
+  let k=0;U.forEach(x=>{const c=CD5[k++],n=x.bi>=0?CUR.BL[x.bi].lines.length:0;if(n&&n<=2&&CNT(c.svg,/<image class="bsh"/g)!==n)BG.bad++;
+    if(n>2){const pg=Math.ceil(n/8);BG.want+=pg;for(let p=0;p<pg;p++){const b=CD5[k++];if(!b||!b.title.startsWith('Гибка '+x.name)||!b.svg.includes('Гибка — проверка уголком')||CNT(b.svg,/<image class="bsh"/g)!==Math.min(8,n-p*8)||CNT(b.svg,/<g class="bs"/g)!==Math.min(8,n-p*8))BG.bad++;else BG.sheets++;}}});
+  if(k!==CD5.length)BG.bad++;`);
+console.log('     снимков сгибов '+run('BG.img')+', листов «Гибка» '+run('BG.sheets')+' из '+run('BG.want')+', всего листов '+run('CD5.length'));
+ok(run('BG.img===BS.lines&&BG.bad===0&&BG.sheets===BG.want&&BG.want>0&&BG.num===0&&BG.rows===0&&!CD4.some(c=>c.svg.includes(\'class="bsh"\'))'),'гибка картинками: снимок на каждый сгиб — 1–2 на карте, больше — лист «Гибка» после карты; листы в штампе по порядку; без WebGL — только строки');
 // гравировка заготовок (как в DXF): подписи сгибов не ближе 1 мм к номерам деталей и друг к другу; всё влезло; номер мельчит не меньше 5 мм; на карте — та же гравировка
 run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1],L=vx*vx+vy*vy||1e-9,t=Math.max(0,Math.min(1,((p[0]-s[0])*vx+(p[1]-s[1])*vy)/L));return Math.hypot(s[0]+vx*t-p[0],s[1]+vy*t-p[1]);};
     const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]),A=[a[0],a[1]],B=[a[2],a[3]],C=[b[0],b[1]],D=[b[2],b[3]];if(cr(A,B,C)*cr(A,B,D)<0&&cr(C,D,A)*cr(C,D,B)<0)return 0;return Math.min(d(A,b),d(B,b),d(C,a),d(D,a));};
