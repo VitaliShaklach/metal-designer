@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.16.0">
+<link rel="stylesheet" href="css/style.css?v=0.17.0">
 </head>
 <body>
 <div class="wrap">
@@ -80,7 +80,8 @@
             <label>Материал<select id="sMat"><option value="steel">Сталь</option><option value="inox">Нержавейка</option><option value="corten">Кортен</option><option value="alu">Алюминий</option></select></label></div>
           <div class="row2"><label>Лист<select id="sSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option><option value="1500x6000">1500 × 6000</option><option value="own">Свой размер</option></select></label>
             <label>Резка<select id="sCut"><option value="laser" selected>Лазер</option><option value="plasma">Плазма</option></select></label></div>
-          <div class="row2"><label>Зазор под сварку, мм<input class="inp" id="sGap" type="number" value="1" min="0" step=".5"></label><label>Между деталями на листе, мм<input class="inp" id="sNGap" type="number" value="3" min="1" step=".5"></label></div>
+          <div class="row2"><label>Сварка<select id="sWeld"><option value="tig" selected>TIG (аргон)</option><option value="mig">Полуавтомат (MIG/MAG)</option></select></label><label>Зазор под сварку, мм<input class="inp" id="sGap" type="number" value="0.5" min="0" step=".5"></label></div>
+          <div class="row2"><label>Между деталями на листе, мм<input class="inp" id="sNGap" type="number" value="3" min="1" step=".5"></label></div>
           <label class="chk"><input type="checkbox" id="cUseT" checked><span>Учитывать толщину листа</span></label>
           <label class="chk"><input type="checkbox" id="cEngrave" checked><span>Гравировка деталей</span></label>
           <label class="chk"><input type="checkbox" id="cTpl"><span>Уголки-шаблоны для сварки</span></label>
@@ -138,7 +139,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.16.0</span>
+    <span class="ver">v0.17.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -147,18 +148,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.16.0"></script>
-<script src="js/models.js?v=0.16.0"></script>
-<script src="js/models-poly.js?v=0.16.0"></script>
-<script src="js/figures.js?v=0.16.0"></script>
-<script src="js/edit.js?v=0.16.0"></script>
-<script src="js/trace.js?v=0.16.0"></script>
-<script src="js/view3d.js?v=0.16.0"></script>
-<script src="js/prod.js?v=0.16.0"></script>
-<script src="js/bend.js?v=0.16.0"></script>
-<script src="js/sheets.js?v=0.16.0"></script>
-<script src="js/ui.js?v=0.16.0"></script>
-<script src="js/tips.js?v=0.16.0"></script>
+<script src="js/mesh.js?v=0.17.0"></script>
+<script src="js/models.js?v=0.17.0"></script>
+<script src="js/models-poly.js?v=0.17.0"></script>
+<script src="js/figures.js?v=0.17.0"></script>
+<script src="js/edit.js?v=0.17.0"></script>
+<script src="js/trace.js?v=0.17.0"></script>
+<script src="js/view3d.js?v=0.17.0"></script>
+<script src="js/prod.js?v=0.17.0"></script>
+<script src="js/bend.js?v=0.17.0"></script>
+<script src="js/sheets.js?v=0.17.0"></script>
+<script src="js/ui.js?v=0.17.0"></script>
+<script src="js/tips.js?v=0.17.0"></script>
 <div id="printBox"></div>
 </body>
 </html>

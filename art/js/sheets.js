@@ -65,16 +65,21 @@ function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=proj
   s+=dimV(F[0],F[1],F[0],F[3],F[0]-10,Math.round(H))+dimH(Tb[0],Tb[3],Tb[2],Tb[3],Tb[3]+9,Math.round(W))+dimH(Lb[0],Lb[3],Lb[2],Lb[3],Lb[3]+9,Math.round(D));
   s+=`<text class="sm" x="${r2((F[0]+F[2])/2)}" y="${r2(F[1]-3)}" text-anchor="middle">Вид спереди</text><text class="sm" x="${r2((Lb[0]+Lb[2])/2)}" y="${r2(Lb[1]-3)}" text-anchor="middle">Вид слева</text><text class="sm" x="${r2((Tb[0]+Tb[2])/2)}" y="${r2(Tb[1]-3)}" text-anchor="middle">Вид сверху</text>`;
   const [sl,sw]=sheetWL(),BS=CUR.BL&&CUR.BL.length?CUR.bendSt:null,PS=perfOn()&&BS?cutStats(CUR.N.sheets.flatMap(s=>s.items)):null,rows=[['Материал',MATN[ST.mat]],['Толщина листа',ST.t+' мм'],['Деталей',T.n],...(BS?[['Заготовок со сгибами',`${CUR.BL.length} (и отдельных деталей ${CUR.PC.length-CUR.BL.length})`],['Сгибов V / m',`${BS.V} / ${BS.m}`]]:[]),['Площадь металла',fmt(T.area/1e6,2)+' м²'],['Масса',`≈ ${fmt(T.mass,1)} кг`],
-    ['Длина реза',fmt(CUR.cutLen/1000,1)+' м'],...(PS&&PS.perf?[['Перфорация (PERF)',perfTxt(PS).replace(' м реза',' м')]]:[]),['Длина швов',fmt((T.weld-(BS?BS.len:0))/1000,1)+' м'],['Зазор шва',ST.gap+' мм'],[`Листов ${sw}×${sl}`,CUR.N.sheets.length+` (заполнение ${Math.round(CUR.N.used*100)}%)`]];
+    ['Длина реза',fmt(CUR.cutLen/1000,1)+' м'],...(PS&&PS.perf?[['Перфорация (PERF)',perfTxt(PS).replace(' м реза',' м')]]:[]),['Длина швов',fmt((T.weld-(BS?BS.len:0))/1000,1)+' м'],['Сварка, зазор шва',`${WELDN[weldOf()]}, ${mmT(ST.gap)} мм`],[`Листов ${sw}×${sl}`,CUR.N.sheets.length+` (заполнение ${Math.round(CUR.N.used*100)}%)`]];
   s+=svgTable(300,22,[{t:'Параметр',w:58},{t:'Значение',w:55}],rows,6.5);
-  const bi=projBox(VIEWS.iso),it=Math.max(95,22+(rows.length+1)*6.5+4),ih=(BS?223:255)-it,ki=Math.min(110/(bi[2]-bi[0]),(ih-10)/(bi[3]-bi[1]));s+=facesSVG(VIEWS.iso,ki,300+(113-(bi[2]-bi[0])*ki)/2-bi[0]*ki,it+(ih-(bi[3]-bi[1])*ki)/2-bi[1]*ki);   // под таблицей; с гибкой — ниже технические требования
+  const TR=techReq(!!BS),ry=264.4-1.2-(TR.length-1)*3.4,bi=projBox(VIEWS.iso),it=Math.max(95,22+(rows.length+1)*6.5+4),ih=ry-6-it,ki=Math.min(110/(bi[2]-bi[0]),(ih-10)/(bi[3]-bi[1]));s+=facesSVG(VIEWS.iso,ki,300+(113-(bi[2]-bi[0])*ki)/2-bi[0]*ki,it+(ih-(bi[3]-bi[1])*ki)/2-bi[1]*ki);   // под таблицей; ниже — технические требования
   s+=`<text class="sm" x="300" y="268">Номера на гранях — номера деталей (вид спереди). Порядок сборки — следующие листы, каждый элемент и деталь — на своей карте (PDF А4).</text>`;
-  // технические требования к гибке
-  if(BS)s+=['Технические требования','1. V — гнуть на себя, m — от себя, глядя на сторону','    с гравировкой (внутреннюю). Число у линии — угол между','    гранями после гибки, в скобках — порядок гибки.',
-    '2. Линии сгиба — в DXF гравировкой на слоях BEND_V и BEND_M'+(perfOn()?',':'.'),...(perfOn()?[`    по ним сквозные прорези ${fmt(ST.perfL,1)} мм шагом до ${ST.perfStep} мм — слой PERF.`]:[]),
-    '3. Порядок на лазере: ENGRAVE, BEND_V и BEND_M, PERF, последним —','    контур CUT (внутреннее раньше наружного, иначе вырезанная деталь','    упадёт). Мелкие детали — на микроперемычках.','4. Толстый лист: пропил болгаркой — только по V и только изнутри.']
-    .map((t,i)=>`<text class="${i?'sm':'h2'}" x="300" y="${r2(229+i*3.4+(i?1.2:0))}">${shEsc(t.replace(/^ +/,m=>' '.repeat(m.length)))}</text>`).join('');
+  s+=TR.map((t,i)=>`<text class="${i?'sm':'h2'}" x="300" y="${r2(ry+i*3.4+(i?1.2:0))}">${shEsc(t.replace(/^ +/,m=>' '.repeat(m.length)))}</text>`).join('');
   return {title:'Общий вид',scale:scaleTxt(n),body:s};}
+// технические требования: гибка (если гнём), порядок на лазере, сварка — под её вид; строки ≤ 66 знаков
+function techReq(bend){const Q=[],g=mmT(ST.gap);
+  if(bend)Q.push(['V — гнуть на себя, m — от себя, глядя на сторону','с гравировкой (внутреннюю). Число у линии — угол между','гранями после гибки, в скобках — порядок гибки.'],
+    ['Линии сгиба — в DXF гравировкой на слоях BEND_V и BEND_M'+(perfOn()?',':'.'),...(perfOn()?[`по ним сквозные прорези ${fmt(ST.perfL,1)} мм шагом до ${ST.perfStep} мм — слой PERF.`]:[])],
+    ['Порядок на лазере: ENGRAVE, BEND_V и BEND_M, PERF, последним —','контур CUT (внутреннее раньше наружного, иначе вырезанная деталь','упадёт). Мелкие детали — на микроперемычках.'],['Толстый лист: пропил болгаркой — только по V и только изнутри.']);
+  else if(ST.engrave)Q.push(['Порядок на лазере: гравировка ENGRAVE, последним — контур CUT.']);
+  Q.push(weldOf()==='tig'?['Сварка TIG (аргон): резать с азотом или зачистить кромки','от окалины; встык с зазором '+g+' мм, присадка по месту.','Прихватки через 30–50 мм, швы короткие вразбивку — меньше','поводка.']
+    :['Сварка полуавтоматом (MIG/MAG): встык с зазором '+g+' мм,','проволока 0,6–0,8 мм, газ Ar+CO₂; окалину у шва — щёткой.','Прихватки через 30–50 мм, тонкий лист — точками, швы','вразбивку. Лицевую сторону — от брызг; швы зачистить','лепестковым кругом.']);
+  return ['Технические требования',...Q.flatMap((q,i)=>[`${i+1}. ${q[0]}`,...q.slice(1).map(l=>'    '+l)])];}
 
 /* ---------- 2. порядок сборки ---------- */
 // вид на детали шага: с их стороны (средняя нормаль по площади + немного изометрии), откуда смотрим — словами
@@ -252,7 +257,7 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
   const wc=W.length>8||hb+(W.length+1)*3.8>124?2:1,ln=[];rows.forEach(r=>{const l=ln[ln.length-1];if(r.w&&l&&l[0].w&&l.length<wc)l.push(r);else ln.push([r]);});
   const maxT=Math.max(30,124-hb),rh=Math.max(3.8,Math.min(B?4.8:5.4,maxT/ln.length)),nl=Math.min(ln.length,Math.floor(maxT/rh)),ty0=274-hb-nl*rh,fy0=y?31:28,SH=typeof pieceShots==='function',mh=SH?[90,80,70,56].find(m=>pickScale([t.L,t.W],[160,ty0-fy0-m-22])<=pickScale([t.L,t.W],[160,ty0-fy0-78]))||56:pickScale([t.L,t.W],[160,ty0-fy0-78])>pickScale([t.L,t.W],[160,ty0-fy0-68])?56:66,my0=ty0-mh;
   // шапка: что внутри, металл, габарит, масса, рез, сколько штук
-  let s=`<text class="td" x="23" y="22.5">${shEsc([B?`детали № ${x.ps.map(p=>p.no).join(', ')}`:back?'подложка глаза':'',`${MATN[ST.mat]||ST.mat} ${ST.t} мм`,`габарит реза ${Math.round(t.L)} × ${Math.round(t.W)} мм`,`масса ${fmt(mass,2)} кг/шт`,`рез ${Math.round(perim(o.pts))} мм`,`кол. ${y?2:1}`].filter(Boolean).join(' · '))}</text>`;
+  let s=`<text class="td" x="23" y="22.5">${shEsc([B?`детали № ${x.ps.map(p=>p.no).join(', ')}`:back?'подложка глаза':'',`${MATN[ST.mat]||ST.mat} ${ST.t} мм`,WELDS[weldOf()],`габарит реза ${Math.round(t.L)} × ${Math.round(t.W)} мм`,`масса ${fmt(mass,2)} кг/шт`,`рез ${Math.round(perim(o.pts))} мм`,`кол. ${y?2:1}`].filter(Boolean).join(' · '))}</text>`;
   if(y)s+=`<text class="sm" x="23" y="26.5">${shEsc(`${y.name} — зеркальная копия: развёртка зеркально (в DXF и раскрое уже так), гнуть и варить так же — на другой стороне фигуры`)}</text>`;
   // 1. развёртка, как режут: контур, линии сгиба с подписью, номера деталей, гравировка, длины сторон и габарит
   const fh=my0-2-fy0,n=pickScale([t.L,t.W],[160,fh-20]),k=1/n,ox=20+(185-t.L*k)/2,oy=fy0+7+(fh-17-t.W*k)/2,T=q=>[ox+q[0]*k,oy+(t.W-q[1])*k],Q=P.map(T),box=[],hit=b=>box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]);   // box — занятые места
@@ -340,9 +345,12 @@ function buildCards(){if(!CUR||!CUR.PC||!CUR.R.parts.length)return [];const {L}=
 
 /* ---------- DXF: раскрой (все листы) и детали (сеткой) ---------- */
 function segNbOf(p){return p.segs.map(g=>g.nb>=0?CUR.R.parts[g.nb].no:null);}
-function dxfNest(){const N=CUR.N,e=[];N.sheets.forEach((sh,i)=>{const oy=i*(N.H+200);dxfPoly(e,[[0,0],[N.W,0],[N.W,N.H],[0,N.H]],'SHEET',0,oy);dxfTxt(e,N.W/2,N.H+60+oy,40,`SHEET ${i+1}`,"SHEET");
+function dxfNest(){const N=CUR.N,e=[];N.sheets.forEach((sh,i)=>{const oy=i*(N.H+200);dxfPoly(e,[[0,0],[N.W,0],[N.W,N.H],[0,N.H]],'SHEET',0,oy);dxfTxt(e,N.W/2,N.H+60+oy,40,`SHEET ${i+1}`,"SHEET");dxfGas(e,N.W/2,N.H+120+oy);
   sh.items.forEach(o=>{dxfMarksOf(e,o,o.x,o.y+oy);dxfPoly(e,o.pts,"CUT",o.x,o.y+oy);});});return dxfDoc(e);}
 // гравировка — ENGRAVE, линии сгиба — BEND_V и BEND_M, прорези перфорации — PERF (сквозной рез отрезками); у каждой детали в файле — раньше её контура CUT
+// газ резки в DXF не задаётся (только геометрия) — под TIG надпись на служебном слое SHEET (не CUT/ENGRAVE); латиницей: в DXF R12 кириллица ломается
+const DXF_N2='CUT WITH NITROGEN N2 - FOR TIG WELDING';
+function dxfGas(e,x,y){if(weldOf()==='tig')dxfTxt(e,x,y,30,DXF_N2,'SHEET');}
 function dxfMarksOf(e,o,ox,oy){const m=itemMarks(o);if(m.eng.length)dxfSegs(e,m.eng,'ENGRAVE',ox,oy);if(m.V.length)dxfSegs(e,m.V,'BEND_V',ox,oy);if(m.M.length)dxfSegs(e,m.M,'BEND_M',ox,oy);if(m.P.length)dxfSegs(e,m.P,'PERF',ox,oy);}
 function dxfParts(){const ps=CUR.PC.filter(o=>!o.bad),e=[];let x=0,y=0,rowH=0;
   // с гравировкой и с гибкой — зеркально, внутренней стороной вверх; заготовка — длинной стороной по X
@@ -352,4 +360,4 @@ function dxfParts(){const ps=CUR.PC.filter(o=>!o.bad),e=[];let x=0,y=0,rowH=0;
   // уголки-шаблоны — рядом ниже деталей
   if(CUR.TPL&&CUR.TPL.length){x=0;y+=rowH+60;rowH=0;CUR.TPL.forEach(o=>{const xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]),x0=Math.min(...xs),y0=Math.min(...ys),P=o.pts.map(q=>[q[0]-x0,q[1]-y0]),w=Math.max(...xs)-x0;
     if(x+w>rowW){x=0;y+=rowH+30;rowH=0;}{const g=engraveSegs(tplNo(o.a),P);if(g)dxfSegs(e,g,'ENGRAVE',x,y);}dxfPoly(e,P,'CUT',x,y);x+=w+30;rowH=Math.max(rowH,Math.max(...ys)-y0);});}
-  return dxfDoc(e);}
+  dxfGas(e,rowW/2,y+rowH+80);return dxfDoc(e);}
