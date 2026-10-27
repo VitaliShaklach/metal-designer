@@ -8,6 +8,8 @@ mangal/tools/*.png
 node_modules/
 .claude/*
 !.claude/skills/
+!.claude/memory/
+!.claude/settings.json
 Thumbs.db
 .DS_Store
 
