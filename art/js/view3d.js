@@ -167,17 +167,24 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
   done();return {url,labs,hit:T.hit,how:tp?'tpl':a>=TPL_MAX?'ruler':'none'};}
 /* ---------- шаг сборки снимком: собранное к шагу (done), новый элемент — оранжевым, остальное — светло-серым; не собранное не показываем ---------- */
 // mine — детали нового элемента (оранжевый с обеих сторон — изнанка темнее: подложку видно сквозь прорезь изнанкой); сгибы — синим пунктиром, края — тёмными линиями
-function stepGroup(done,mine){const {R}=CUR,{V,F}=CUR.M3,pos=[],cf=[],cb=[],L=[],Lb=[],O=new THREE.Color(0xe07a35),Ob=new THREE.Color(0xc0602a),G0=new THREE.Color(0xa9b0b6),Gb=new THREE.Color(0x868e96);
+function stepGroup(done,mine,nbs){const {R}=CUR,{V,F}=CUR.M3,pos=[],cf=[],cb=[],L=[],Lb=[],Gh=[],Nb=[],O=new THREE.Color(0xe07a35),Ob=new THREE.Color(0xc0602a),G0=new THREE.Color(0xa9b0b6),Gb=new THREE.Color(0x868e96);
   F.forEach((f,fi)=>{const pi=R.partOf[fi];if(!done.has(pi))return;const m=mine.has(pi),a=m?O:G0,b=m?Ob:Gb;f.forEach(v=>{pos.push(...V[v]);cf.push(a.r,a.g,a.b);cb.push(b.r,b.g,b.b);});});
   // подложки за прорезями — не в сетке фигуры: контур прорези, утопленный внутрь на BACK_DEPTH
   R.parts.forEach(p=>{if(!p.back||!done.has(p.id))return;const m=mine.has(p.id),a=m?O:G0,b=m?Ob:Gb,Q=backPts(p);earClip(Q,Q.map((_,i)=>i)).forEach(t=>t.forEach(i=>{pos.push(...Q[i]);cf.push(a.r,a.g,a.b);cb.push(b.r,b.g,b.b);}));Q.forEach((q,i)=>L.push(...q,...Q[(i+1)%Q.length]));});
-  R.edges.forEach(e=>{if(!e.p.some(p=>done.has(p)))return;(e.p.length===2&&e.p.every(p=>done.has(p))&&CUR.bentKey&&CUR.bentKey.has(bendKey(e.p[0],e.p[1]))?Lb:L).push(...V[e.a],...V[e.b]);});
+  // призрак — края несобранных деталей тонкими светлыми линиями (где элемент на фигуре); Nb — контур соседей, к кому варить, сквозь металл пунктиром
+  R.edges.forEach(e=>{if(nbs&&e.p.some(p=>nbs.has(p)))Nb.push(...V[e.a],...V[e.b]);if(!e.p.some(p=>done.has(p))){Gh.push(...V[e.a],...V[e.b]);return;}(e.p.length===2&&e.p.every(p=>done.has(p))&&CUR.bentKey&&CUR.bentKey.has(bendKey(e.p[0],e.p[1]))?Lb:L).push(...V[e.a],...V[e.b]);});
   const mk=(P,C)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.computeVertexNormals();return g;};
   const rv=[],rc=[];for(let i=0;i<pos.length;i+=9){rv.push(...pos.slice(i,i+3),...pos.slice(i+6,i+9),...pos.slice(i+3,i+6));rc.push(...cb.slice(i,i+9));}
   const g=mk(pos,cf),gb=mk(rv,rc),m=()=>new THREE.MeshStandardMaterial({vertexColors:true,metalness:.1,roughness:.7,side:THREE.FrontSide,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
   const grp=new THREE.Group(),ms=[new THREE.Mesh(g,m()),new THREE.Mesh(gb,m())],hl=new THREE.DirectionalLight(0xffffff,.75);grp.add(...ms,hl,hl.target,new THREE.AmbientLight(0xffffff,.5));   // свет ровный: рассеянный + от камеры (общий свет сцены выключен) — ни белых, ни чёрных граней
   const lg=new THREE.BufferGeometry(),G=[g,gb,lg];lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0x2b2f33,transparent:true,opacity:.75})));
   if(Lb.length){const bg=new THREE.BufferGeometry();G.push(bg);bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x1f5fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
+  const seg=(P,mt)=>{const g=new THREE.BufferGeometry();G.push(g);g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));const l=new THREE.LineSegments(g,mt);if(mt.isLineDashedMaterial)l.computeLineDistances();grp.add(l);return l;};
+  // невидимая поверхность несобранного (только глубина, рисуется после металла) — у призрака видны только ближние рёбра, как на рисунке
+  const gp=[];F.forEach((f,fi)=>{if(!done.has(R.partOf[fi]))f.forEach(v=>gp.push(...V[v]));});if(gp.length){const gg=new THREE.BufferGeometry();G.push(gg);gg.setAttribute('position',new THREE.Float32BufferAttribute(gp,3));
+    const gm=new THREE.Mesh(gg,new THREE.MeshBasicMaterial({colorWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));gm.renderOrder=1;grp.add(gm);}
+  if(Gh.length)seg(Gh,new THREE.LineBasicMaterial({color:0x8d969e,transparent:true,opacity:.6})).renderOrder=2;
+  if(Nb.length)seg(Nb,new THREE.LineDashedMaterial({color:0x3a4046,dashSize:3,gapSize:2,depthTest:false,transparent:true,opacity:.7})).renderOrder=3;
   return {grp,hl,ms,G};}
 const backPts=p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))),partC=p=>p.back?V3.sub(p.c,V3.mul(p.n,BACK_DEPTH)):p.c;
 /* st — шаг (asmSteps), asp — ширина/высота клетки. Вид — со стороны элемента (stepView); заслоняет — пробуем повернуть/наклонить.
@@ -185,7 +192,7 @@ const backPts=p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))),partC
    → {url, txt — откуда смотрим, labs: [{x, y, t, k: 'new' | 'nb'}] — номера в долях кадра, только видимые и не ребром}; нет WebGL → null */
 function stepShot(st,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScene();}catch(e){return null;}
   const {R}=CUR,{V}=CUR.M3,x=st.u[0],W=st.w[0],mine=new Set(x.ps.map(p=>p.id)),nbs=[...new Set(W.map(q=>q.nb))].map(i=>R.parts[i]);
-  const P=stepGroup(st.done,mine),Wd=1600,done=shotBegin(S,P,Wd,Math.round(Wd/asp),0);
+  const P=stepGroup(st.done,mine,new Set(nbs.map(p=>p.id))),Wd=1600,done=shotBegin(S,P,Wd,Math.round(Wd/asp),0);
   const ev=x.ps.flatMap(p=>p.back?backPts(p):p.full.map(i=>V[i])),c0=ev.reduce((s,q)=>V3.add(s,V3.mul(q,1/ev.length)),[0,0,0]),er=Math.max(...ev.map(q=>V3.len(V3.sub(q,c0)))),lim=er+Math.max(60,er*.6);
   const sm=W.flatMap(q=>q.ed).map(([a,b])=>V3.mul(V3.add(V[a],V[b]),.5)),vs=ev.concat(nbs.flatMap(p=>p.full.map(i=>V[i])).filter(q=>V3.len(V3.sub(q,c0))<=lim));
   const eyeHit=(eye,q)=>{const dv=V3.sub(q,eye),dl=V3.len(dv);S.ray.set(new THREE.Vector3(...eye),new THREE.Vector3(...V3.mul(dv,1/dl)));const h=S.ray.intersectObjects(P.ms);return h.length&&h[0].distance<dl-Math.max(1.5,dl*.006);};
