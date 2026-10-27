@@ -45,7 +45,7 @@
       <div class="controls" id="controls">
         <div class="drawerhead"><b>Панель</b><button type="button" id="drawerClose" aria-label="Закрыть">✕</button></div>
 
-        <div class="grp" data-g="size"><button type="button" class="gt">Размер фигуры</button>
+        <div class="grp shut" data-g="size"><button type="button" class="gt">Размер фигуры</button>
           <div class="xyz3"><label>Высота<input class="inp" id="dH" type="number" min="50" step="10"></label><label>Ширина<input class="inp" id="dW" type="number" min="50" step="10"></label><label>Глубина<input class="inp" id="dD" type="number" min="50" step="10"></label></div>
           <label class="chk"><input type="checkbox" id="cProp" checked><span>Пропорционально<small>Меняете одно — остальные тянутся следом. Снимите галочку, чтобы растянуть только по одной оси</small></span></label>
           <button id="bReset" type="button" class="wide">Пропорции как в модели</button>
@@ -75,7 +75,7 @@
           <p class="note">Узкие треугольники программа сама стягивает или перекладывает диагональ. Что осталось уже — подсвечено красным</p>
         </div>
 
-        <div class="grp" data-g="metal"><button type="button" class="gt">Металл</button>
+        <div class="grp shut" data-g="metal"><button type="button" class="gt">Металл</button>
           <div class="row2"><label>Толщина<select id="sT"><option value="1">1 мм</option><option value="1.2">1,2 мм</option><option value="1.5">1,5 мм</option><option value="2" selected>2 мм</option><option value="3">3 мм</option></select></label>
             <label>Материал<select id="sMat"><option value="steel">Сталь</option><option value="inox">Нержавейка</option><option value="corten">Кортен</option><option value="alu">Алюминий</option></select></label></div>
           <div class="row2"><label>Лист<select id="sSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option><option value="1500x6000">1500 × 6000</option><option value="own">Свой размер</option></select></label>
@@ -88,7 +88,7 @@
           <div class="row2" id="ownSheet" hidden><label>Лист, ширина<input class="inp" id="sW" type="number" value="1250" min="100"></label><label>длина<input class="inp" id="sL" type="number" value="2500" min="100"></label></div>
         </div>
 
-        <div class="grp" data-g="perf"><button type="button" class="gt">Перфорация сгибов</button>
+        <div class="grp shut" data-g="perf"><button type="button" class="gt">Перфорация сгибов</button>
           <label class="chk"><input type="checkbox" id="cPerf"><span>Перфорация линий сгиба</span></label>
           <div class="xyz3"><label>Прорезь, мм<input class="inp" id="pL" type="number" min="1" max="10" step=".5" value="2"></label><label>Шаг, мм<input class="inp" id="pStep" type="number" min="5" step="1" value="20"></label><label>От края, мм<input class="inp" id="pEdge" type="number" min="3" step="1" value="10"></label></div>
           <p class="note" id="perfNote"></p>
