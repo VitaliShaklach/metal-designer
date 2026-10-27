@@ -101,7 +101,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .q li::marker{color:var(--accent);font-family:var(--f-mono)}
 .controls .grp{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1.5px solid var(--ink)}
 .controls .drawerhead+.grp{padding-top:0;border-top:0}
-.controls .gt{font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);background:none;border:0;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px}
+.controls .gt{font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em;color:var(--ink);background:none;border:0;padding:0;text-align:left;cursor:pointer;display:flex;align-items:center;gap:8px;width:100%}
 .controls .gt::before{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
 .controls .grp.shut .gt::before{transform:rotate(-45deg)}
 .controls .grp.shut>*:not(.gt):not(.hq){display:none!important}
@@ -197,7 +197,11 @@ footer a{color:var(--accent)}
   .controls.open{transform:none}
   .drawerhead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2;background:var(--panel);padding:12px 0 10px;border-bottom:1px solid var(--line);font:600 16px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
   .drawerhead button{font:16px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--ink);width:34px;height:34px;cursor:pointer}
-  .controls .drawerhead+.grp{padding-top:14px}
+  .controls .drawerhead+.grp{padding-top:4px}
+  .controls .grp{padding-top:4px}
+  .controls .gt{min-height:44px}   /* заголовок раздела — под палец */
+  .tabbar{flex-wrap:wrap;overflow-x:visible}   /* все вкладки на виду, в два ряда */
+  .tabbar button{flex:1 1 auto;font-size:15px;padding:10px 12px}
   .pick select{min-width:0;width:100%}
   .pick label,.pick .lbl{flex:1 1 100%}
   .pick .modeseg{min-width:0}
