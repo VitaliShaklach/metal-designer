@@ -278,9 +278,12 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
   s+=`<path class="t" d="M20,${r2(my0)}H205M112,${r2(my0)}V${r2(ty0)}M20,${r2(ty0)}H205"/><text class="h2" x="23" y="${r2(my0+4.5)}">${SHOTS?'Кусок — с 4 сторон':'Где на фигуре'}</text>`;
   if(SHOTS)SHOTS.forEach((o,i)=>{const ch=(mh-9)/2,cx=20.5+(i%2)*45.75,cy=my0+6.5+Math.floor(i/2)*(ch+.6);s+=`<image class="shot" href="${o.url}" x="${r2(cx)}" y="${r2(cy)}" width="45" height="${r2(ch)}" preserveAspectRatio="xMidYMid slice"/><text class="lb" x="${r2(cx+1)}" y="${r2(cy+ch-1)}" style="font-size:2px;fill:#555">${o.txt}</text>`;});
   else s+=`<text class="sm" x="109" y="${r2(my0+4.5)}" text-anchor="end">вид ${v.txt}</text>`+facesSVG(v,kf,20+(92-(bf[2]-bf[0])*kf)/2-bf[0]*kf,my0+7+(mh-12-(bf[3]-bf[1])*kf)/2-bf[1]*kf,{color:(p,sh)=>own.has(p.id)?orng(sh):tw.has(p.id)?`rgb(${Math.round(90+50*sh)},${Math.round(130+50*sh)},${Math.round(200+40*sh)})`:grey(.72+.25*sh)});
+  // со снимками — «где на фигуре» маленькой картинкой в правом углу (схема готового куска сдвигается влево)
+  if(SHOTS){const ki=Math.min(27/(bf[2]-bf[0]),(mh-14)/(bf[3]-bf[1]));s+=`<path class="t" style="stroke-width:.1" d="M176,${r2(my0+6)}V${r2(ty0-4)}"/><text class="lb" x="190.5" y="${r2(my0+8.5)}" text-anchor="middle" style="font-size:2.2px">где на фигуре</text>`
+    +facesSVG(v,ki,177+(27-(bf[2]-bf[0])*ki)/2-bf[0]*ki,my0+10+(mh-14-(bf[3]-bf[1])*ki)/2-bf[1]*ki,{color:(p,sh)=>own.has(p.id)?orng(sh):tw.has(p.id)?`rgb(${Math.round(90+50*sh)},${Math.round(130+50*sh)},${Math.round(200+40*sh)})`:grey(.72+.25*sh)});}
   // 3. готовый кусок крупно: все грани (изнанка — серо-голубым), номера деталей, сгибы синим пунктиром с номером по порядку, швы красным с номером соседа
   const bx=[1e9,1e9,-1e9,-1e9];x.ps.forEach(p=>p.full.forEach(i=>{const q=prjV(v,V[i]);bx[0]=Math.min(bx[0],q[0]);bx[1]=Math.min(bx[1],q[1]);bx[2]=Math.max(bx[2],q[0]);bx[3]=Math.max(bx[3],q[1]);}));
-  const kp=Math.min(80/(bx[2]-bx[0]||1),(mh-22)/(bx[3]-bx[1]||1)),px=112+(93-(bx[2]-bx[0])*kp)/2-bx[0]*kp,py=my0+9+(mh-18-(bx[3]-bx[1])*kp)/2-bx[1]*kp,Pp=i=>{const q=prjV(v,V[i]);return [px+q[0]*kp,py+q[1]*kp];};
+  const kp=Math.min((SHOTS?52:80)/(bx[2]-bx[0]||1),(mh-22)/(bx[3]-bx[1]||1)),px=112+((SHOTS?62:93)-(bx[2]-bx[0])*kp)/2-bx[0]*kp,py=my0+9+(mh-18-(bx[3]-bx[1])*kp)/2-bx[1]*kp,Pp=i=>{const q=prjV(v,V[i]);return [px+q[0]*kp,py+q[1]*kp];};
   const Lt=V3.norm(V3.add(V3.add(v.d,V3.mul(v.up,.7)),V3.mul(v.r,-.4))),fl=[];
   s+=`<text class="h2" x="115" y="${r2(my0+4.5)}">${B?'Готовый кусок — после гибки':'Деталь — швы и соседи'}</text>`;
   x.ps.slice().sort((a,b)=>V3.dot(a.c,v.d)-V3.dot(b.c,v.d)).forEach(p=>{const pts=p.full.map(Pp),sh=.5+.45*Math.abs(V3.dot(p.n,Lt)),fr=V3.dot(p.n,v.d)>0;
