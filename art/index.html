@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.15.0">
+<link rel="stylesheet" href="css/style.css?v=0.16.0">
 </head>
 <body>
 <div class="wrap">
@@ -51,7 +51,7 @@
           <button id="bReset" type="button" class="wide">Пропорции как в модели</button>
         </div>
 
-        <div class="grp" data-g="edit"><button type="button" class="gt">Редактор</button>
+        <div class="grp shut" data-g="edit"><button type="button" class="gt">Редактор</button>
           <label class="chk"><input type="checkbox" id="cEdit"><span>Править фигуру<small>На модели появятся точки: клик по точке — выбрать, тянуть мышкой — двигать. Клик по грани — выбрать грань</small></span></label>
           <div id="edBox" hidden>
             <label class="chk"><input type="checkbox" id="cSym" checked><span>Симметрия<small>Левая половина повторяет правую — для животных удобно</small></span></label>
@@ -67,7 +67,7 @@
           </div>
         </div>
 
-        <div class="grp" data-g="faces"><button type="button" class="gt">Грани</button>
+        <div class="grp shut" data-g="faces"><button type="button" class="gt">Грани</button>
           <label class="rng"><span>Граней (треугольников): <b id="fVal"></b></span><input type="range" id="fRng" min="40" max="800" step="10"></label>
           <p class="note" id="fNote"></p>
           <label class="rng"><span>Слить почти плоские грани: <b id="dVal"></b></span><input type="range" id="dRng" min="0" max="25" step="1" value="0"></label>
@@ -88,13 +88,15 @@
           <div class="row2" id="ownSheet" hidden><label>Лист, ширина<input class="inp" id="sW" type="number" value="1250" min="100"></label><label>длина<input class="inp" id="sL" type="number" value="2500" min="100"></label></div>
         </div>
 
-        <div class="grp" data-g="sel"><button type="button" class="gt">Деталь</button>
-          <div id="selBox"><p class="note">Кликните грань на модели или строку в таблице</p></div>
+        <div class="grp" data-g="perf"><button type="button" class="gt">Перфорация сгибов</button>
+          <label class="chk"><input type="checkbox" id="cPerf"><span>Перфорация линий сгиба</span></label>
+          <div class="xyz3"><label>Прорезь, мм<input class="inp" id="pL" type="number" min="1" max="10" step=".5" value="2"></label><label>Шаг, мм<input class="inp" id="pStep" type="number" min="5" step="1" value="20"></label><label>От края, мм<input class="inp" id="pEdge" type="number" min="3" step="1" value="10"></label></div>
+          <p class="note" id="perfNote"></p>
         </div>
 
-        <div class="grp" data-g="view"><button type="button" class="gt">Вид</button>
+        <div class="grp shut" data-g="view"><button type="button" class="gt">Вид</button>
           <label class="chk"><input type="checkbox" id="cNums"><span>Номера деталей</span></label>
-          <label class="chk"><input type="checkbox" id="cPairs" checked><span>Зеркальные пары — один номер (7 и 7.1)</span></label>
+          <div id="selBox"><p class="note">Деталь: кликните грань на модели или строку в таблице</p></div>
         </div>
       </div>
     </div>
@@ -136,7 +138,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.15.0</span>
+    <span class="ver">v0.16.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -145,18 +147,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.15.0"></script>
-<script src="js/models.js?v=0.15.0"></script>
-<script src="js/models-poly.js?v=0.15.0"></script>
-<script src="js/figures.js?v=0.15.0"></script>
-<script src="js/edit.js?v=0.15.0"></script>
-<script src="js/trace.js?v=0.15.0"></script>
-<script src="js/view3d.js?v=0.15.0"></script>
-<script src="js/prod.js?v=0.15.0"></script>
-<script src="js/bend.js?v=0.15.0"></script>
-<script src="js/sheets.js?v=0.15.0"></script>
-<script src="js/ui.js?v=0.15.0"></script>
-<script src="js/tips.js?v=0.15.0"></script>
+<script src="js/mesh.js?v=0.16.0"></script>
+<script src="js/models.js?v=0.16.0"></script>
+<script src="js/models-poly.js?v=0.16.0"></script>
+<script src="js/figures.js?v=0.16.0"></script>
+<script src="js/edit.js?v=0.16.0"></script>
+<script src="js/trace.js?v=0.16.0"></script>
+<script src="js/view3d.js?v=0.16.0"></script>
+<script src="js/prod.js?v=0.16.0"></script>
+<script src="js/bend.js?v=0.16.0"></script>
+<script src="js/sheets.js?v=0.16.0"></script>
+<script src="js/ui.js?v=0.16.0"></script>
+<script src="js/tips.js?v=0.16.0"></script>
 <div id="printBox"></div>
 </body>
 </html>

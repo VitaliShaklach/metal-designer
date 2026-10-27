@@ -238,4 +238,29 @@ run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1
 console.log('     гравировка заготовок Д9: подписей сгибов '+run('EG.labs')+', номеров уменьшено '+run('EG.shrunk'));
 ok(run("EG.close")===0&&run("EG.miss")===0&&run("EG.tiny")===0&&run("EG.labs")===run("CUR.BL.reduce((a,b)=>a+b.lines.filter(l=>l.segs.length).length,0)")&&run("CD3.filter(c=>c.svg.includes('Карта заготовки')).every(c=>c.svg.includes('eng engb'))"),
   "гравировка заготовок: Д9 — каждая подпись сгиба выгравирована и не ближе 1 мм к номерам деталей и другим подписям, номер мельчит не меньше 5 мм; на карте — та же гравировка, подписи сгибов бледно");
+// перфорация линий сгиба: прорези 2 мм на каждой линии, центры крайних — 10 мм от концов, шаг не больше 20, все внутри заготовки; в метраже — отдельно от реза и врезок;
+// в DXF — слой PERF, у каждой детали контур CUT после её меток; без галочки и при плазме прорезей нет
+run(`ST.perf=true;ST.cut='laser';ST.perfL=2;ST.perfStep=20;ST.perfEdge=10;PF={segs:0,holes:0,bad:0,stray:0,out:0};PI=[];
+  CUR.BL.forEach((B,i)=>{const t=bendAlign(B.pts,true),P=B.pts.map(q=>trPt(t,q)),o={id:'b'+i,no:'Г'+B.no,pts:P,tr:t},m=itemMarks(o);PI.push(o);let got=0;
+    m.P.forEach(h=>{if(!inPoly([(h[0]+h[2])/2,(h[1]+h[3])/2],P))PF.out++;});
+    B.lines.forEach(l=>l.segs.forEach(z=>{const a=trPt(t,[z[0],z[1]]),b=trPt(t,[z[2],z[3]]),L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L,pr=p=>(p[0]-a[0])*ux+(p[1]-a[1])*uy;PF.segs++;
+      const C=m.P.filter(h=>[[h[0],h[1]],[h[2],h[3]]].every(p=>Math.abs((p[0]-a[0])*uy-(p[1]-a[1])*ux)<1e-6&&pr(p)>-1e-6&&pr(p)<L+1e-6)).map(h=>{if(Math.abs(Math.hypot(h[2]-h[0],h[3]-h[1])-2)>.01)PF.bad++;return pr([(h[0]+h[2])/2,(h[1]+h[3])/2]);}).sort((x,y)=>x-y);
+      got+=C.length;PF.holes+=C.length;
+      if(L<6){if(C.length)PF.bad++;return;}if(L<=20){if(C.length!==1||Math.abs(C[0]-L/2)>.01)PF.bad++;return;}
+      if(Math.abs(C[0]-10)>.01||Math.abs(C[C.length-1]-(L-10))>.01||C.some((c,k)=>k&&c-C[k-1]>20+1e-6))PF.bad++;}));
+    if(got!==m.P.length)PF.stray++;});
+  PS0=cutStats(PI);ST.perf=false;PS1=cutStats(PI);ST.perf=true;ST.cut='plasma';PS2=cutStats(PI);ST.cut='laser';
+  NI=PI.map((o,i)=>{const xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]);return Object.assign({},o,{x:i*3000-Math.min(...xs),y:-Math.min(...ys)});});
+  N0=CUR.N;CUR.N={W:3000*NI.length,H:3000,gap:3,sheets:[{items:NI}]};
+  DXP=t=>{const TK=t.split('\\r\\n'),EN=[];let cur=null,vx=false;for(let i=0;i+1<TK.length;i+=2){const c=TK[i].trim(),v=TK[i+1].trim();
+      if(c==='0'){vx=v==='VERTEX';if(v==='LINE'||v==='POLYLINE'){cur={t:v,lay:'',x:null};EN.push(cur);}else if(!vx)cur=null;}
+      else if(cur){if(c==='8'&&!vx&&!cur.lay)cur.lay=v;else if(c==='10'&&cur.x===null&&(cur.t==='LINE'||vx))cur.x=+v;}}return EN;};
+  EN1=DXP(dxfNest());DO={bad:0,perf:0};CI=[];EN1.forEach((en,j)=>{if(en.lay==='SHEET')return;const k=Math.floor((en.x+1)/3000);(CI[k]=CI[k]||{m:[],c:[]})[en.lay==='CUT'?'c':'m'].push(j);if(en.lay==='PERF')DO.perf++;});
+  CI.forEach((g,k)=>{if(!g||g.c.length!==1||g.m.some(j=>j>g.c[0]||(k&&CI[k-1]&&j<CI[k-1].c[0])))DO.bad++;});
+  ST.perf=false;EN2=DXP(dxfNest());ST.perf=true;ST.cut='plasma';EN3=DXP(dxfNest());ST.cut='laser';ST.perf=false;CUR.N=N0;`);
+console.log('     перфорация Д9: линий сгиба '+run('PF.segs')+', прорезей '+run('PF.holes')+' ('+run("perfTxt(PS0)")+'), DXF: PERF '+run('DO.perf'));
+ok(run("PF.holes")>0&&run("PF.bad+PF.stray+PF.out")===0&&run("PS0.perf===PF.holes&&PS0.perfPierce===PF.holes&&Math.abs(PS0.perfLen-2*PF.holes)<.1&&PS0.pierce===PS1.pierce&&Math.abs(PS0.cut-PS1.cut)<1e-6&&PS1.perf===0&&PS2.perf===0"),
+  "перфорация: Д9 — на каждой линии сгиба прорези 2 мм, крайние центры 10 мм от концов, шаг не больше 20, все внутри заготовки; рез и врезки контуров не меняются, перфорация считается отдельно; без галочки и при плазме — нет");
+ok(run("DO.perf")===run("PF.holes")&&run("DO.bad")===0&&run("CI.filter(Boolean).length")===run("NI.length")&&run("!EN2.some(e=>e.lay==='PERF')&&!EN3.some(e=>e.lay==='PERF')")&&run("EN2.some(e=>e.lay==='BEND_V')"),
+  "перфорация в DXF: слой PERF, у каждой заготовки гравировка, сгибы и прорези раньше её контура CUT; без галочки и при плазме слоя PERF нет");
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

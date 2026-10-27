@@ -6,7 +6,7 @@ const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localSto
 function msg(t){$('msg').textContent=t||'';}
 
 // состояние фигуры
-const ST={frame:null,edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,trace:false,refId:'',name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,tpl:false,bend:true,pairs:true,selB:-1,allParts:false,sel:-1,nums:false,small:true};
+const ST={frame:null,edit:false,sym:true,sv:-1,sp:-1,sp2:-1,seam:null,trace:false,refId:'',name:'',fig:'dog',base:null,faces:260,diss:0,dims:{W:0,H:600,D:0},prop:true,t:2,mat:'steel',sheet:'1250x2500',sw:1250,sl:2500,cut:'laser',minW:15,gap:1,useT:true,ngap:3,engrave:true,tpl:false,bend:true,perf:false,perfL:2,perfStep:20,perfEdge:10,selB:-1,allParts:false,sel:-1,nums:false,small:true};
 let SIMP={key:'',m:null},CUR=null,SHEETS_OLD=true,SHEETS_T=0;   // CUR = {M3,R,T,small}
 const DENSE=2000;                    // больше стольких треугольников — модель гладкая, упрощаем
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
@@ -52,14 +52,14 @@ function ensureNest(cb){if(CUR&&CUR.N){cb&&cb();return;}if(cb)NEST.wait.push(cb)
     NEST.key=key;NEST.N=v.value;NEST.run=null;if(CUR&&NEST.want===key)CUR.N=v.value;const w=NEST.wait;NEST.wait=[];w.forEach(f=>f());if(!$('tab-sum').hidden)sumTable();};
   setTimeout(step,0);}
 function compute0(){const b=ST.base;let S=b;
-  if(isPoly()){const M3={V:b.V,F:b.F,T:b.T,S:b.S},R=buildParts(M3,1.5,1.5),wl=addBacking(R,M3),_p=ST.pairs&&pairNumbers(R,M3.V),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});T.weld+=wl;T.open=Math.max(0,T.open-wl);
+  if(isPoly()){const M3={V:b.V,F:b.F,T:b.T,S:b.S},R=buildParts(M3,1.5,1.5),wl=addBacking(R,M3),_p=pairNumbers(R,M3.V),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});T.weld+=wl;T.open=Math.max(0,T.open-wl);
     CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5)),selfx:new Set(selfXPolys(E()))};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   const asIs=!isDense()&&ST.faces>=b.F.length;   // гранёная как есть: грани уже плоские, не трогаем
   let M3=fitMesh(S,ST.dims);if(ST.minW>0&&!asIs)M3=fitMesh(fixSlivers(M3,ST.minW),ST.dims);   // после чистки — снова точно в размер
   if(ST.diss>0)M3=mergeFlat(M3);
-  const R=asIs||ST.diss>0?buildParts(M3,1.5,1.5):buildParts(M3);if(ST.pairs)pairNumbers(R,M3.V);const T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
+  const R=asIs||ST.diss>0?buildParts(M3,1.5,1.5):buildParts(M3);pairNumbers(R,M3.V);const T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});
   const small=new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id));
   CUR={M3,R,T,small,bad:new Set()};if(ST.sel>=R.parts.length)ST.sel=-1;}
 // слить почти плоские грани в многоугольники → выровнять в плоскость (стена остаётся на z=0) → снова точно в размер
@@ -163,7 +163,7 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
     ['Сгибов',`V ${B.V} (на себя) · m ${B.m} (от себя) · ${fmt(B.len/1000,1)} м — эти стыки не варим`]);}
   if(CUR.TPL&&CUR.TPL.length){const tp=CUR.TPL,ta=tp.reduce((a,o)=>a+Math.abs(area2(o.pts)),0),tl=tp.reduce((a,o)=>a+perim(o.pts),0);
     rows.push(['Уголки-шаблоны для сварки (оснастка, по одному на угол)',`${tp.length} шт · ${tp[0].a}°…${tp[tp.length-1].a}° · ≈ ${fmt(ta*1e-9*ST.t*(DENS[ST.mat]||7850),2)} кг · рез ${fmt(tl/1000,1)} м`]);}
-  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));const at=rows.findIndex(r=>r[0].startsWith('Длина реза'))+1;const pc=CUR.BL&&CUR.BL.length?'позицию':'деталь';rows.splice(at,0,[CUR.TPL&&CUR.TPL.length?`Врезок (по одной на ${pc} и уголок)`:`Врезок (по одной на ${pc})`,cs.pierce]);if(ST.engrave)rows.splice(at+1,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);if(cs.bend)rows.splice(at+1,0,['Линии сгиба (слои BEND_V, BEND_M)',fmt(cs.bend/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
+  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));const at=rows.findIndex(r=>r[0].startsWith('Длина реза'))+1;const pc=CUR.BL&&CUR.BL.length?'позицию':'деталь';rows.splice(at,0,[CUR.TPL&&CUR.TPL.length?`Врезок (по одной на ${pc} и уголок)`:`Врезок (по одной на ${pc})`,cs.pierce]);if(cs.perf)rows.splice(at+1,0,['Перфорация сгибов (слой PERF, отдельно от реза и врезок выше)',perfTxt(cs)]);if(ST.engrave)rows.splice(at+1,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);if(cs.bend)rows.splice(at+1,0,['Линии сгиба (слои BEND_V, BEND_M)',fmt(cs.bend/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
   $('sum').innerHTML='<tbody>'+rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('')+'</tbody>';}
 
 /* ---------- загрузка фигур и файлов ---------- */
@@ -174,14 +174,18 @@ function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=
   file.arrayBuffer().then(buf=>later(()=>{let m,o={name};
     if(ext==='obj')m=parseOBJ(new TextDecoder().decode(buf));else if(ext==='stl')m=parseSTL(buf);else if(ext==='glb')m=parseGLB(buf);
     else if(ext==='json'){const j=JSON.parse(new TextDecoder().decode(buf));if(j.type!=='md-art')throw new Error('это не файл фигуры');m=j.P?polyBase(j.V,j.P,j.S):{V:j.V,F:j.F};o={name:j.name||name,dims:j.dims,faces:j.F.length,ref:j.ref,frame:j.frame};
-      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','tpl','bend','pairs','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
+      ['t','mat','sheet','sw','sl','cut','minW','gap','useT','ngap','engrave','tpl','bend','perf','perfL','perfStep','perfEdge','diss'].forEach(k=>{if(j[k]!==undefined)ST[k]=j[k];});metalUI();}
     else throw new Error('нужен файл OBJ, STL, GLB или JSON');
     if(!m.F.length)throw new Error('в файле нет граней');ST.refId=o.ref&&typeof MODELS_POLY!=='undefined'&&MODELS_POLY[o.ref]?o.ref:'';ST.frame=o.frame?{min:o.frame[0],max:o.frame[1]}:null;ST.fig='';$('figSel').value='';setBase(m,o);compute();renderAll('instant');
     msg(`Открыто: ${m.F.length} треугольников${isDense()?' — упрощаю до '+ST.faces:''}`);},'Читаю модель…'));}
-function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,tpl:ST.tpl,bend:ST.bend,pairs:ST.pairs,diss:0,
+function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,tpl:ST.tpl,bend:ST.bend,perf:ST.perf,perfL:ST.perfL,perfStep:ST.perfStep,perfEdge:ST.perfEdge,diss:0,
     V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly()){j.P=ST.base.P;j.S=ST.base.S||[];}if(ST.refId){j.ref=ST.refId;const fb=traceFrame();j.frame=[fb.min,fb.max].map(p=>p.map(x=>Math.round(x*100)/100));}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
-function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('cTpl').checked=!!ST.tpl;$('cBend').checked=!!ST.bend;$('cPairs').checked=ST.pairs!==false;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';}
+function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('cTpl').checked=!!ST.tpl;$('cBend').checked=!!ST.bend;$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';perfUI();}
+// перфорация линий сгиба: только лазер и только с гибкой
+function perfUI(){$('cPerf').checked=!!ST.perf;$('pL').value=ST.perfL;$('pStep').value=ST.perfStep;$('pEdge').value=ST.perfEdge;const pl=ST.cut==='plasma',nb=!ST.bend;$('cPerf').disabled=pl||nb;
+  ['pL','pStep','pEdge'].forEach(k=>$(k).disabled=pl||nb||!ST.perf);
+  $('perfNote').innerHTML=pl?'Плазмой такие прорези не прорезать — только лазер':nb?'Прорези — на линиях сгиба: включите «Гнуть» в разделе «Металл»':'Сквозные прорези по линиям V и m — видны и снаружи. В DXF — слой PERF; в метраже — отдельной строкой';}
 
 /* ---------- события ---------- */
 let RT=0;const recalc=(fit,heavy)=>{clearTimeout(RT);RT=setTimeout(()=>heavy?later(()=>{compute();renderAll(fit);}):(compute(),renderAll(fit)),heavy?150:60);};
@@ -199,20 +203,23 @@ $('dRng').addEventListener('input',e=>{ST.diss=+e.target.value;$('dVal').textCon
 $('minW').addEventListener('change',e=>{ST.minW=Math.max(0,+e.target.value||0);recalc();});
 $('cSmall').addEventListener('change',e=>{ST.small=e.target.checked;renderAll();});
 $('cNums').addEventListener('change',e=>{ST.nums=e.target.checked;renderAll();});
-$('cPairs').addEventListener('change',e=>{ST.pairs=e.target.checked;recalc();});
 document.querySelectorAll('.rot [data-r]').forEach(b=>b.addEventListener('click',()=>{const ax=b.dataset.r,H=ST.dims.H;
   const RV=ST.base.V.map(([x,y,z])=>ax==='x'?[x,-z,y]:ax==='y'?[z,y,-x]:[-y,x,z]);if(isPoly()){pushUndo();ST.base=polyBase(RV,ST.base.P,ST.base.S);syncDims();setPolyDims();}else{ST.base={V:RV,F:ST.base.F};SIMP={key:'',m:null};dimsFromH(H);}later(()=>{compute();renderAll(true);});}));
 $('sT').addEventListener('change',e=>{ST.t=+e.target.value;recalc();});
 $('sMat').addEventListener('change',e=>{ST.mat=e.target.value;recalc();});
 $('sSheet').addEventListener('change',e=>{ST.sheet=e.target.value;$('ownSheet').hidden=ST.sheet!=='own';recalc();});
 ['sW','sL'].forEach(k=>$(k).addEventListener('change',e=>{ST[k==='sW'?'sw':'sl']=Math.max(100,+e.target.value||0);recalc();}));
-$('sCut').addEventListener('change',e=>{ST.cut=e.target.value;ST.minW=ST.cut==='laser'?15:30;recalc();});
+$('sCut').addEventListener('change',e=>{ST.cut=e.target.value;ST.minW=ST.cut==='laser'?15:30;perfUI();recalc();});
+$('cPerf').addEventListener('change',e=>{ST.perf=e.target.checked;perfUI();recalc();});
+// пределы: прорезь 1–10 мм, шаг не меньше прорези + 3, от края не меньше 3
+const perfFix=()=>{ST.perfL=Math.min(10,Math.max(1,ST.perfL||2));ST.perfStep=Math.max(ST.perfL+3,ST.perfStep||20);ST.perfEdge=Math.max(3,ST.perfEdge||10);perfUI();recalc();};
+[['pL','perfL'],['pStep','perfStep'],['pEdge','perfEdge']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ST[k]=+e.target.value;perfFix();}));
 $('parts').addEventListener('click',e=>{const tb=e.target.closest('tr[data-b]'),tr=e.target.closest('tr[data-p]');if(!tb&&!tr)return;
   // заготовка: подсветить целиком, камера — на неё (средняя точка и нормаль по площади)
   if(tb){const b=CUR.BL[+tb.dataset.b];ST.selB=+tb.dataset.b;ST.sel=-1;renderAll();const ps=b.parts.map(i=>CUR.R.parts[i]),A=ps.reduce((s,p)=>s+p.area,0);
     focusPart({c:V3.mul(ps.reduce((s,p)=>V3.add(s,V3.mul(p.c,p.area)),[0,0,0]),1/A),n:V3.norm(ps.reduce((s,p)=>V3.add(s,V3.mul(p.n,p.area)),[0,0,0])),L:b.L,W:b.W},meshBox(CUR.M3.V));}
   else{ST.sel=+tr.dataset.p;ST.selB=-1;renderAll();focusPart(CUR.R.parts[ST.sel],meshBox(CUR.M3.V));}
-  $('controls').querySelector('[data-g="sel"]').classList.remove('shut');});
+  $('controls').querySelector('[data-g="view"]').classList.remove('shut');});
 $('partsVw').addEventListener('click',e=>{const b=e.target.closest('[data-vw]');if(!b)return;ST.allParts=b.dataset.vw==='parts';partsTable();});
 document.querySelectorAll('.vbar [data-v]').forEach(b=>b.addEventListener('click',()=>CUR&&viewDir(b.dataset.v,meshBox(CUR.M3.V))));
 $('bFit').addEventListener('click',()=>CUR&&fitBox(meshBox(CUR.M3.V)));
@@ -263,7 +270,7 @@ $('cUseT').addEventListener('change',e=>{ST.useT=e.target.checked;recalc();});
 $('sNGap').addEventListener('change',e=>{ST.ngap=Math.max(1,+e.target.value||3);recalc();});
 $('cEngrave').addEventListener('change',e=>{ST.engrave=e.target.checked;recalc();});
 $('cTpl').addEventListener('change',e=>{ST.tpl=e.target.checked;recalc();});
-$('cBend').addEventListener('change',e=>{ST.bend=e.target.checked;ST.allParts=false;ST.selB=-1;recalc();});
+$('cBend').addEventListener('change',e=>{ST.bend=e.target.checked;ST.allParts=false;ST.selB=-1;perfUI();recalc();});
 
 /* ---------- редактор ---------- */
 const UNDO=[],REDO=[];
@@ -320,7 +327,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.15.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.16.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
@@ -344,7 +351,7 @@ $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&
       if(e.shiftKey&&ST.sp>=0&&fp>=0&&fp!==ST.sp){ST.sp2=fp;ST.sv=-1;renderAll();return;}
       ST.sv=-1;ST.sp=fp;ST.sp2=-1;ST.sel=pi;renderAll();return;}
     ST.sel=pi===ST.sel?-1:pi;ST.selB=-1;renderAll();
-    if(pi>=0){$('controls').querySelector('[data-g="sel"]').classList.remove('shut');const tr=$('parts').querySelector(`tr[data-p="${pi}"]`);if(tr)tr.scrollIntoView({block:'nearest'});}});
+    if(pi>=0){$('controls').querySelector('[data-g="view"]').classList.remove('shut');const tr=$('parts').querySelector(`tr[data-p="${pi}"]`);if(tr)tr.scrollIntoView({block:'nearest'});}});
   cv.addEventListener('pointerleave',()=>tag.hidden=true);})();
 
 // старт

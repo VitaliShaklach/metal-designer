@@ -136,7 +136,7 @@ function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const 
   const ox=ip.p[0]-uw*u/2,oy=ip.p[1]-uh*u/2,seg=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++)seg.push([ox+(i*1.5+L[k][0])*u,oy+L[k][1]*u,ox+(i*1.5+L[k+1][0])*u,oy+L[k+1][1]*u]);}));
   return seg;}
-const DXF_COL={ENGRAVE:1,BEND_V:3,BEND_M:5};   // красный, зелёный, синий
+const DXF_COL={ENGRAVE:1,BEND_V:3,BEND_M:5,PERF:6};   // красный, зелёный, синий, малиновый
 // надпись t по направлению ang (рад) с центром (cx, cy), высота знаков h → отрезки
 function textSegs(t,cx,cy,h,ang){const u=h/2,uw=t.length*1.5-.5,c=Math.cos(ang),s=Math.sin(ang),T=(x,y)=>{const X=(x-uw/2)*u,Y=(y-1)*u;return [cx+c*X-s*Y,cy+s*X+c*Y];},out=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++){const a=T(i*1.5+L[k][0],L[k][1]),b=T(i*1.5+L[k+1][0],L[k+1][1]);out.push([a[0],a[1],b[0],b[1]]);}}));return out;}
