@@ -272,11 +272,11 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
     let nx=(C[1]-A[1])/pl,ny=-(C[0]-A[0])/pl;const mx=(A[0]+C[0])/2,my=(A[1]+C[1])/2;if(inPoly([mx+nx*.6,my+ny*.6],Q)){nx=-nx;ny=-ny;}
     const tx=String(Math.round(L)),w=tx.length*1.3,c=[mx+nx*(2+Math.abs(ny)*.4),my+ny*2.4],b=[c[0]-w/2,c[1]-1.3,c[0]+w/2,c[1]+1];if(hit(b))return;box.push(b);s+=`<text class="sm" x="${r2(c[0])}" y="${r2(c[1]+.8)}" text-anchor="middle">${tx}</text>`;});
   s+=dimH(ox,oy+t.W*k,ox+t.L*k,oy+t.W*k,oy+t.W*k+8,Math.round(t.L))+dimV(ox+t.L*k,oy,ox+t.L*k,oy+t.W*k,ox+t.L*k+9,Math.round(t.W));
-  // 2. где на фигуре: снимки 3D-модели с 4 сторон — кусок оранжевым, зеркальный синим; без WebGL (тесты, старые браузеры) — схема одним видом
+  // 2. кусок в 3D с 4 сторон (снимки, только сам кусок); без WebGL (тесты, старые браузеры) — где на фигуре, схемой одним видом
   const v=stepView(x.ps),bf=projBox(v),tw=new Set(y?y.ps.map(p=>p.id):[]),kf=Math.min(84/(bf[2]-bf[0]),(mh-14)/(bf[3]-bf[1])),orng=sh=>`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`;
-  s+=`<path class="t" d="M20,${r2(my0)}H205M112,${r2(my0)}V${r2(ty0)}M20,${r2(ty0)}H205"/><text class="h2" x="23" y="${r2(my0+4.5)}">Где на фигуре</text>`;
-  const shots=SH?pieceShots(own,tw,45/((mh-9)/2)):null;
-  if(shots)shots.forEach((o,i)=>{const ch=(mh-9)/2,cx=20.5+(i%2)*45.75,cy=my0+6.5+Math.floor(i/2)*(ch+.6);s+=`<image class="shot" href="${o.url}" x="${r2(cx)}" y="${r2(cy)}" width="45" height="${r2(ch)}" preserveAspectRatio="xMidYMid slice"/><text class="lb" x="${r2(cx+1)}" y="${r2(cy+ch-1)}" style="font-size:2px;fill:#555">${o.txt}</text>`;});
+  const SHOTS=SH?pieceShots(own,tw,45/((mh-9)/2)):null;
+  s+=`<path class="t" d="M20,${r2(my0)}H205M112,${r2(my0)}V${r2(ty0)}M20,${r2(ty0)}H205"/><text class="h2" x="23" y="${r2(my0+4.5)}">${SHOTS?'Кусок — с 4 сторон':'Где на фигуре'}</text>`;
+  if(SHOTS)SHOTS.forEach((o,i)=>{const ch=(mh-9)/2,cx=20.5+(i%2)*45.75,cy=my0+6.5+Math.floor(i/2)*(ch+.6);s+=`<image class="shot" href="${o.url}" x="${r2(cx)}" y="${r2(cy)}" width="45" height="${r2(ch)}" preserveAspectRatio="xMidYMid slice"/><text class="lb" x="${r2(cx+1)}" y="${r2(cy+ch-1)}" style="font-size:2px;fill:#555">${o.txt}</text>`;});
   else s+=`<text class="sm" x="109" y="${r2(my0+4.5)}" text-anchor="end">вид ${v.txt}</text>`+facesSVG(v,kf,20+(92-(bf[2]-bf[0])*kf)/2-bf[0]*kf,my0+7+(mh-12-(bf[3]-bf[1])*kf)/2-bf[1]*kf,{color:(p,sh)=>own.has(p.id)?orng(sh):tw.has(p.id)?`rgb(${Math.round(90+50*sh)},${Math.round(130+50*sh)},${Math.round(200+40*sh)})`:grey(.72+.25*sh)});
   // 3. готовый кусок крупно: все грани (изнанка — серо-голубым), номера деталей, сгибы синим пунктиром с номером по порядку, швы красным с номером соседа
   const bx=[1e9,1e9,-1e9,-1e9];x.ps.forEach(p=>p.full.forEach(i=>{const q=prjV(v,V[i]);bx[0]=Math.min(bx[0],q[0]);bx[1]=Math.min(bx[1],q[1]);bx[2]=Math.max(bx[2],q[0]);bx[3]=Math.max(bx[3],q[1]);}));

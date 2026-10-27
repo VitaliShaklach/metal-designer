@@ -94,20 +94,31 @@ function shotScene(){const R=CUR.R,M3=CUR.M3;if(!SHOT){const r=new THREE.WebGLRe
   const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0x15191b,transparent:true,opacity:.8})));
   if(Lb.length){const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x2a6fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
   SHOT.sc.add(grp);Object.assign(SHOT,{key:M3,R,grp,mesh,base});return SHOT;}
-// own, tw — номера деталей куска и его зеркального; asp — ширина/высота клетки. → [{url, txt}] — 4 ракурса, где кусок виден лучше и не заслонён; нет WebGL → null
+// только кусок, в 3D с 4 сторон: лицо — оранжевым, изнанка — серо-голубым, край (швы к соседям) — красным, сгибы — синим пунктиром
+// own — номера деталей куска; asp — ширина/высота клетки. → [{url, txt}]; нет WebGL → null
 function pieceShots(own,tw,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScene();}catch(e){return null;}
-  const {R}=CUR,V=CUR.M3.V,col=S.mesh.geometry.attributes.color,a=col.array,sel=new THREE.Color(0xd0561f),blu=new THREE.Color(0x3a6fe0);a.set(S.base);
-  CUR.M3.F.forEach((f,fi)=>{const pi=R.partOf[fi],c=own.has(pi)?sel:tw.has(pi)?blu:null;if(c)for(let k=0;k<3;k++)a.set([c.r,c.g,c.b],fi*9+k*3);});col.needsUpdate=true;
-  // кадр: кусок по центру, вокруг — соседи (кусок примерно на треть кадра)
-  const ps=R.parts.filter(p=>own.has(p.id)),vs=[...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]),c=vs.reduce((s,q)=>V3.add(s,V3.mul(q,1/vs.length)),[0,0,0]),rad=Math.max(...vs.map(q=>V3.len(V3.sub(q,c)))),dist=rad*3/Math.tan(17.5*Math.PI/180)+60;
-  // кандидаты — вокруг основного вида; оценка: доля точек куска, которые видно (луч первым попадает в кусок) × насколько кусок повёрнут к нам
-  const v0=stepView(R.parts.filter(p=>own.has(p.id))),C=[];[-40,0,40].forEach(u=>[0,45,-45,90,-90,135,-135,180].forEach(t=>C.push(viewTilt(viewTurn(v0,t),u))));
-  const smp=ps.flatMap(p=>[p.c,...p.full.map(i=>V3.add(V3.mul(p.c,.4),V3.mul(V[i],.6)))]),A=ps.reduce((s,p)=>s+p.area,0)||1;
-  C.forEach(v=>{const eye=V3.add(c,V3.mul(v.d,dist));let vis=0;smp.forEach(q=>{const dv=V3.sub(q,eye),L=V3.len(dv);S.ray.set(new THREE.Vector3(...eye),new THREE.Vector3(...V3.mul(dv,1/L)));S.ray.far=L+2;
-      const h=S.ray.intersectObject(S.mesh,false)[0];if(h&&own.has(R.partOf[h.faceIndex]))vis++;});
-    v.sc=vis/smp.length*(.3+.7*ps.reduce((s,p)=>s+p.area*Math.abs(V3.dot(p.n,v.d)),0)/A);});
-  // 4 лучших, не ближе 40° друг к другу
-  const pick=[];C.slice().sort((x,y)=>y.sc-x.sc).forEach(v=>{if(pick.length<4&&pick.every(u=>V3.dot(u.d,v.d)<Math.cos(40*Math.PI/180)))pick.push(v);});
+  const {R}=CUR,{V,F}=CUR.M3,pos=[],L=[],Lb=[];F.forEach((f,fi)=>{if(own.has(R.partOf[fi]))f.forEach(v=>pos.push(...V[v]));});
+  R.edges.forEach(e=>{const a=e.p.filter(p=>own.has(p)).length;if(!a)return;(a===2?Lb:L).push(...V[e.a],...V[e.b]);});
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();
+  const grp=new THREE.Group(),m=(c,side)=>new THREE.MeshStandardMaterial({color:c,metalness:.1,roughness:.7,side,flatShading:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+  // изнанка — те же треугольники в обратном обходе (BackSide на общей геометрии не рисовался)
+  const rv=[];for(let i=0;i<pos.length;i+=9)rv.push(...pos.slice(i,i+3),...pos.slice(i+6,i+9),...pos.slice(i+3,i+6));const gb=new THREE.BufferGeometry();gb.setAttribute('position',new THREE.Float32BufferAttribute(rv,3));gb.computeVertexNormals();
+  grp.add(new THREE.Mesh(g,m(0xe07a35,THREE.FrontSide)),new THREE.Mesh(gb,m(0x6f7f92,THREE.FrontSide)));
+  // свет от камеры (слева сверху от неё) — кусок одинаково освещён с любой стороны
+  const hl=new THREE.DirectionalLight(0xffffff,.9);grp.add(hl,hl.target);
+  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(L,3));grp.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xd01f1f})));
+  if(Lb.length){const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(Lb,3));const ln=new THREE.LineSegments(bg,new THREE.LineDashedMaterial({color:0x1f5fd0,dashSize:4,gapSize:3}));ln.computeLineDistances();grp.add(ln);}
+  S.grp.visible=false;S.sc.add(grp);
+  // общий свет сцены приглушаем — иначе со светом от камеры пересвечено (изнанка уходила в белое)
+  const lt=S.sc.children.filter(o=>o.isLight);lt.forEach(o=>{o.userData.i=o.intensity;o.intensity*=.55;});
+  // кадр — кусок целиком; ракурсы: основной, слева и справа сверху, сзади (изнанка); почти с ребра — поворот поменьше
+  const ps=R.parts.filter(p=>own.has(p.id)),vs=[...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]),c=vs.reduce((s,q)=>V3.add(s,V3.mul(q,1/vs.length)),[0,0,0]),rad=Math.max(...vs.map(q=>V3.len(V3.sub(q,c)))); // расстояние — по месту: кусок заполняет кадр с полем ~10%
+  const v0=stepView(ps),A=ps.reduce((s,p)=>s+p.area,0)||1,sc=v=>ps.reduce((s,p)=>s+p.area*Math.abs(V3.dot(p.n,v.d)),0)/A;
+  const vw=[[0,0],[65,25],[-65,25],[180,0]].map(([t,u])=>{for(const k of [1,.6,.35]){const v=viewTilt(viewTurn(v0,t*k),u);if(sc(v)>.4||t===0)return v;}return viewTilt(viewTurn(v0,t*.35),u);});
   const W=640,H=Math.round(W/asp);S.r.setSize(W,H,false);S.cam.aspect=W/H;S.cam.updateProjectionMatrix();
-  return pick.map(v=>{const eye=V3.add(c,V3.mul(v.d,dist));S.cam.position.set(...eye);S.cam.up.set(...(Math.abs(v.d[1])>.95?[0,0,-1]:[0,1,0]));S.cam.lookAt(...c);S.r.render(S.sc,S.cam);
-    return {url:S.r.domElement.toDataURL('image/jpeg',.82),txt:v.txt};});}
+  // кадр: кусок длинной стороной вдоль клетки (камеру можно повернуть на 90°), расстояние — чтобы кусок заполнил кадр с полем ~10%
+  const tv=Math.tan(17.5*Math.PI/180),fit=v=>{let d=0;vs.forEach(q=>{const o=V3.sub(q,c),z=V3.dot(o,v.d);d=Math.max(d,Math.abs(V3.dot(o,v.r))/(tv*asp*.88)+z,Math.abs(V3.dot(o,v.up))/(tv*.88)+z);});return d;};
+  const out=vw.map((v0,i)=>{const v1={...v0,r:v0.up,up:V3.mul(v0.r,-1)},v=fit(v1)<fit(v0)?v1:v0,dist=fit(v);
+    const eye=V3.add(c,V3.mul(v.d,dist+5));hl.position.set(...V3.add(eye,V3.add(V3.mul(v.up,dist*.6),V3.mul(v.r,-dist*.4))));hl.target.position.set(...c);S.cam.position.set(...eye);S.cam.up.set(...v.up);S.cam.lookAt(...c);S.r.render(S.sc,S.cam);
+    return {url:S.r.domElement.toDataURL('image/jpeg',.85),txt:i===3?'сзади — изнанка':'вид '+v.txt};});
+  S.sc.remove(grp);S.grp.visible=true;lt.forEach(o=>{o.intensity=o.userData.i;});g.dispose();gb.dispose();lg.dispose();return out;}
