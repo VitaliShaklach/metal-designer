@@ -205,9 +205,9 @@ ok(run('BS.cells===BS.lines&&BS.wo>0&&BS.wbad===0&&BS.pv&&BS.sh'),'карты: �
 run(`BT={n:0,plane:0,ang:0,side:0,hit:0,none:0};CUR.BL.forEach(B=>{const own=new Set(B.parts);B.lines.forEach(l=>{const j=CUR.BP.J[l.id],tp=CUR.TPL.find(o=>o.a===Math.round(l.ang));if(!tp){BT.none++;return;}BT.n++;
     const T=bendTpl(RP,MP3,j,own,tp.pts),np=RP.parts[j.p].n,nq=RP.parts[j.q].n;if(Math.abs(V3.dot(np,T.e1))>.02||Math.abs(V3.dot(nq,T.w2))>.02||Math.abs(V3.dot(T.u,T.e1))>.02||Math.abs(V3.dot(T.u,T.e2))>.02)BT.plane++;
     if(Math.abs(Math.acos(Math.max(-1,Math.min(1,V3.dot(T.e1,T.w2))))*180/Math.PI-l.ang)>1)BT.ang++;const sg=l.kind==='V'?-1:1;if(V3.dot(T.b,np)*sg<=0||V3.dot(T.b,nq)*sg<=0)BT.side++;if(T.hit)BT.hit++;
-    const a2=tp.pts[1],q=T.P3[1],o=V3.sub(V3.sub(q,T.M),T.o),gp=V3.len(T.o)*Math.sin(Math.acos(V3.dot(T.e1,T.w2))/2);if(Math.abs(gp-3)>.05)BT.plane++;if(Math.abs(V3.dot(o,T.e1)-a2[0])>.01||Math.abs(V3.dot(o,T.u))>.01)BT.plane++;});});`);
+    const a2=tp.pts[1],q=T.P3[1],o=V3.sub(V3.sub(q,T.M),T.o),gp=V3.len(T.o)*Math.sin(Math.acos(V3.dot(T.e1,T.w2))/2);if(Math.abs(gp-.3)>.01)BT.plane++;if(Math.abs(V3.dot(o,T.e1)-a2[0])>.01||Math.abs(V3.dot(o,T.u))>.01)BT.plane++;});});`);
 console.log('     уголки в углах сгибов Д9: '+run('BT.n')+' (без уголка '+run('BT.none')+'), не встают в готовом элементе '+run('BT.hit'));
-ok(run('BT.n>0&&BT.plane===0&&BT.ang===0&&BT.side===0'),'гибка картинками: уголок в угле сгиба — кромки по граням, угол = углу сгиба, у V изнутри фигуры, у m снаружи, зазор до граней 3 мм');
+ok(run('BT.n>0&&BT.plane===0&&BT.ang===0&&BT.side===0'),'гибка картинками: уголок в угле сгиба — кромки по граням, угол = углу сгиба, у V изнутри фигуры, у m снаружи, прижат к граням (зазор 0,3 мм)');
 // снимки сгибов (заглушка вместо WebGL): 1–2 сгиба — на карте элемента, 3 и больше — лист «Гибка» сразу после карты (до 8 на лист); номера листов в штампе — по порядку
 run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[{x:.5,y:.5,t:'7',k:'no'},{x:.4,y:.6,t:String(l.k),k:'bend'}],hit:false,how:'tpl'});CD5=buildCards();delete globalThis.bendShot;
   BG={img:0,bad:0,sheets:0,want:0,num:0,rows:0};const U=asmUnits().L.filter((x,i,L)=>(x.tw<0||x.tw>i)&&CUR.PC.some(c=>c.id===(x.bi>=0?'b'+x.bi:x.ps[0].id)&&c.pts.length>2));

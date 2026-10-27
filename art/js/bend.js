@@ -123,9 +123,9 @@ function blankNumbers(BL,R){let n=0;const done=new Set(),of=new Map();BL.forEach
 const bendTxt=l=>l.kind+l.ang+' ('+l.k+')';   // «V144 (2)»: вид, угол между гранями, номер в порядке гибки
 /* ---------- уголок в угол сгиба — на готовом элементе (снимки «проверка уголком») ----------
    Плоскость уголка — поперёк линии сгиба, вершина — на линии, кромки — по граням p и q. Клин между гранями (меньше 180°) у V — изнутри фигуры (сторона гравировки), у m — снаружи.
-   S — контур уголка (tplShape: вершина в 0, кромка 1 — по x, кромка 2 — под углом a), null — уголка нет; gap — зазор до граней, мм (не вплотную — видно, где грань, где уголок). Место вдоль линии: середина, потом ближе к концам — пока уголок не упирается в другие грани элемента (own).
+   S — контур уголка (tplShape: вершина в 0, кромка 1 — по x, кромка 2 — под углом a), null — уголка нет; gap — зазор до граней, мм: уголок прижат, 0,3 мм — только чтобы на снимке грань и кромка не сливались; у вершины зазор даёт выемка уголка. Место вдоль линии: середина, потом ближе к концам — пока уголок не упирается в другие грани элемента (own).
    → {M, u, e1, e2, w2, b, o, at, hit, P3}: e1, w2 — кромки (от линии в грани), b — биссектриса клина, o — сдвиг уголка от линии (зазор), hit — места не нашлось (стоит посередине), P3 — контур в 3D */
-function bendTpl(R,M3,j,own,S,gap=3){const {V,F}=M3,A=V[j.A],B=V[j.B],u=V3.norm(V3.sub(B,A)),L=V3.len(V3.sub(B,A));
+function bendTpl(R,M3,j,own,S,gap=.3){const {V,F}=M3,A=V[j.A],B=V[j.B],u=V3.norm(V3.sub(B,A)),L=V3.len(V3.sub(B,A));
   const side=pi=>{const P=R.parts[pi],c=P.full.reduce((s,i)=>V3.add(s,V3.mul(V[i],1/P.full.length)),[0,0,0]),w=V3.norm(V3.cross(P.n,u));return V3.dot(V3.sub(c,A),w)<0?V3.mul(w,-1):w;};
   const e1=side(j.p),w2=side(j.q),e2=V3.norm(V3.sub(w2,V3.mul(e1,V3.dot(w2,e1)))),b=V3.norm(V3.add(e1,w2)),o=V3.mul(b,gap/Math.max(.05,Math.sin(Math.acos(Math.max(-1,Math.min(1,V3.dot(e1,w2))))/2))),tris=[];
   if(S)F.forEach((f,fi)=>{const pi=R.partOf[fi];if(own.has(pi)&&pi!==j.p&&pi!==j.q)tris.push(f.map(v=>V[v]));});

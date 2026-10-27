@@ -136,7 +136,7 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
   // линия этого сгиба — толстой (линии WebGL всегда в 1 пиксель)
   const LA=V[j.A],LB=V[j.B],ll=V3.len(V3.sub(LB,LA)),cg=new THREE.CylinderGeometry(1.1,1.1,ll,10),cy=new THREE.Mesh(cg,new THREE.MeshBasicMaterial({color:col}));P.G.push(cg);
   cy.position.set(...V3.mul(V3.add(LA,LB),.5));cy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...u));P.grp.add(cy);
-  // уголок: контур толщиной 2 мм поперёк линии, с зазором ~3 мм до граней (не вплотную), светлая сталь, тёмная кромка; линейка — полоса поперёк линии на гранях
+  // уголок: контур толщиной 2 мм поперёк линии, прижат к граням (у вершины — выемка), светлая сталь, тёмная кромка; линейка — полоса поперёк линии на гранях
   let tc=null;if(tp){// базис правый (иначе обход граней зеркальный и уголок тёмный): третья ось — u или −u
     const uz=V3.dot(V3.cross(e1,T.e2),u)>0?u:V3.mul(u,-1),sh=new THREE.Shape(tp.pts.map(([x,y])=>new THREE.Vector2(x,y))),eg=new THREE.ExtrudeGeometry(sh,{depth:2,bevelEnabled:false}),O=V3.sub(V3.add(M,T.o),uz);
     eg.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3(...e1),new THREE.Vector3(...T.e2),new THREE.Vector3(...uz)).setPosition(...O));const ed=new THREE.EdgesGeometry(eg);P.G.push(eg,ed);
@@ -155,9 +155,9 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
     const xs=vs.map(q=>V3.dot(V3.sub(q,M),v.r)),ys=vs.map(q=>V3.dot(V3.sub(q,M),v.up)),c=V3.add(M,V3.add(V3.mul(v.r,(Math.min(...xs)+Math.max(...xs))/2),V3.mul(v.up,(Math.min(...ys)+Math.max(...ys))/2))),dist=shotFit(vs,c,v,asp);
     const eye=V3.add(c,V3.mul(d,dist+5)),sc=probe.filter(q=>!eyeHit(eye,q)).length;if(!best||sc>best.sc)best={v,c,dist,sc};if(sc===probe.length)break;}
   const eye=shotCam(S,P,best.v,best.c,best.dist);S.r.render(S.sc,S.cam);const url=S.r.domElement.toDataURL('image/jpeg',.9);
-  // подписи: номера деталей (видимые и в кадре), номер сгиба у линии, уголок
+  // подписи: номера деталей (видимые, в кадре и не ребром к нам), номер сгиба у линии, уголок
   const prj=q=>{const p=new THREE.Vector3(...q).project(S.cam);return [(p.x+1)/2,(1-p.y)/2];},inF=f=>f[0]>.05&&f[0]<.95&&f[1]>.06&&f[1]<.94,labs=[];
-  ps.forEach(p=>{const q=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):p.c,f=prj(q);if(inF(f)&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
+  ps.forEach(p=>{const q=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):p.c,f=prj(q),fc=Math.abs(V3.dot(p.n,V3.norm(V3.sub(eye,q))));if(inF(f)&&fc>.2&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
   const fb=prj(V3.sub(M,V3.mul(b,6)));labs.push({x:fb[0],y:fb[1],t:String(l.k),k:'bend'});
   if(tp){const f=prj(tc);labs.push({x:f[0],y:f[1],t:tplNo(a),k:'tpl'});}
   done();return {url,labs,hit:T.hit,how:tp?'tpl':a>=TPL_MAX?'ruler':'none'};}
