@@ -283,7 +283,7 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
   s+=`<text class="sm" x="115" y="${r2(ty0-2)}">${B?'синий пунктир — сгиб (номер по порядку), ':''}красное — шов, →№ — к какой детали</text>`;
   // 4. гибка — клетками по порядку, сварка — строками с профилем шва и чем выставить угол
   let yy=ty0;if(B){s+=`<text class="h2" x="23" y="${r2(yy+4.3)}" style="font-size:3.2px">Гибка — по порядку · V — на себя, m — от себя (глядя на гравировку)${bsh?'':' · угол между гранями после гибки'}</text>`
-    +(bsh?`<text class="sm" x="202" y="${r2(yy+4.3)}" text-anchor="end">${onC?'элемент готовый, в угле — уголок':`снимки с уголком — лист «Гибка ${x.name}»`}</text>`:'');
+    +(bsh?`<text class="sm" x="202" y="${r2(yy+4.3)}" text-anchor="end">${onC?`элемент готовый, в угле — ${bsh.some(o=>o.how==='tpl')?'уголок':'дуга угла'}`:`снимки — лист «Гибка ${x.name}»`}</text>`:'');
     // строкой: номер по порядку, V/m и угол, куда гнуть, между какими деталями, длина линии, чем выставить угол (картинки гибки — потом)
     B.lines.forEach((l,i)=>{const cx=20+(bc>1?(i%2)*92.5:0),cy=yy+6+(onC?BIH+1:0)+Math.floor(i/bc)*BRH,V=l.kind==='V',col=V?'#c33':'#33c';
       if(onC)s+=bendImg(20.5+i*92.5,yy+6,91.5,BIH,l,bsh[i]);
@@ -307,14 +307,14 @@ function bendImg(x0,y0,w,h,l,o){const col=l.kind==='V'?'#c33':'#33c',X=f=>r2(x0+
       :b.k==='tpl'?`<text class="no" x="${X(b.x)}" y="${Y(b.y,.9)}" text-anchor="middle" style="font-size:2.6px;fill:#b01818;${hs};stroke-width:.5">${shEsc(b.t)}</text>`
       :`<text class="no" x="${X(b.x)}" y="${Y(b.y,1.1)}" text-anchor="middle" style="font-size:3.2px;${hs};stroke-width:.7">${b.t}</text>`).join('');}
 // c — карта элемента с c.bends: листы «Гибка» — снимок на каждый сгиб
-function cardBends(c){const {x,y,B,shots}=c.bends,g=bsGrid(B.lines.length),nm=pi=>CUR.R.parts[pi].no,pg=Math.ceil(B.lines.length/8),out=[];
-  for(let p0=0;p0<B.lines.length;p0+=8){let s=`<text class="h2" x="23" y="22.5">Гибка — проверка уголком · элемент в готовом виде${pg>1?` · ${p0/8+1} из ${pg}`:''}</text>`
-      +`<text class="sm" x="23" y="26.3">${shEsc('после каждого сгиба уголок — в угол: прилегает без щели — верно; щель к концам уголка — догнуть; не доходит до вершины — перегнут')}</text>`;
+function cardBends(c){const {x,y,B,shots}=c.bends,tq=shots.some(o=>o.how==='tpl'),g=bsGrid(B.lines.length),nm=pi=>CUR.R.parts[pi].no,pg=Math.ceil(B.lines.length/8),out=[];
+  for(let p0=0;p0<B.lines.length;p0+=8){let s=`<text class="h2" x="23" y="22.5">Гибка — проверка ${tq?'уголком':'угла'} · элемент в готовом виде${pg>1?` · ${p0/8+1} из ${pg}`:''}</text>`
+      +`<text class="sm" x="23" y="26.3">${shEsc(tq?'после каждого сгиба уголок — в угол: прилегает без щели — верно; щель к концам уголка — догнуть; не доходит до вершины — перегнут':'после каждого сгиба — угол транспортиром: дуга на снимке показывает, какой угол мерить, цифра — угол между гранями')}</text>`;
     B.lines.slice(p0,p0+8).forEach((l,i)=>{const o=shots[p0+i],cx=20.5+(i%2)*92.5,cy=29+Math.floor(i/2)*g.ch,V=l.kind==='V',col=V?'#c33':'#33c',ty=cy+g.ih+3.6;
       s+=bendImg(cx,cy,91.5,g.ih,l,o)+`<g class="bs"><circle cx="${r2(cx+2.2)}" cy="${r2(ty-1)}" r="1.7" fill="#fff" stroke="${col}" stroke-width=".25"/><text class="no" x="${r2(cx+2.2)}" y="${r2(ty-.1)}" text-anchor="middle" style="font-size:2.4px;fill:${col}">${l.k}</text>`
         +`<text class="td" x="${r2(cx+5)}" y="${r2(ty)}" style="font-size:2.7px"><tspan style="fill:${col};font-weight:bold;font-style:normal">${l.kind}${l.ang}</tspan> — ${V?'на себя':'от себя'} · между № ${nm(l.p)} и ${nm(l.q)} · линия ${Math.round(l.len)} мм</text>`
         +`<text class="sm" x="${r2(cx+5)}" y="${r2(ty+3.3)}"${o.hit?' style="fill:#c00"':''}>${shEsc(bendHow(l,o))}</text></g>`;});
-    out.push({head:'Гибка '+x.name+(y?` и ${y.name}`:''),title:'Гибка — проверка уголком',scale:'—',mass:c.mass,body:s,rows:0});}
+    out.push({head:'Гибка '+x.name+(y?` и ${y.name}`:''),title:'Гибка — проверка '+(tq?'уголком':'угла'),scale:'—',mass:c.mass,body:s,rows:0});}
   return out;}
 function buildCards(){if(!CUR||!CUR.PC||!CUR.R.parts.length)return [];const {L}=asmUnits(),C=L.filter((x,i)=>(x.tw<0||x.tw>i)&&CUR.PC.some(c=>c.id===(x.bi>=0?'b'+x.bi:x.ps[0].id)&&c.pts.length>2)).map(x=>cardPiece(x,x.tw>=0?L[x.tw]:null)).flatMap(c=>c.bends?[c,...cardBends(c)]:[c]),date=shDate();
   return C.map((b,i)=>({title:b.head,rows:b.rows,svg:wrapA4(b,{n:i+1,N:C.length,date})}));}

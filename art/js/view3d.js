@@ -127,7 +127,7 @@ function pieceShots(own,tw,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=sh
   const out=vw.map((v0,i)=>{const v1={...v0,r:v0.up,up:V3.mul(v0.r,-1)},v=shotFit(vs,c,v1,asp)<shotFit(vs,c,v0,asp)?v1:v0;shotCam(S,P,v,c,shotFit(vs,c,v,asp));S.r.render(S.sc,S.cam);
     return {url:S.r.domElement.toDataURL('image/jpeg',.9),txt:i===3?'сзади — изнанка':'вид '+v.txt};});
   done();return out;}
-/* сгиб l элемента own — крупно, элемент уже согнут; в угол вставлен уголок «У141°» (≥178° — приложена линейка, уголка нет — ничего).
+/* сгиб l элемента own — крупно, элемент уже согнут; в угол вставлен уголок «У141°» (≥178° — приложена линейка, уголков нет — дуга с цифрой угла).
    Смотрим вдоль линии сгиба под ≈35° (в сторону и со стороны клина — видны и угол, и грани), «верх» — по биссектрисе угла; кадр — уголок и грани рядом (до ~10 см от него).
    → {url, labs: [{x, y, t, k}] — подписи в долях кадра (k: no — номер детали, bend — номер сгиба, tpl — уголок), hit — уголок не встаёт}; нет WebGL → null */
 function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;try{S=shotScene();}catch(e){return null;}
@@ -146,6 +146,10 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
     bx.applyMatrix4(m4);P.G.push(bx);P.grp.add(new THREE.Mesh(bx,new THREE.MeshStandardMaterial({color:0xe8cf6a,metalness:.1,roughness:.6})));tc=V3.add(M,V3.mul(b,2));}
   // кадр: уголок, грани p и q от линии до ~R0, линия сгиба, вершины элемента рядом
   const ext=(pi,w)=>Math.max(10,...R.parts[pi].full.map(i=>V3.dot(V3.sub(V[i],M),w))),Ep=Math.min(ext(j.p,e1),R0),Eq=Math.min(ext(j.q,w2),R0),near=q=>V3.len(V3.sub(q,M))<R0;
+  // уголков нет (галочка выключена) — дуга угла в угле, цифра — подписью; выставлять транспортиром
+  let arc=null;if(!tp&&a<TPL_MAX){const r=Math.max(8,Math.min(30,.7*Math.min(Ep,Eq))),th=Math.acos(Math.max(-1,Math.min(1,V3.dot(e1,w2)))),at=t=>V3.add(V3.add(M,V3.mul(b,.6)),V3.add(V3.mul(e1,r*Math.cos(t)),V3.mul(T.e2,r*Math.sin(t))));
+    const tg=new THREE.TubeGeometry(new THREE.CatmullRomCurve3([...Array(25)].map((_,i)=>new THREE.Vector3(...at(th*i/24)))),48,.7,6,false);P.G.push(tg);P.grp.add(new THREE.Mesh(tg,new THREE.MeshBasicMaterial({color:0x1a1a1a})));
+    arc=at(th/2);tc=V3.add(M,V3.mul(V3.sub(arc,M),1.45));}
   const ps=R.parts.filter(p=>own.has(p.id)),vs=T.P3.concat([V3.add(M,V3.mul(e1,Ep)),V3.add(M,V3.mul(w2,Eq)),V3.add(M,V3.mul(u,Math.max(-R0,-ll*T.at))),V3.add(M,V3.mul(u,Math.min(R0,ll*(1-T.at))))],
     [...new Set(ps.flatMap(p=>p.full))].map(i=>V[i]).filter(near));
   // откуда смотреть: с обоих концов линии, в обе стороны — где уголок и обе грани у вершины не заслонены
@@ -159,5 +163,5 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
   const prj=q=>{const p=new THREE.Vector3(...q).project(S.cam);return [(p.x+1)/2,(1-p.y)/2];},inF=f=>f[0]>.05&&f[0]<.95&&f[1]>.06&&f[1]<.94,labs=[];
   ps.forEach(p=>{const q=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):p.c,f=prj(q),fc=Math.abs(V3.dot(p.n,V3.norm(V3.sub(eye,q))));if(inF(f)&&fc>.2&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
   const fb=prj(V3.sub(M,V3.mul(b,6)));labs.push({x:fb[0],y:fb[1],t:String(l.k),k:'bend'});
-  if(tp){const f=prj(tc);labs.push({x:f[0],y:f[1],t:tplNo(a),k:'tpl'});}
+  if(tp||arc){const f=prj(tc);labs.push({x:f[0],y:f[1],t:tp?tplNo(a):a+'°',k:'tpl'});}
   done();return {url,labs,hit:T.hit,how:tp?'tpl':a>=TPL_MAX?'ruler':'none'};}

@@ -217,6 +217,9 @@ run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[{x:.
   if(k!==CD5.length)BG.bad++;`);
 console.log('     снимков сгибов '+run('BG.img')+', листов «Гибка» '+run('BG.sheets')+' из '+run('BG.want')+', всего листов '+run('CD5.length'));
 ok(run('BG.img===BS.lines&&BG.bad===0&&BG.sheets===BG.want&&BG.want>0&&BG.num===0&&BG.rows===0&&!CD4.some(c=>c.svg.includes(\'class="bsh"\'))'),'гибка картинками: снимок на каждый сгиб — 1–2 на карте, больше — лист «Гибка» после карты; листы в штампе по порядку; без WebGL — только строки');
+// уголков нет — на снимке дуга угла: листы «Гибка — проверка угла», слова «уголком» нет
+run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[],hit:false,how:'none'});CD6=buildCards().filter(c=>c.svg.includes('class="bsh"'));delete globalThis.bendShot;`);
+ok(run("CD6.length>0&&CD6.filter(c=>c.title.startsWith('Гибка ')).every(c=>c.svg.includes('Гибка — проверка угла')&&!c.svg.includes('уголком'))&&CD6.filter(c=>!c.title.startsWith('Гибка ')).every(c=>c.svg.includes('дуга угла'))"),'гибка картинками без уголков: лист «Гибка — проверка угла», на карте — «дуга угла»');
 // гравировка заготовок (как в DXF): подписи сгибов не ближе 1 мм к номерам деталей и друг к другу; всё влезло; номер мельчит не меньше 5 мм; на карте — та же гравировка
 run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1],L=vx*vx+vy*vy||1e-9,t=Math.max(0,Math.min(1,((p[0]-s[0])*vx+(p[1]-s[1])*vy)/L));return Math.hypot(s[0]+vx*t-p[0],s[1]+vy*t-p[1]);};
     const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]),A=[a[0],a[1]],B=[a[2],a[3]],C=[b[0],b[1]],D=[b[2],b[3]];if(cr(A,B,C)*cr(A,B,D)<0&&cr(C,D,A)*cr(C,D,B)<0)return 0;return Math.min(d(A,b),d(B,b),d(C,a),d(D,a));};
