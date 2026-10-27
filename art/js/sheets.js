@@ -78,9 +78,13 @@ function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=proj
 /* ---------- 2. порядок сборки ---------- */
 // вид на детали шага: с их стороны (средняя нормаль по площади + немного изометрии), откуда смотрим — словами
 function stepView(ps){let n=[0,0,0];ps.forEach(p=>{n=V3.add(n,V3.mul(p.n,p.area));});const d=V3.norm(V3.add(V3.norm(n),V3.mul(VIEWS.iso.d,.5)));
-  const up0=Math.abs(d[1])>.9?[0,0,d[1]>0?-1:1]:[0,1,0],r=V3.norm(V3.cross(up0,d)),w=[];
-  if(d[2]>.35)w.push('спереди');if(d[0]>.35)w.push('справа');if(d[0]<-.35)w.push('слева');if(d[1]>.35)w.push('сверху');if(d[1]<-.35)w.push('снизу');
-  return {r,up:V3.cross(d,r),d,txt:w.join(', ')||'сзади'};}
+  const up0=Math.abs(d[1])>.9?[0,0,d[1]>0?-1:1]:[0,1,0],r=V3.norm(V3.cross(up0,d));
+  return {r,up:V3.cross(d,r),d,txt:viewTxt(d)};}
+// откуда смотрим (d — от фигуры к глазу)
+function viewTxt(d){const w=[];if(d[2]>.35)w.push('спереди');if(d[0]>.35)w.push('справа');if(d[0]<-.35)w.push('слева');if(d[1]>.35)w.push('сверху');if(d[1]<-.35)w.push('снизу');return w.join(', ')||'сзади';}
+// тот же вид, повёрнутый вокруг вертикали вида (turn) или наклонённый — взгляд выше (tilt), a — градусы
+function viewTurn(v,a){const c=Math.cos(a*Math.PI/180),s=Math.sin(a*Math.PI/180),d=V3.norm(V3.add(V3.mul(v.d,c),V3.mul(v.r,s)));return {d,up:v.up,r:V3.norm(V3.sub(V3.mul(v.r,c),V3.mul(v.d,s))),txt:viewTxt(d)};}
+function viewTilt(v,a){const c=Math.cos(a*Math.PI/180),s=Math.sin(a*Math.PI/180),d=V3.norm(V3.add(V3.mul(v.d,c),V3.mul(v.up,s)));return {d,r:v.r,up:V3.norm(V3.sub(V3.mul(v.up,c),V3.mul(v.d,s))),txt:viewTxt(d)};}
 // рамка шага в проекции: детали шага + 30% с каждой стороны, не меньше MINW мм по месту, не больше всей фигуры
 function stepFrame(view,ps,MINW=150){const b=[1e9,1e9,-1e9,-1e9],add=(B,q)=>{B[0]=Math.min(B[0],q[0]);B[1]=Math.min(B[1],q[1]);B[2]=Math.max(B[2],q[0]);B[3]=Math.max(B[3],q[1]);};
   ps.forEach(p=>p.full.forEach(i=>add(b,prjV(view,CUR.M3.V[i]))));const all=[1e9,1e9,-1e9,-1e9];CUR.M3.V.forEach(p=>add(all,prjV(view,p)));
@@ -214,6 +218,19 @@ function weldGlyph(x,y,a,s,tpl,out){const r=a*Math.PI/180,c=Math.cos(r),sn=(out?
   return `<g class="wg"${out?' data-out="1"':''}>`+(tpl?`<polygon class="tw" points="${r2(vx+o[0]+q*1.15)},${r2(y+o[1])} ${r2(vx+o[0])},${r2(y+o[1])} ${r2(vx+o[0]+q*1.15*c)},${r2(y+o[1]-q*1.15*sn)}"/>`
     :`<path class="ag" d="M${r2(vx+q)},${r2(y)}A${r2(q)},${r2(q)} 0 0 ${out?1:0} ${r2(vx+q*c)},${r2(y-q*sn)}"/>`)
     +`<path class="pw" style="stroke:#e08a3c" d="M${r2(vx+s)},${r2(y)}L${r2(vx)},${r2(y)}"/><path class="pw" style="stroke:#9a9a9a" d="M${r2(vx)},${r2(y)}L${r2(vx+s*c)},${r2(y-s*sn)}"/><circle cx="${r2(vx)}" cy="${r2(y)}" r=".45" fill="#d01f1f"/></g>`;}
+// ещё 3 вида куска: слева и справа сверху (видно, куда загнуто) и сзади — изнанкой; плохой (почти с ребра) — заменяем поворотом поменьше
+function pieceViews(v0,ps){const sc=v=>ps.reduce((a,p)=>a+p.area*Math.abs(V3.dot(p.n,v.d)),0),m=sc(v0)||1;
+  return [[50,25],[-50,25],[180,0]].map(([t,u])=>{for(const k of [1,.6,.3]){const v=viewTilt(viewTurn(v0,t*k),u);if(sc(v)>.3*m)return v;}return viewTilt(viewTurn(v0,t*.3),u);});}
+// кусок с одной стороны, без подписей: грани (лицо — оранжевым, изнанка — серо-голубым), сгибы — синим пунктиром с номером, швы — красным. В рамку x,y,w,h
+function pieceMini(v,ps,W,B,x,y,w,h){const V=CUR.M3.V,bx=[1e9,1e9,-1e9,-1e9];ps.forEach(p=>p.full.forEach(i=>{const q=prjV(v,V[i]);bx[0]=Math.min(bx[0],q[0]);bx[1]=Math.min(bx[1],q[1]);bx[2]=Math.max(bx[2],q[0]);bx[3]=Math.max(bx[3],q[1]);}));
+  const k=Math.min(w/(bx[2]-bx[0]||1),h/(bx[3]-bx[1]||1)),px=x+(w-(bx[2]-bx[0])*k)/2-bx[0]*k,py=y+(h-(bx[3]-bx[1])*k)/2-bx[1]*k,Pp=i=>{const q=prjV(v,V[i]);return [px+q[0]*k,py+q[1]*k];},P=q=>r2(q[0])+','+r2(q[1]);
+  const Lt=V3.norm(V3.add(V3.add(v.d,V3.mul(v.up,.7)),V3.mul(v.r,-.4)));let s='<g class="pv">';
+  ps.slice().sort((a,b)=>V3.dot(a.c,v.d)-V3.dot(b.c,v.d)).forEach(p=>{const sh=.5+.45*Math.abs(V3.dot(p.n,Lt));
+    s+=`<polygon class="fc" fill="${V3.dot(p.n,v.d)>0?`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`:`rgb(${Math.round(170+60*sh)},${Math.round(178+55*sh)},${Math.round(190+50*sh)})`}" points="${p.full.map(i=>P(Pp(i))).join(' ')}"/>`;});
+  W.forEach(o=>{s+=`<path class="seam" style="stroke-width:.45" d="${o.ed.map(([a,b])=>'M'+P(Pp(a))+'L'+P(Pp(b))).join('')}"/>`;});
+  if(B)B.lines.forEach(l=>{const j=CUR.BP.J[l.id],A=Pp(j.A),C=Pp(j.B),m=[(A[0]+C[0])/2,(A[1]+C[1])/2];
+    s+=`<path class="bl3" d="M${P(A)}L${P(C)}"/><circle cx="${r2(m[0])}" cy="${r2(m[1])}" r="1.35" fill="#fff" stroke="#1f5fd0" stroke-width=".2"/><text class="no" x="${r2(m[0])}" y="${r2(m[1]+.7)}" text-anchor="middle" style="font-size:1.9px;fill:#1f5fd0">${l.k}</text>`;});
+  return s+'</g>';}
 // клетка сгиба: «до» — лист плашмя, гравировка сверху, стрелка — куда гнуть (V — на себя, вверх; m — от себя, вниз); «после» — профиль на угол l.ang,
 // уголок — во внутреннем углу (у V — со стороны гравировки, у m — с обратной). Клетка BCW × BCH мм, x,y — левый верхний угол
 const BCW=46.25,BCH=25.5;
@@ -248,7 +265,8 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
   let s=`<text class="td" x="23" y="22.5">${shEsc([B?`детали № ${x.ps.map(p=>p.no).join(', ')}`:back?'подложка глаза':'',`${MATN[ST.mat]||ST.mat} ${ST.t} мм`,`габарит реза ${Math.round(t.L)} × ${Math.round(t.W)} мм`,`масса ${fmt(mass,2)} кг/шт`,`рез ${Math.round(perim(o.pts))} мм`,`кол. ${y?2:1}`].filter(Boolean).join(' · '))}</text>`;
   if(y)s+=`<text class="sm" x="23" y="26.5">${shEsc(`${y.name} — зеркальная копия: развёртка зеркально (в DXF и раскрое уже так), гнуть и варить так же — на другой стороне фигуры`)}</text>`;
   // 1. развёртка, как режут: контур, линии сгиба с подписью, номера деталей, гравировка, длины сторон и габарит
-  const fh=my0-2-fy0,n=pickScale([t.L,t.W],[160,fh-20]),k=1/n,ox=20+(185-t.L*k)/2,oy=fy0+7+(fh-17-t.W*k)/2,T=q=>[ox+q[0]*k,oy+(t.W-q[1])*k],Q=P.map(T),box=[],hit=b=>box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]);   // box — занятые места
+  // у заготовки рядом с развёрткой — ещё 3 вида готового куска: столбиком справа или рядом снизу — где развёртка выйдет крупнее
+  const fh=my0-2-fy0,sC=pickScale([t.L,t.W],[105,fh-20]),sR=pickScale([t.L,t.W],[160,fh-56]),col=!!B&&sC<=sR,row=!!B&&!col,n=col?sC:row?sR:pickScale([t.L,t.W],[160,fh-20]),k=1/n,ox=20+((col?133:185)-t.L*k)/2,oy=fy0+7+((row?fh-36:fh)-17-t.W*k)/2,T=q=>[ox+q[0]*k,oy+(t.W-q[1])*k],Q=P.map(T),box=[],hit=b=>box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]);   // box — занятые места
   s+=`<text class="h2" x="23" y="${r2(fy0+3.5)}">Развёртка — как режут</text><text class="sm" x="202" y="${r2(fy0+3.5)}" text-anchor="end">вид со стороны гравировки (изнутри фигуры) · М ${scaleTxt(n)}</text><polygon class="l" points="${Q.map(q=>r2(q[0])+','+r2(q[1])).join(' ')}"/>`;
   const segP=(S,c)=>S.length?`<path class="${c}" d="${S.map(z=>{const A=T([z[0],z[1]]),C=T([z[2],z[3]]);return `M${r2(A[0])},${r2(A[1])}L${r2(C[0])},${r2(C[1])}`;}).join('')}"/>`:'';
   // гравировка — та же, что в DXF и раскрое (itemMarks): номера деталей — красным, подписи сгибов — бледно (читать их удобнее у кружков за контуром)
@@ -268,6 +286,10 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
     let nx=(C[1]-A[1])/pl,ny=-(C[0]-A[0])/pl;const mx=(A[0]+C[0])/2,my=(A[1]+C[1])/2;if(inPoly([mx+nx*.6,my+ny*.6],Q)){nx=-nx;ny=-ny;}
     const tx=String(Math.round(L)),w=tx.length*1.3,c=[mx+nx*(2+Math.abs(ny)*.4),my+ny*2.4],b=[c[0]-w/2,c[1]-1.3,c[0]+w/2,c[1]+1];if(hit(b))return;box.push(b);s+=`<text class="sm" x="${r2(c[0])}" y="${r2(c[1]+.8)}" text-anchor="middle">${tx}</text>`;});
   s+=dimH(ox,oy+t.W*k,ox+t.L*k,oy+t.W*k,oy+t.W*k+8,Math.round(t.L))+dimV(ox+t.L*k,oy,ox+t.L*k,oy+t.W*k,ox+t.L*k+9,Math.round(t.W));
+  if(B){const v0=stepView(x.ps),vs=pieceViews(v0,x.ps),hd='Готовый кусок — ещё 3 вида';
+    if(col)s+=`<path class="t" d="M153,${r2(fy0+5.5)}V${r2(my0-2)}"/><text class="h2" x="156" y="${r2(fy0+9.5)}" style="font-size:3.2px">${hd}</text>`;
+    else s+=`<path class="t" style="stroke-width:.1" d="M20,${r2(my0-38)}H205"/><text class="h2" x="23" y="${r2(my0-33.5)}" style="font-size:3.2px">${hd}</text>`;
+    vs.forEach((w,i)=>{const [cx,cy,cw,ch]=col?[154,fy0+12+i*(fh-12)/3,51,(fh-12)/3]:[20+i*185/3,my0-31,185/3,29];s+=`<text class="sm" x="${r2(cx+2)}" y="${r2(cy+2.6)}">вид ${w.txt}</text>`+pieceMini(w,x.ps,W,B,cx+2,cy+4,cw-4,ch-5);});}
   // 2. где на фигуре: вся фигура со стороны куска, кусок — оранжевым, зеркальный — синим
   const v=stepView(x.ps),bf=projBox(v),tw=new Set(y?y.ps.map(p=>p.id):[]),kf=Math.min(84/(bf[2]-bf[0]),(mh-14)/(bf[3]-bf[1])),orng=sh=>`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`;
   s+=`<path class="t" d="M20,${r2(my0)}H205M112,${r2(my0)}V${r2(ty0)}M20,${r2(ty0)}H205"/><text class="h2" x="23" y="${r2(my0+4.5)}">Где на фигуре</text><text class="sm" x="109" y="${r2(my0+4.5)}" text-anchor="end">вид ${v.txt}</text>`;
