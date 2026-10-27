@@ -195,9 +195,11 @@ run(`ST.tpl=false;CUR.TPL=null;CD2=buildCards();`);ok(run("CD2.every(c=>CNT(c.sv
 run(`ST.tpl=true;CUR.TPL=weldTemplates(RP,2,15,(p,q)=>CUR.bentKey.has(bendKey(p,q)),CUR.BL.flatMap(b=>b.lines.map(l=>l.ang)));CD4=buildCards();BS={cells:0,lines:0,tw:0,bad:0};
   CD4.filter(c=>c.svg.includes('Карта заготовки')).forEach(c=>{const gs=c.svg.split('<g class="bc"').slice(1);BS.cells+=gs.length;gs.map(g=>g.slice(0,g.indexOf('</g>'))).forEach(g=>{const m=g.match(/<polygon class="tw" points="([^"]+)"/);if(!m)return;BS.tw++;
     const cy=m[1].split(' ').map(p=>+p.split(',')[1]).reduce((a,b)=>a+b,0)/3,vy=+g.match(/cy="([0-9.]+)" r=".5"/)[1];if(g.includes('data-kind="V"')?cy>=vy:cy<=vy)BS.bad++;});});
+  BS.wo=0;BS.wbad=0;CD4.forEach(c=>c.svg.split('<g class="wg"').slice(1).map(g=>g.slice(0,g.indexOf('</g>'))).forEach(g=>{const m=g.match(/<polygon class="tw" points="([^"]+)"/);if(!m)return;const out=g.startsWith(' data-out');if(out)BS.wo++;
+    const cy=m[1].split(' ').map(p=>+p.split(',')[1]).reduce((a,b)=>a+b,0)/3,vy=+g.match(/cy="([0-9.]+)" r=".45"/)[1];if(out?cy<=vy:cy>=vy)BS.wbad++;}));
   BS.lines=asmUnits().L.filter((x,i,L)=>(x.tw<0||x.tw>i)&&x.bi>=0).reduce((a,x)=>a+CUR.BL[x.bi].lines.length,0);`);
-console.log('     гибка клетками: '+run('BS.cells')+' клеток (сгибов на картах '+run('BS.lines')+'), уголков в них '+run('BS.tw')+', не с той стороны '+run('BS.bad'));
-ok(run('BS.cells===BS.lines&&BS.tw>0&&BS.bad===0'),'карты: гибка — клетка «до/после» на каждый сгиб; уголок во внутреннем углу — у V со стороны гравировки, у m — с обратной');
+console.log('     гибка клетками: '+run('BS.cells')+' клеток (сгибов на картах '+run('BS.lines')+'), уголков в них '+run('BS.tw')+', не с той стороны '+run('BS.bad')+'; швов «внутрь» с уголком '+run('BS.wo')+', уголок сварки не с той стороны '+run('BS.wbad'));
+ok(run('BS.cells===BS.lines&&BS.tw>0&&BS.bad===0&&BS.wo>0&&BS.wbad===0'),'карты: гибка — клетка «до/после» на каждый сгиб; уголок во внутреннем углу — у V со стороны гравировки, у m — с обратной; в профиле шва уголок сверху (изнутри), у шва «внутрь» — снизу (снаружи)');
 // гравировка заготовок (как в DXF): подписи сгибов не ближе 1 мм к номерам деталей и друг к другу; всё влезло; номер мельчит не меньше 5 мм; на карте — та же гравировка
 run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1],L=vx*vx+vy*vy||1e-9,t=Math.max(0,Math.min(1,((p[0]-s[0])*vx+(p[1]-s[1])*vy)/L));return Math.hypot(s[0]+vx*t-p[0],s[1]+vy*t-p[1]);};
     const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]),A=[a[0],a[1]],B=[a[2],a[3]],C=[b[0],b[1]],D=[b[2],b[3]];if(cr(A,B,C)*cr(A,B,D)<0&&cr(C,D,A)*cr(C,D,B)<0)return 0;return Math.min(d(A,b),d(B,b),d(C,a),d(D,a));};

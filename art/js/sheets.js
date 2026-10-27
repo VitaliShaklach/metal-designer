@@ -207,10 +207,12 @@ function wrapA4(b,o){return `<svg xmlns="http://www.w3.org/2000/svg" class="shs"
 function pieceWelds(own){const R=CUR.R,V=CUR.M3.V,m=new Map();R.edges.forEach(e=>{if(e.p.length!==2)return;const i=own.has(e.p[0]);if(i===own.has(e.p[1]))return;const nb=i?e.p[1]:e.p[0],l=V3.len(V3.sub(V[e.a],V[e.b]));
     if(!m.has(nb))m.set(nb,{nb,len:0,dih:e.dih,ml:0,ed:[]});const w=m.get(nb);w.len+=l;w.ed.push([e.a,e.b]);if(l>w.ml){w.ml=l;w.dih=e.dih;}});
   return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);}
-// профиль шва: свой лист (оранжевый) и соседний (серый) под углом a, шов — красная точка; в угол вставлен уголок, нет его — дуга (выставить транспортиром). x — левый край, y — низ
-function weldGlyph(x,y,a,s,tpl){const r=a*Math.PI/180,c=Math.cos(r),sn=Math.sin(r),q=s*.5,vx=x+s*Math.max(0,-c),bi=[(1+c)/2,-sn/2],bl=Math.hypot(bi[0],bi[1])||1,o=[bi[0]/bl*.35,bi[1]/bl*.35];
-  return `<g class="wg">`+(tpl?`<polygon class="tw" points="${r2(vx+o[0]+q*1.15)},${r2(y+o[1])} ${r2(vx+o[0])},${r2(y+o[1])} ${r2(vx+o[0]+q*1.15*c)},${r2(y+o[1]-q*1.15*sn)}"/>`
-    :`<path class="ag" d="M${r2(vx+q)},${r2(y)}A${r2(q)},${r2(q)} 0 0 0 ${r2(vx+q*c)},${r2(y-q*sn)}"/>`)
+// профиль шва: свой лист (оранжевый) и соседний (серый) под углом a, шов — красная точка; в угол вставлен уголок, нет его — дуга (выставить транспортиром).
+// Внутри фигуры — сверху, как гравировка в клетках гибки: обычный шов — сосед вверх, уголок сверху (изнутри); out — шов «внутрь»: сосед вниз, уголок снизу (снаружи). x — левый край, y — низ
+function weldGlyph(x,y,a,s,tpl,out){const r=a*Math.PI/180,c=Math.cos(r),sn=(out?-1:1)*Math.sin(r),q=s*.5,vx=x+s*Math.max(0,-c),bi=[(1+c)/2,-sn/2],bl=Math.hypot(bi[0],bi[1])||1,o=[bi[0]/bl*.35,bi[1]/bl*.35];
+  if(out)y-=s;
+  return `<g class="wg"${out?' data-out="1"':''}>`+(tpl?`<polygon class="tw" points="${r2(vx+o[0]+q*1.15)},${r2(y+o[1])} ${r2(vx+o[0])},${r2(y+o[1])} ${r2(vx+o[0]+q*1.15*c)},${r2(y+o[1]-q*1.15*sn)}"/>`
+    :`<path class="ag" d="M${r2(vx+q)},${r2(y)}A${r2(q)},${r2(q)} 0 0 ${out?1:0} ${r2(vx+q*c)},${r2(y-q*sn)}"/>`)
     +`<path class="pw" style="stroke:#e08a3c" d="M${r2(vx+s)},${r2(y)}L${r2(vx)},${r2(y)}"/><path class="pw" style="stroke:#9a9a9a" d="M${r2(vx)},${r2(y)}L${r2(vx+s*c)},${r2(y-s*sn)}"/><circle cx="${r2(vx)}" cy="${r2(y)}" r=".45" fill="#d01f1f"/></g>`;}
 // клетка сгиба: «до» — лист плашмя, гравировка сверху, стрелка — куда гнуть (V — на себя, вверх; m — от себя, вниз); «после» — профиль на угол l.ang,
 // уголок — во внутреннем углу (у V — со стороны гравировки, у m — с обратной). Клетка BCW × BCH мм, x,y — левый верхний угол
@@ -238,7 +240,7 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
   // строки: гибка по порядку, потом сварка по соседям; у каждой — чертёж угла
   const rows=[],nbr=B?Math.ceil(B.lines.length/4):0,hb=B?6+nbr*BCH:0;
   rows.push({h:back?'Сварка — подложка за прорезью глаза: приварить изнутри по краю прорези':`Сварка — к чему варить · угол между листами по шву${y?` · ${y.name} — к зеркальным (с «.1»), детали посередине — те же`:''}`});
-  W.forEach(w=>rows.push({w:1,t:`к № ${nm(w.nb)} · шов ${Math.round(w.len)} мм`,a:Math.round(w.dih>180.5?360-w.dih:w.dih),at:angT(w.dih),tp:tplSay(w.dih)}));
+  W.forEach(w=>rows.push({w:1,o:w.dih>180.5,t:`к № ${nm(w.nb)} · шов ${Math.round(w.len)} мм`,a:Math.round(w.dih>180.5?360-w.dih:w.dih),at:angT(w.dih),tp:tplSay(w.dih)}));
   // строки по ширине листа; соседей много — швы в две колонки
   const wc=W.length>8||hb+(W.length+1)*3.8>124?2:1,ln=[];rows.forEach(r=>{const l=ln[ln.length-1];if(r.w&&l&&l[0].w&&l.length<wc)l.push(r);else ln.push([r]);});
   const maxT=Math.max(30,124-hb),rh=Math.max(3.8,Math.min(B?4.8:5.4,maxT/ln.length)),nl=Math.min(ln.length,Math.floor(maxT/rh)),ty0=274-hb-nl*rh,fy0=y?31:28,mh=pickScale([t.L,t.W],[160,ty0-fy0-78])>pickScale([t.L,t.W],[160,ty0-fy0-68])?56:66,my0=ty0-mh;
@@ -290,7 +292,7 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
     B.lines.forEach((l,i)=>{const cx=20+(i%4)*BCW,cy=yy+6+Math.floor(i/4)*BCH;s+=bendCell(cx,cy,l,nm)+(i%4?`<path class="t" style="stroke-width:.08" d="M${r2(cx)},${r2(cy+1)}V${r2(cy+BCH-1)}"/>`:'');});
     yy+=hb;s+=`<path class="t" style="stroke-width:.08" d="M20,${r2(yy)}H205"/>`;}ln.slice(0,nl).forEach((l,i)=>{const by=r2(yy+rh*.78),cw=l[0].w?185/wc:185,X=cw<100?[33,45,64]:[106,122,144];l.forEach((r,j)=>{const x0=20+j*cw;
       if(r.h)s+=`<text class="h2" x="23" y="${by}" style="font-size:3.2px">${shEsc(r.h)}</text>`;
-      else s+=`<text class="td" x="${r2(x0+3)}" y="${by}">${shEsc(r.t)}</text>`+weldGlyph(x0+X[0],yy+rh*.85,r.a,rh*.72,r.tp.startsWith('уголок'))+`<text class="no" x="${r2(x0+X[1])}" y="${by}" style="font-size:3.1px">${shEsc(r.at)}</text><text class="td" x="${r2(x0+X[2])}" y="${by}">${shEsc(r.tp)}</text>`;});
+      else s+=`<text class="td" x="${r2(x0+3)}" y="${by}">${shEsc(r.t)}</text>`+weldGlyph(x0+X[0],yy+rh*.85,r.a,rh*.72,r.tp.startsWith('уголок'),r.o)+`<text class="no" x="${r2(x0+X[1])}" y="${by}" style="font-size:3.1px">${shEsc(r.at)}</text><text class="td" x="${r2(x0+X[2])}" y="${by}">${shEsc(r.tp)}</text>`;});
     if(l[0].w&&wc>1)s+=`<path class="t" style="stroke-width:.08" d="M112.5,${r2(yy)}V${r2(yy+rh)}"/>`;yy+=rh;if(i<nl-1)s+=`<path class="t" style="stroke-width:.08" d="M20,${r2(yy)}H205"/>`;});
   if(nl<ln.length)s+=`<text class="sm" x="202" y="${r2(ty0-0.8)}" text-anchor="end">не влезло строк: ${ln.slice(nl).flat().length} — см. спецификацию</text>`;
   return {head:x.name+(y?` и ${y.name}`:''),title:B?'Карта заготовки со сгибами':'Карта детали',scale:scaleTxt(n),mass:fmt(mass*(y?2:1),2)+' кг',body:s,rows:rows.filter(r=>!r.h).length+(B?B.lines.length:0)};}
