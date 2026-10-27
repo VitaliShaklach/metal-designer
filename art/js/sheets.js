@@ -108,25 +108,34 @@ function asmSteps(){const {L:U,of}=asmUnits(),R=CUR.R,n=U.length,placed=new Set(
     if(j>=0&&!pu.has(j)){const w2=weldTo(j,new Set([...placed,...own[i]]));if(w2.length||!w.length){st.u.push(U[j]);st.ix.push(j);st.w.push(w2);pu.add(j);}}
     st.ix.forEach(k=>own[k].forEach(p=>placed.add(p)));st.done=new Set(placed);steps.push(st);}
   return {steps,of};}
+// снимок шага в клетке x0, y0, w × h; номера — с белой обводкой, наезжают — сдвигаем рядом или не пишем
+function asmImg(x0,y0,w,h,o){const box=[],fs=2.8,hs='paint-order:stroke;stroke:#fff;stroke-linejoin:round;stroke-width:.7';let s=`<image class="ash" href="${o.url}" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}" preserveAspectRatio="none"/>`;
+  o.labs.slice().sort((a,b)=>(a.k==='new'?0:1)-(b.k==='new'?0:1)).forEach(l=>{const hw=l.t.length*fs*.28+.3,hh=fs*.6;
+    for(const [dx,dy] of [[0,0],[0,-1],[0,1],[-1,0],[1,0],[0,-2],[0,2]]){const x=x0+l.x*w+dx*hw*2,y=y0+l.y*h+dy*hh*1.6,b=[x-hw,y-hh,x+hw,y+hh];
+      if(b[0]<x0||b[2]>x0+w||b[1]<y0||b[3]>y0+h||box.some(c=>b[0]<c[2]&&b[2]>c[0]&&b[1]<c[3]&&b[3]>c[1]))continue;box.push(b);
+      s+=`<text class="no" x="${r2(x)}" y="${r2(y+fs*.36)}" text-anchor="middle" style="font-size:${fs}px;${hs}${l.k==='new'?';fill:#8a3a0a':''}">${shEsc(l.t)}</text>`;break;}});
+  return s+`<rect class="t" style="stroke-width:.12" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}"/>`;}
 // перенос строки по словам
 const wrapTxt=(t,n)=>{const out=[];let l='';t.split(' ').forEach(w=>{if((l+' '+w).trim().length>n&&l){out.push(l);l=w;}else l=(l+' '+w).trim();});if(l)out.push(l);return out;};
 function sheetsAssembly(){const {steps}=asmSteps(),R=CUR.R,V=CUR.M3.V,cw=130,ch=124,out=[];
   const say=(x,w)=>{const bl=x.bi>=0;if(x.ps[0].back)return `${x.name}: подложка за прорезью глаза — приварить изнутри по краю прорези`;return `${x.name}${bl?` (дет. ${x.ps.map(p=>p.no).join(', ')})`:''}: ${bl?`согнуть по карте ${x.name}, `:''}${w.length?'приварить к '+w.map(q=>`№ ${R.parts[q.nb].no} (${angT(q.dih)})`).join(', '):'первый элемент — от него собираем'}`;};
-  for(let si=0;si<steps.length;si+=6){let s='';steps.slice(si,si+6).forEach((st,j)=>{const cx=25+(j%3)*cw,cy=22+Math.floor(j/3)*ch,[x,tw]=st.u,now=new Set(st.u.flatMap(u=>u.ps.map(p=>p.id)));
-      const W=st.w[0],nbs=new Set(W.map(q=>q.nb)),mine=new Set(x.ps.map(p=>p.id));
+  for(let si=0;si<steps.length;si+=6){let s='';steps.slice(si,si+6).forEach((st,j)=>{const cx=25+(j%3)*cw,cy=22+Math.floor(j/3)*ch,[x,tw]=st.u;
+      const W=st.w[0],nbs=new Set(W.map(q=>q.nb)),mine=new Set(x.ps.map(p=>p.id)),sh=typeof stepShot==='function'?stepShot(st,(cw-2)/82):null;
       // крупно и со стороны нового куска; собранное раньше — светло-серым, новый — оранжевым; номера — только у нового и тех, к кому варим
-      const v=stepView(x.ps),fb=stepFrame(v,x.ps.concat(W.map(q=>R.parts[q.nb]))),   // в рамке — новый кусок и те, к кому его варить
+      // есть WebGL — снимок шага (перекрытия считает видеокарта), номера — текстом поверх; нет — схема гранями
+      if(sh){s+=`<rect class="t" x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><text class="h2" x="${cx+3}" y="${cy+6}">Шаг ${si+j+1} · ${shEsc(x.name+(tw?` и ${tw.name} (зеркально)`:''))}</text><text class="sm" x="${cx+cw-3}" y="${cy+6}" text-anchor="end">вид ${sh.txt}</text>`+asmImg(cx+1,cy+8,cw-2,82,sh);}
+      else{const v=stepView(x.ps),fb=stepFrame(v,x.ps.concat(W.map(q=>R.parts[q.nb]))),   // в рамке — новый кусок и те, к кому его варить
         k=Math.min((cw-10)/(fb[2]-fb[0]),80/(fb[3]-fb[1])),id='asm'+(si+j),ox=cx+(cw-(fb[2]-fb[0])*k)/2-fb[0]*k,oy=cy+9+(80-(fb[3]-fb[1])*k)/2-fb[1]*k;
       s+=`<rect class="t" x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><text class="h2" x="${cx+3}" y="${cy+6}">Шаг ${si+j+1} · ${shEsc(x.name+(tw?` и ${tw.name} (зеркально)`:''))}</text><text class="sm" x="${cx+cw-3}" y="${cy+6}" text-anchor="end">вид ${v.txt}</text>`;
       s+=`<clipPath id="${id}"><rect x="${cx+1}" y="${cy+8}" width="${cw-2}" height="82"/></clipPath><g clip-path="url(#${id})">`+facesSVG(v,k,ox,oy,{only:p=>st.done.has(p.id),
-        color:(p,sh)=>now.has(p.id)?`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`:grey(.7+.28*sh),label:p=>mine.has(p.id)||nbs.has(p.id)});
+        color:(p,sh)=>mine.has(p.id)?`rgb(${Math.round(200+50*sh)},${Math.round(110+60*sh)},${Math.round(50+40*sh)})`:grey(.7+.28*sh),label:p=>mine.has(p.id)||nbs.has(p.id)});
       // швы этого шага — толстые красные (только на гранях, повёрнутых к нам)
       const Pp=q=>{const z=prjV(v,q);return [ox+z[0]*k,oy+z[1]*k];},vis=pi=>V3.dot(R.parts[pi].n,v.d)>.02;
-      s+=`<path class="seam" d="${W.filter(q=>vis(q.nb)||x.ps.some(p=>vis(p.id))).flatMap(q=>q.ed).map(([a,b])=>{const A=Pp(V[a]),B=Pp(V[b]);return `M${r2(A[0])},${r2(A[1])}L${r2(B[0])},${r2(B[1])}`;}).join('')}"/></g>`;
+      s+=`<path class="seam" d="${W.filter(q=>vis(q.nb)||x.ps.some(p=>vis(p.id))).flatMap(q=>q.ed).map(([a,b])=>{const A=Pp(V[a]),B=Pp(V[b]);return `M${r2(A[0])},${r2(A[1])}L${r2(B[0])},${r2(B[1])}`;}).join('')}"/></g>`;}
       // что делать — словами; пара — «то же зеркально справа»
       let ty=cy+95;const line=(t,cl)=>wrapTxt(t,78).forEach(l=>{if(ty<cy+ch-1.5){s+=`<text class="${cl}" x="${cx+3}" y="${r2(ty)}">${shEsc(l)}</text>`;ty+=3.6;}});
       line(say(x,W),'td');if(tw){ty+=.6;line('То же зеркально справа — '+say(tw,st.w[1]),'sm');}});
-    s+=`<text class="sm" x="25" y="272">Оранжевое — элемент этого шага, светло-серое — собрано раньше, красная линия — шов этого шага. Номера — у нового элемента и у деталей, к которым его варить. Угол — между листами по шву.</text>`;
+    s+=`<text class="sm" x="25" y="272">Оранжевое — элемент этого шага, светло-серое — собрано раньше и его зеркальная пара, красная линия — шов этого шага. Номера — у нового элемента и у деталей, к которым его варить. Угол — между листами по шву.</text>`;
     out.push({title:'Порядок сборки',scale:'—',body:s});}
   return out;}
 

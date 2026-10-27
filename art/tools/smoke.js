@@ -220,6 +220,13 @@ ok(run('BG.img===BS.lines&&BG.bad===0&&BG.sheets===BG.want&&BG.want>0&&BG.num===
 // уголков нет — на снимке дуга угла: листы «Гибка — проверка угла», слова «уголком» нет
 run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[],hit:false,how:'none'});CD6=buildCards().filter(c=>c.svg.includes('class="bsh"'));delete globalThis.bendShot;`);
 ok(run("CD6.length>0&&CD6.filter(c=>c.title.startsWith('Гибка ')).every(c=>c.svg.includes('Гибка — проверка угла')&&!c.svg.includes('уголком'))&&CD6.filter(c=>!c.title.startsWith('Гибка ')).every(c=>c.svg.includes('дуга угла'))"),'гибка картинками без уголков: лист «Гибка — проверка угла», на карте — «дуга угла»');
+// v0.15.0: порядок сборки снимками (заглушка вместо WebGL) — снимок в каждой клетке шага, схемы гранями нет; номера поверх снимка — в клетке
+run(`globalThis.stepShot=(st,a)=>({url:'data:image/jpeg;base64,AA',txt:'спереди',labs:[{x:.5,y:.5,t:String(st.u[0].ps[0].no),k:'new'},{x:.5,y:.5,t:'99',k:'nb'},{x:.99,y:.99,t:'77',k:'nb'}]});AA1=sheetsAssembly();delete globalThis.stepShot;
+  AN=asmSteps().steps.length;AA2=sheetsAssembly();AQ={img:0,fc:0,lab:0,out:0};AA1.forEach(o=>{AQ.img+=CNT(o.body,/<image class="ash"/g);AQ.fc+=CNT(o.body,/class="fc"/g);AQ.lab+=CNT(o.body,/<text class="no"/g);AQ.out+=CNT(o.body,/>77</g);});
+  // без WebGL — схема: оранжевые только грани самого элемента (зеркальная пара — серым)
+  AQ.or=AA2.reduce((s,o)=>s+CNT(o.body,/fill="rgb[(]/g),0);AQ.want=asmSteps().steps.reduce((s,st)=>{const v=stepView(st.u[0].ps);return s+st.u[0].ps.filter(p=>V3.dot(p.n,v.d)>.02).length;},0);`);
+console.log('     порядок сборки Д9: шагов '+run('AN')+', листов '+run('AA1.length')+', снимков '+run('AQ.img')+'; без WebGL оранжевых граней '+run('AQ.or')+' из '+run('AQ.want'));
+ok(run('AQ.img===AN&&AQ.fc===0&&AQ.lab===AN*2&&AQ.out===0&&AA2.length===AA1.length&&AQ.or===AQ.want&&!AA2.some(o=>o.body.includes(\'class="ash"\'))'),'порядок сборки снимками: в каждой клетке шага снимок, номера поверх (наезжают — сдвиг, за краем — нет); без WebGL — схема, оранжевый только сам элемент, зеркальная пара серым');
 // гравировка заготовок (как в DXF): подписи сгибов не ближе 1 мм к номерам деталей и друг к другу; всё влезло; номер мельчит не меньше 5 мм; на карте — та же гравировка
 run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1],L=vx*vx+vy*vy||1e-9,t=Math.max(0,Math.min(1,((p[0]-s[0])*vx+(p[1]-s[1])*vy)/L));return Math.hypot(s[0]+vx*t-p[0],s[1]+vy*t-p[1]);};
     const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]),A=[a[0],a[1]],B=[a[2],a[3]],C=[b[0],b[1]],D=[b[2],b[3]];if(cr(A,B,C)*cr(A,B,D)<0&&cr(C,D,A)*cr(C,D,B)<0)return 0;return Math.min(d(A,b),d(B,b),d(C,a),d(D,a));};
