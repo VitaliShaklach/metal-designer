@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.13.5">
+<link rel="stylesheet" href="css/style.css?v=0.13.6">
 </head>
 <body>
 <div class="wrap">
@@ -109,7 +109,7 @@
       <button role="tab" data-tab="cards" aria-selected="false">Карты деталей</button>
     </div>
     <div class="tabpane" id="tab-parts" role="tabpanel">
-      <p class="tabnote">Каждая деталь — плоский кусок листа. Размер — по габариту развёртки, ширина — самая узкая. Соседи — с кем деталь сваривается. Клик по строке — модель повернётся этой деталью к вам; общий вид — кнопки над моделью</p>
+      <p class="tabnote">Каждая деталь — плоский лист. Размер — по габариту развёртки, ширина — самая узкая. Соседи — с кем деталь сваривается. Клик по строке — модель повернётся этой деталью к вам; общий вид — кнопки над моделью</p>
       <p class="tabnote" id="partsVw"></p>
       <div class="tbl"><table id="parts"></table></div>
     </div>
@@ -124,19 +124,19 @@
       <div class="sheets" id="nestBox"></div>
     </div>
     <div class="tabpane" id="tab-sheets" role="tabpanel" hidden>
-      <p class="tabnote">Листы А3 для производства: общий вид, порядок сборки, гибка, спецификация, уголки, раскрой. Каждый кусок отдельно — во вкладке «Карты деталей». Размеры в мм</p>
+      <p class="tabnote">Листы А3 для производства: общий вид, порядок сборки, гибка, спецификация, уголки, раскрой. Каждый элемент и деталь отдельно — во вкладке «Карты деталей». Размеры в мм</p>
       <div class="dimbar"><button id="shPdf" type="button">Скачать PDF (А3)</button><button id="bDxfParts" type="button">DXF детали</button><select id="shGo" aria-label="Перейти к листу"></select><span class="dxfmsg">PDF: в окне печати выберите «Сохранить как PDF»; формат А3 уже задан</span></div>
       <div class="sheets" id="sheets"></div>
     </div>
     <div class="tabpane" id="tab-cards" role="tabpanel" hidden>
-      <p class="tabnote">Лист А4 на каждый кусок (зеркальная пара — на одном): развёртка с размерами, где кусок на фигуре, готовый вид, гибка по порядку и швы — у каждого угла его чертёж и чем выставить. Клик по карте — крупно</p>
+      <p class="tabnote">Лист А4 на каждый элемент и деталь (зеркальная пара — на одном): развёртка с размерами, где он на фигуре, готовый вид, гибка по порядку и швы — у каждого угла его чертёж и чем выставить. Клик по карте — крупно</p>
       <div class="dimbar"><button id="shCards" type="button">Скачать PDF (А4)</button><select id="cdGo" aria-label="Перейти к карте"></select><span class="dxfmsg" id="cdMsg"></span></div>
       <div class="sheets cards" id="cards"></div>
     </div>
   </section>
 
   <footer>
-    <span class="ver">v0.13.5</span>
+    <span class="ver">v0.13.6</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -145,18 +145,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.13.5"></script>
-<script src="js/models.js?v=0.13.5"></script>
-<script src="js/models-poly.js?v=0.13.5"></script>
-<script src="js/figures.js?v=0.13.5"></script>
-<script src="js/edit.js?v=0.13.5"></script>
-<script src="js/trace.js?v=0.13.5"></script>
-<script src="js/view3d.js?v=0.13.5"></script>
-<script src="js/prod.js?v=0.13.5"></script>
-<script src="js/bend.js?v=0.13.5"></script>
-<script src="js/sheets.js?v=0.13.5"></script>
-<script src="js/ui.js?v=0.13.5"></script>
-<script src="js/tips.js?v=0.13.5"></script>
+<script src="js/mesh.js?v=0.13.6"></script>
+<script src="js/models.js?v=0.13.6"></script>
+<script src="js/models-poly.js?v=0.13.6"></script>
+<script src="js/figures.js?v=0.13.6"></script>
+<script src="js/edit.js?v=0.13.6"></script>
+<script src="js/trace.js?v=0.13.6"></script>
+<script src="js/view3d.js?v=0.13.6"></script>
+<script src="js/prod.js?v=0.13.6"></script>
+<script src="js/bend.js?v=0.13.6"></script>
+<script src="js/sheets.js?v=0.13.6"></script>
+<script src="js/ui.js?v=0.13.6"></script>
+<script src="js/tips.js?v=0.13.6"></script>
 <div id="printBox"></div>
 </body>
 </html>

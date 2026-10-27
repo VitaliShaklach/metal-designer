@@ -70,7 +70,7 @@ function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tr
   build3D(CUR.M3,CUR.R,{sel:ST.sel,bent:CUR.bentKey&&CUR.bentKey.size?e=>e.p.length===2&&CUR.bentKey.has(bendKey(e.p[0],e.p[1])):null,grp:selBlank()>=0?new Set(CUR.BL[selBlank()].parts):null,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),diff:ed&&traceOn()?TRC.diff:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
   stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
-  $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],CUR.BL&&CUR.BL.length?[`${T.n} → ${CUR.PC.length}`,`деталей → кусков на резку (${CUR.BL.length} гнутых)`]:[`${T.n}`,'деталей'],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(weldLen()/1000,1)} м`,'швов']]
+  $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],CUR.BL&&CUR.BL.length?[`${T.n} → ${CUR.PC.length}`,`деталей → позиций на резку (${CUR.BL.length} гнутых)`]:[`${T.n}`,'деталей'],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(weldLen()/1000,1)} м`,'швов']]
     .map(([b,s])=>`<div class="stat"><b>${b}</b><span>${esc(s)}</span></div>`).join('');}
 // швы без гнутых стыков
 const weldLen=()=>CUR.T.weld-(CUR.bendSt&&CUR.BL.length?CUR.bendSt.len:0);
@@ -133,7 +133,7 @@ function selUI(){if(ST.selB>=0&&selBlank()===ST.selB){blankUI(CUR.BL[ST.selB]);r
 const isBentNb=(p,q)=>!!(CUR.bentKey&&CUR.bentKey.has(bendKey(p,q)));
 // с гибкой — куски на резку: заготовка одной строкой; ссылка над таблицей — все детали (для сборки)
 function piecesTable(){const dens=DENS[ST.mat]||7850,sb=selBlank();
-  $('partsVw').innerHTML=`Куски на резку: ${CUR.PC.length} (заготовок со сгибами ${CUR.BL.length}) · <button type="button" class="lnk" data-vw="parts">все детали (${CUR.R.parts.length})</button>`;
+  $('partsVw').innerHTML=`Позиций на резку: ${CUR.PC.length} (заготовок со сгибами ${CUR.BL.length}) · <button type="button" class="lnk" data-vw="parts">все детали (${CUR.R.parts.length})</button>`;
   $('parts').innerHTML=`<thead><tr><th>№</th><th>Эскиз</th><th>Размер, мм</th><th>Площадь, см²</th><th>Масса, кг</th><th>Рез, мм</th><th>Детали · гнуть по порядку</th><th>Сварка с (угол)</th></tr></thead><tbody>`+
     CUR.PC.map(o=>{const a=Math.abs(area2(o.pts)),cl=`${CUR.small.has(o.parts[0])&&!o.B?' bad':''}`;
       if(o.B){const b=o.B,bi=+o.id.slice(1);return `<tr data-b="${bi}" class="${bi===sb?'on':''}"><td>Г${b.no}</td><td>${blankSVG(b)}</td><td>${Math.round(b.L)} × ${Math.round(b.W)}</td><td>${fmt(a/100,1)}</td><td>${fmt(a*1e-9*ST.t*dens,3)}</td><td>${Math.round(perim(o.pts))}</td>
@@ -141,7 +141,7 @@ function piecesTable(){const dens=DENS[ST.mat]||7850,sb=selBlank();
       const p=CUR.R.parts[o.parts[0]];return `<tr data-p="${p.id}" class="${p.id===ST.sel?'on':''}${cl}"><td>${p.no}</td><td>${partSVG(p)}</td><td>${Math.round(p.L)} × ${Math.round(p.W)}</td><td>${fmt(p.area/100,1)}</td><td>${fmt(p.area*1e-9*ST.t*dens,3)}</td><td>${Math.round(p.perim)}</td><td>—</td>
         <td class="nbs">${p.back?'подложка глаза':p.segs.filter(g=>g.nb>=0).map(g=>`${CUR.R.parts[g.nb].no}<small> ${angT(g.dih)}</small>`).join(', ')}</td></tr>`;}).join('')+'</tbody>';}
 function partsTable(){const bt=CUR.BL&&CUR.BL.length;if(bt&&!ST.allParts){piecesTable();return;}
-  $('partsVw').innerHTML=bt?`Все детали: ${CUR.R.parts.length} · <button type="button" class="lnk" data-vw="pieces">куски на резку (${CUR.PC.length})</button>`:'';
+  $('partsVw').innerHTML=bt?`Все детали: ${CUR.R.parts.length} · <button type="button" class="lnk" data-vw="pieces">позиции на резку (${CUR.PC.length})</button>`:'';
   const ps=[...CUR.R.parts].sort((a,b)=>a.no-b.no),dens=DENS[ST.mat]||7850,grp=selBlank();
   $('parts').innerHTML=`<thead><tr><th>№</th><th>Эскиз</th><th>Размер, мм</th><th>Ширина</th><th>Площадь, см²</th><th>Масса, кг</th><th>Рез, мм</th>${bt?'<th>Заготовка</th>':''}<th>Соседи (угол)</th></tr></thead><tbody>`+
     ps.map(p=>`<tr data-p="${p.id}" class="${p.id===ST.sel?'on':bt&&grp>=0&&CUR.blankOf[p.id]===grp?'grp':''}${CUR.small.has(p.id)?' bad':''}"><td>${p.no}</td><td>${partSVG(p)}</td><td>${Math.round(p.L)} × ${Math.round(p.W)}</td><td>${Math.round(p.minW)}</td><td>${fmt(p.area/100,1)}</td><td>${fmt(p.area*1e-9*ST.t*dens,3)}</td><td>${Math.round(p.perim)}</td>${bt?`<td>${CUR.blankOf[p.id]>=0?'Г'+CUR.BL[CUR.blankOf[p.id]].no:'—'}</td>`:''}
@@ -159,11 +159,11 @@ function sumTable(){const T=CUR.T,[sl,sw]=sheetWL(),warn=[];
   const rows=[['Деталей',T.n],['Площадь металла',fmt(T.area/1e6,2)+' м²'],[`Масса (${ST.t} мм, ${MATN[ST.mat]})`,'≈ '+fmt(T.mass,1)+' кг'],['Длина реза (с учётом толщины)',fmt(CUR.cutLen/1000,1)+' м'],
     ['Длина швов',fmt(weldLen()/1000,1)+' м'],['Открытый край (спина, низ)',fmt(T.open/1000,1)+' м'],['Самая узкая деталь',Math.round(T.minW)+' мм'],[`Листов ${sw} × ${sl}`,CUR.N?`${CUR.N.sheets.length} (детали в полосе ${sw} × ${Math.round(CUR.N.sheets[0]?CUR.N.sheets[0].len:0)} мм)`:'раскладываю…']];
   // гибка: сколько кусков на резку, сгибов и на сколько меньше сварки
-  if(CUR.BL&&CUR.BL.length){const B=CUR.bendSt,ns=CUR.PC.length-CUR.BL.length;rows.splice(1,0,['Гибка (галочка «Гнуть»)',`${CUR.PC.length} кусков на резку: заготовок со сгибами ${CUR.BL.length} + отдельных деталей ${ns}`],
+  if(CUR.BL&&CUR.BL.length){const B=CUR.bendSt,ns=CUR.PC.length-CUR.BL.length;rows.splice(1,0,['Гибка (галочка «Гнуть»)',`${CUR.PC.length} позиций на резку: заготовок со сгибами ${CUR.BL.length} + отдельных деталей ${ns}`],
     ['Сгибов',`V ${B.V} (на себя) · m ${B.m} (от себя) · ${fmt(B.len/1000,1)} м — эти стыки не варим`]);}
   if(CUR.TPL&&CUR.TPL.length){const tp=CUR.TPL,ta=tp.reduce((a,o)=>a+Math.abs(area2(o.pts)),0),tl=tp.reduce((a,o)=>a+perim(o.pts),0);
     rows.push(['Уголки-шаблоны для сварки (оснастка, по одному на угол)',`${tp.length} шт · ${tp[0].a}°…${tp[tp.length-1].a}° · ≈ ${fmt(ta*1e-9*ST.t*(DENS[ST.mat]||7850),2)} кг · рез ${fmt(tl/1000,1)} м`]);}
-  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));const at=rows.findIndex(r=>r[0].startsWith('Длина реза'))+1;const pc=CUR.BL&&CUR.BL.length?'кусок':'деталь';rows.splice(at,0,[CUR.TPL&&CUR.TPL.length?`Врезок (по одной на ${pc} и уголок)`:`Врезок (по одной на ${pc})`,cs.pierce]);if(ST.engrave)rows.splice(at+1,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);if(cs.bend)rows.splice(at+1,0,['Линии сгиба (слои BEND_V, BEND_M)',fmt(cs.bend/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
+  if(CUR.N){const cs=cutStats(CUR.N.sheets.flatMap(s=>s.items));const at=rows.findIndex(r=>r[0].startsWith('Длина реза'))+1;const pc=CUR.BL&&CUR.BL.length?'позицию':'деталь';rows.splice(at,0,[CUR.TPL&&CUR.TPL.length?`Врезок (по одной на ${pc} и уголок)`:`Врезок (по одной на ${pc})`,cs.pierce]);if(ST.engrave)rows.splice(at+1,0,['Длина гравировки номеров',fmt(cs.eng/1000,1)+' м']);if(cs.bend)rows.splice(at+1,0,['Линии сгиба (слои BEND_V, BEND_M)',fmt(cs.bend/1000,1)+' м']);}if(!CUR.N&&!$('tab-sum').hidden)ensureNest();
   $('sum').innerHTML='<tbody>'+rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join('')+'</tbody>';}
 
 /* ---------- загрузка фигур и файлов ---------- */
@@ -227,7 +227,7 @@ document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').ad
 function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden||!$('tab-cards').hidden;if(!vis||!CUR)return;
   if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}
   if(!$('tab-cards').hidden){const cd=buildCards();$('cards').innerHTML=cd.map((s,i)=>`<figure class="sheet" id="card${i+1}"><figcaption>Карта ${i+1} из ${cd.length} · ${esc(s.title)}</figcaption>${s.svg}</figure>`).join('');
-    $('cdGo').innerHTML=cd.map((s,i)=>`<option value="card${i+1}">Карта ${i+1} · ${esc(s.title)}</option>`).join('');$('cdMsg').textContent=cd.length?`Карт: ${cd.length} · кусков на резку: ${CUR.PC.length}`:'';return;}
+    $('cdGo').innerHTML=cd.map((s,i)=>`<option value="card${i+1}">Карта ${i+1} · ${esc(s.title)}</option>`).join('');$('cdMsg').textContent=cd.length?`Карт: ${cd.length} · позиций на резку: ${CUR.PC.length}`:'';return;}
   if(!CUR.N){ensureNest(()=>sheetsUI(true));return;}SHEETS_OLD=false;
   if(!$('tab-nest').hidden){const L=sheetsNest(),d=new Date(),date=d.toLocaleDateString('ru-RU');$('nestBox').innerHTML=L.map((b,i)=>`<figure class="sheet"><figcaption>Раскрой ${i+1} из ${L.length}</figcaption>${wrapSheet(b,{n:i+1,N:L.length,date})}</figure>`).join('');
     const s0=CUR.N.sheets[0];$('nestMsg').textContent=`Листов: ${CUR.N.sheets.length} · ${itemsTxt(CUR.N.sheets.flatMap(s=>s.items))} · зазор ${ST.ngap} мм${s0?` · детали в полосе ${sheetWL()[1]} × ${Math.round(s0.len)} мм (плотность ${Math.round(s0.dense*100)}%), остальное свободно`:''} · ${cutTxt(cutStats(CUR.N.sheets.flatMap(s=>s.items)))}${CUR.degen?' · выродились: '+CUR.degen:''}`;}
@@ -290,7 +290,7 @@ $('edSel').addEventListener('change',e=>{if(ST.sv<0||!['vX','vY','vZ'].includes(
   moveVert(e2,ST.sv,[+$('vX').value,+$('vY').value,+$('vZ').value],ST.sym);applyE(e2,true);});
 $('edOps').addEventListener('click',e=>{const b=e.target.closest('button[data-op]');if(!b)return;if(ST.sp<0){msg('Сначала кликните грань на модели');return;}if(b.dataset.op==='merge'&&b.classList.contains('off')){msg('Для «Убрать шов» кликните грань, потом Shift+клик по соседней');return;}const d=Math.max(1,+$('edD').value||0),op=b.dataset.op;
   if(op==='cut'){ST.seam=ST.seam?null:[];ST.sv=-1;renderAll();return;}
-  if(op==='merge'){const r=mergePolys(E(),ST.sp,ST.sp2,ST.sym);if(!r){msg('Эти грани не слить: нет общего шва или он из нескольких кусков');return;}pushUndo();applyE(r);msg('Шов убран, грани выровнены');return;}
+  if(op==='merge'){const r=mergePolys(E(),ST.sp,ST.sp2,ST.sym);if(!r){msg('Эти грани не слить: нет общего шва или он из нескольких отрезков');return;}pushUndo();applyE(r);msg('Шов убран, грани выровнены');return;}
   pushUndo();
   const r={extrude:()=>extrude(E(),ST.sp,d,ST.sym),inset:()=>extrude(E(),ST.sp,-d,ST.sym),bump:()=>poke(E(),ST.sp,d,ST.sym),pit:()=>poke(E(),ST.sp,-d,ST.sym),split:()=>splitPoly(E(),ST.sp,ST.sym),del:()=>delPoly(E(),ST.sp,ST.sym)}[op]();applyE(r);});
 $('bFlat').addEventListener('click',()=>{if($('bFlat').classList.contains('off'))return;pushUndo();applyE(flattenAll(E(),ST.sym),true);});
@@ -320,7 +320,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.13.5';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.13.6';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
