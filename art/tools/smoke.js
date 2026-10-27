@@ -270,11 +270,11 @@ ok(run("weldGap('tig',2)===0.5&&weldGap('tig',3)===0.5&&weldGap('mig',2)===1&&we
 run(`WG={big:0,n:0,sb:0};RP.parts.forEach(p=>{const a=cutContour(p,2,0.5,true),b=cutContour(p,2,1,true);if(a.bad||b.bad)return;WG.n++;const sa=Math.abs(area2(a.pts)),sb=Math.abs(area2(b.pts));if(p.segs.some(g=>g.nb>=0)?sa>sb:Math.abs(sa-sb)<1e-9)WG.big++;
     p.segs.forEach(g=>{if(g.nb>=0&&Math.abs(edgeSetback(g,2,1,true)-edgeSetback(g,2,0.5,true)-0.25)>1e-9)WG.sb++;});});`);
 ok(run("WG.n>0&&WG.big===WG.n&&WG.sb===0"),"сварка: при зазоре 0,5 каждая деталь Д9 со швами больше, чем при 1 (без швов — та же) — кромка у шва на 0,25 мм дальше, открытый край на месте");
-run(`ST.weld='tig';ST.gap=0.5;TQ1=techReq(true);TQ2=techReq(false);ST.weld='mig';ST.gap=1;TQ3=techReq(true);ST.engrave=false;TQ4=techReq(false);ST.engrave=true;`);
-ok(run("TQ1.some(l=>l.includes('Сварка TIG')&&l.startsWith('5.'))&&TQ1.some(l=>l.includes('азотом'))&&TQ1.some(l=>l.includes('зазором 0,5 мм'))&&!TQ1.some(l=>l.includes('MIG'))")
-  &&run("TQ2[1].startsWith('1. Порядок на лазере')&&TQ2.some(l=>l.startsWith('2. Сварка TIG'))&&TQ3.some(l=>l.startsWith('5. Сварка полуавтоматом'))&&TQ3.some(l=>l.includes('Ar+CO₂'))&&TQ3.some(l=>l.includes('зазором 1 мм'))&&!TQ3.some(l=>l.includes('азот'))")
-  &&run("TQ4.length===6&&TQ4[1].startsWith('1. Сварка полуавтоматом')&&[TQ1,TQ2,TQ3,TQ4].every(Q=>Q.every(l=>l.length<=70))"),
-  "техтребования: всегда есть пункт сварки под её вид (TIG — азот и зазор 0,5, полуавтомат — Ar+CO₂ и зазор 1), без гибки — нумерация с 1, строки не длиннее 70 знаков");
+run(`ST.weld='tig';ST.gap=0.5;TQ1=techReq(true);TQ2=techReq(false);ST.weld='mig';ST.gap=1;TQ3=techReq(true);ST.engrave=false;TQ4=techReq(false);ST.engrave=true;TJ=Q=>Q.join(' ').replace(/[  ]+/g,' ');`);
+ok(run("TQ1.some(l=>l.includes('Сварка TIG')&&l.startsWith('5.'))&&TJ(TQ1).includes('азотом')&&TJ(TQ1).includes('зазором 0,5 мм')&&!TQ1.some(l=>l.includes('MIG'))")
+  &&run("TQ2[1].startsWith('1. Порядок на лазере')&&TQ2.some(l=>l.startsWith('2. Сварка TIG'))&&TQ3.some(l=>l.startsWith('5. Сварка полуавтоматом'))&&TQ3.some(l=>l.includes('Ar+CO₂'))&&TJ(TQ3).includes('зазором 1 мм')&&!TQ3.some(l=>l.includes('азот'))")
+  &&run("TQ4[1].startsWith('1. Сварка полуавтоматом')&&[TQ1,TQ2,TQ3,TQ4].every(Q=>Q.every(l=>l.length<=TR_W+4))"),
+  "техтребования: всегда есть пункт сварки под её вид (TIG — азот и зазор 0,5, полуавтомат — Ar+CO₂ и зазор 1), без гибки — нумерация с 1, строки по ширине столбца");
 const DT=t=>[...t.matchAll(/\r\nTEXT\r\n8\r\n([^\r]+)\r\n[\s\S]*?\r\n1\r\n([^\r]*)/g)].map(m=>({lay:m[1],t:m[2]}));
 run(`N0=CUR.N;CUR.N={W:3000,H:3000,gap:3,sheets:[{items:[NI[0]]}]};ST.weld='tig';`);const W1=DT(run('dxfNest()')),W2=DT(run('dxfParts()'));run(`ST.weld='mig';`);const W3=DT(run('dxfNest()')),W4=DT(run('dxfParts()'));run(`CUR.N=N0;ST.weld='tig';`);
 const N2=run('DXF_N2'),hasN2=W=>W.filter(x=>x.t===N2);
