@@ -121,3 +121,5 @@ FIGURES.doberman7={name:'Доберман 7',H:600,poly:true,build:()=>modelPoly
 FIGURES.doberman8={name:'Доберман 8',H:600,poly:true,build:()=>modelPoly('doberman8'),ref:'doberman7',frame:[[-145.5,0,0],[145.5,600,395]]};
 // Доберман 9 — Доберман 8 без коротких рёбер и лишних швов (art/tools/plates/marks/round2.js → fromjson.js)
 FIGURES.doberman9={name:'Доберман 9',H:600,poly:true,build:()=>modelPoly('doberman9'),ref:'doberman7',frame:[[-145.5,0,0],[145.5,600,395]]};
+// Доберман 10 — Доберман 9 без лишних швов второго круга: щёки, темя, лоб (art/tools/plates/marks/round3.js → fromjson.js)
+FIGURES.doberman10={name:'Доберман 10',H:600,poly:true,build:()=>modelPoly('doberman10'),ref:'doberman7',frame:[[-145.5,0,0],[145.5,600,395]]};

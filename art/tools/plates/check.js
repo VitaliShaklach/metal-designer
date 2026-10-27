@@ -4,6 +4,8 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),JS=path.join(__dirn
 const c={console,Math};vm.createContext(c);vm.runInContext(['mesh','edit','models','models-poly','figures','prod'].map(f=>fs.readFileSync(JS+f+'.js','utf8')).join('\n;\n'),c);
 const g=n=>vm.runInContext(n,c),V3=g('V3'),triN=g('triN');
 const id=process.argv[2]||'doberman7',B=g('figureMesh')(id),R=g('buildParts')(B,1.5,1.5);
+// номера деталей — как на сайте (ui.js): с подложками глаз и зеркальными парами «7 / 7.1»
+g('addBacking')(R,B);g('pairNumbers')(R,B.V);
 console.log('граней',B.P.length,'деталей',R.parts.length,'неплоских',g('nonPlanar')({V:B.V,P:B.P},1).length);
 const per=new Map();B.T.forEach((pi,t)=>{(per.get(pi)||per.set(pi,new Set()).get(pi)).add(R.partOf[t]);});
 const split=[...per].filter(([,s])=>s.size>1);console.log('граней на нескольких деталях:',split.length,split.slice(0,12).map(([pi,s])=>pi+':'+B.P[pi].length+'уг/'+s.size).join(' '));
