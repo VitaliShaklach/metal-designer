@@ -280,4 +280,10 @@ run(`N0=CUR.N;CUR.N={W:3000,H:3000,gap:3,sheets:[{items:[NI[0]]}]};ST.weld='tig'
 const N2=run('DXF_N2'),hasN2=W=>W.filter(x=>x.t===N2);
 ok(hasN2(W1).length===1&&hasN2(W1)[0].lay==='SHEET'&&hasN2(W2).length===1&&hasN2(W2)[0].lay==='SHEET'&&!hasN2(W3).length&&!hasN2(W4).length&&/^[\x20-\x7e]+$/.test(N2),
   "DXF под TIG: надпись «резать азотом N2» латиницей на слое SHEET (не CUT/ENGRAVE) — в раскрое и в деталях; под полуавтомат — нет");
+// v0.17.0 шаг сборки: другая половина фигуры — призраком (не металлом), элемент и соседи — всегда; элемент посередине — всё собранное
+run(`SW={steps:0,cut:0,bad:0,mid:0};asmSteps().steps.forEach(st=>{const S=stepShown(st),x=st.u[0],A=x.ps.reduce((s,p)=>s+p.area,0),cx=x.ps.reduce((s,p)=>s+p.c[0]*p.area,0)/A;SW.steps++;
+  if(x.ps.some(p=>!S.has(p.id))||st.w[0].some(q=>!S.has(q.nb))||[...S].some(pi=>!st.done.has(pi)))SW.bad++;if(Math.abs(cx)<15){SW.mid++;if(S.size!==st.done.size)SW.bad++;return;}
+  const gone=[...st.done].filter(pi=>!S.has(pi));SW.cut+=gone.length;if(gone.some(pi=>RP.parts[pi].c[0]*Math.sign(cx)>-15))SW.bad++;if(st.u[1]&&st.u[1].ps.some(p=>Math.abs(p.c[0])>=15&&S.has(p.id)))SW.bad++;});`);
+console.log('     шаги сборки Д9: '+run('SW.steps')+' (посередине '+run('SW.mid')+'), деталей другой половины призраком всего '+run('SW.cut'));
+ok(run('SW.steps>0&&SW.cut>0&&SW.bad===0'),'шаг сборки: другая половина фигуры (зеркальная пара) — призраком, элемент и соседи — металлом, посередине — всё собранное');
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

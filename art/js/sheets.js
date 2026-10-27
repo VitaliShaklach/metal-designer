@@ -87,6 +87,10 @@ function techReq(bend,w=110){const Q=[],g=mmT(ST.gap);
 
 /* ---------- 2. порядок сборки ---------- */
 // вид на детали шага: с их стороны (средняя нормаль по площади + немного изометрии), откуда смотрим — словами
+// металлом на снимке шага: собранное, кроме другой половины фигуры (зеркальная пара и что за ней) — её силуэт ложится на элемент, она — призраком.
+// Элемент посередине (|x| < 15 мм) — всё собранное; сам элемент и соседи, к кому варить, — всегда
+function stepShown(st){const x=st.u[0],A=x.ps.reduce((s,p)=>s+p.area,0)||1,cx=x.ps.reduce((s,p)=>s+p.c[0]*p.area,0)/A;if(Math.abs(cx)<15)return st.done;
+  const keep=new Set([...x.ps.map(p=>p.id),...st.w[0].map(q=>q.nb)]),sg=Math.sign(cx);return new Set([...st.done].filter(pi=>keep.has(pi)||CUR.R.parts[pi].c[0]*sg>-15));}
 function stepView(ps){let n=[0,0,0];ps.forEach(p=>{n=V3.add(n,V3.mul(p.n,p.area));});const d=V3.norm(V3.add(V3.norm(n),V3.mul(VIEWS.iso.d,.5)));
   const up0=Math.abs(d[1])>.9?[0,0,d[1]>0?-1:1]:[0,1,0],r=V3.norm(V3.cross(up0,d));
   return {r,up:V3.cross(d,r),d,txt:viewTxt(d)};}
@@ -145,7 +149,7 @@ function sheetsAssembly(){const {steps}=asmSteps(),R=CUR.R,V=CUR.M3.V,cw=130,ch=
       // что делать — словами; пара — «то же зеркально справа»
       let ty=cy+95;const line=(t,cl)=>wrapTxt(t,78).forEach(l=>{if(ty<cy+ch-1.5){s+=`<text class="${cl}" x="${cx+3}" y="${r2(ty)}">${shEsc(l)}</text>`;ty+=3.6;}});
       line(say(x,W),'td');if(tw){ty+=.6;line('То же зеркально справа — '+say(tw,st.w[1]),'sm');}});
-    s+=`<text class="sm" x="25" y="272">Оранжевое — элемент этого шага, светло-серое — собрано раньше и его зеркальная пара, красная линия — шов этого шага. Номера — у нового элемента и у деталей, к которым его варить. Угол — между листами по шву.</text>`;
+    s+=`<text class="sm" x="25" y="272">Оранжевое — элемент этого шага, светло-серое — собрано раньше (другая половина фигуры и зеркальная пара — тонкими линиями), красная линия — шов этого шага. Номера — у нового элемента и у деталей, к которым его варить. Угол — между листами по шву.</text>`;
     out.push({title:'Порядок сборки',scale:'—',body:s});}
   return out;}
 

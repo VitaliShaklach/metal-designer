@@ -187,12 +187,12 @@ function stepGroup(done,mine,nbs){const {R}=CUR,{V,F}=CUR.M3,pos=[],cf=[],cb=[],
   if(Nb.length)seg(Nb,new THREE.LineDashedMaterial({color:0x3a4046,dashSize:3,gapSize:2,depthTest:false,transparent:true,opacity:.7})).renderOrder=3;
   return {grp,hl,ms,G};}
 const backPts=p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))),partC=p=>p.back?V3.sub(p.c,V3.mul(p.n,BACK_DEPTH)):p.c;
-/* st — шаг (asmSteps), asp — ширина/высота клетки. Вид — со стороны элемента (stepView); заслоняет — пробуем повернуть/наклонить.
-   Кадр — элемент целиком и соседи, к кому варить, рядом с ним (не меньше 150 мм). Швы шага — толстые красные.
+/* st — шаг (asmSteps), asp — ширина/высота клетки. Металлом — stepShown (другая половина фигуры — призраком). Вид — со стороны элемента (stepView); заслоняет — пробуем повернуть/наклонить.
+   Кадр — элемент целиком и соседи, к кому варить, рядом с ним (не меньше 150 мм и 2,5 размера элемента). Швы шага — толстые красные.
    → {url, txt — откуда смотрим, labs: [{x, y, t, k: 'new' | 'nb'}] — номера в долях кадра, только видимые и не ребром}; нет WebGL → null */
 function stepShot(st,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScene();}catch(e){return null;}
   const {R}=CUR,{V}=CUR.M3,x=st.u[0],W=st.w[0],mine=new Set(x.ps.map(p=>p.id)),nbs=[...new Set(W.map(q=>q.nb))].map(i=>R.parts[i]);
-  const P=stepGroup(st.done,mine,new Set(nbs.map(p=>p.id))),Wd=1600,done=shotBegin(S,P,Wd,Math.round(Wd/asp),0);
+  const P=stepGroup(stepShown(st),mine,new Set(nbs.map(p=>p.id))),Wd=1600,done=shotBegin(S,P,Wd,Math.round(Wd/asp),0);
   const ev=x.ps.flatMap(p=>p.back?backPts(p):p.full.map(i=>V[i])),c0=ev.reduce((s,q)=>V3.add(s,V3.mul(q,1/ev.length)),[0,0,0]),er=Math.max(...ev.map(q=>V3.len(V3.sub(q,c0)))),lim=er+Math.max(60,er*.6);
   const sm=W.flatMap(q=>q.ed).map(([a,b])=>V3.mul(V3.add(V[a],V[b]),.5)),vs=ev.concat(nbs.flatMap(p=>p.full.map(i=>V[i])).filter(q=>V3.len(V3.sub(q,c0))<=lim));
   const eyeHit=(eye,q)=>{const dv=V3.sub(q,eye),dl=V3.len(dv);S.ray.set(new THREE.Vector3(...eye),new THREE.Vector3(...V3.mul(dv,1/dl)));const h=S.ray.intersectObjects(P.ms);return h.length&&h[0].distance<dl-Math.max(1.5,dl*.006);};
@@ -200,8 +200,8 @@ function stepShot(st,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScen
   const nq=nbs.map(p=>{const ed=W.filter(q=>q.nb===p.id).flatMap(q=>q.ed);return {p,len:ed.reduce((s,[a,b])=>s+V3.len(V3.sub(V[b],V[a])),0),qs:ed.map(([a,b])=>{const m=V3.mul(V3.add(V[a],V[b]),.5),d=V3.sub(p.c,m),l=V3.len(d);return V3.add(m,V3.mul(d,Math.min(.5,Math.max(8,er*.25)/(l||1))));})};});
   const probe=x.ps.map(partC).concat(sm,nq.flatMap(o=>o.qs)).slice(0,32),A=x.ps.reduce((s,p)=>s+p.area,0)||1,NL=nq.reduce((s,o)=>s+o.len,0);
   const face=v=>{const e=x.ps.reduce((s,p)=>s+p.area*Math.max(0,V3.dot(p.n,v.d)),0)/A;return NL?(e+nq.reduce((s,o)=>s+o.len*Math.max(0,V3.dot(o.p.n,v.d)),0)/NL)/2:e;};
-  // кадр под вид v: рамка по точкам vs (и не меньше 150 мм) в плоскости вида
-  const frame=v=>{const xs=vs.map(q=>V3.dot(V3.sub(q,c0),v.r)),ys=vs.map(q=>V3.dot(V3.sub(q,c0),v.up)),x0=Math.min(-75,Math.min(...xs)),x1=Math.max(75,Math.max(...xs)),y0=Math.min(-75,Math.min(...ys)),y1=Math.max(75,Math.max(...ys));
+  // кадр под вид v: рамка по точкам vs в плоскости вида, не меньше 150 мм и 2,5 размера элемента — вокруг видно фигуру призраком (где элемент)
+  const frame=v=>{const xs=vs.map(q=>V3.dot(V3.sub(q,c0),v.r)),ys=vs.map(q=>V3.dot(V3.sub(q,c0),v.up)),m0=Math.max(75,er*1.25),x0=Math.min(-m0,Math.min(...xs)),x1=Math.max(m0,Math.max(...xs)),y0=Math.min(-m0,Math.min(...ys)),y1=Math.max(m0,Math.max(...ys));
     const c=V3.add(c0,V3.add(V3.mul(v.r,(x0+x1)/2),V3.mul(v.up,(y0+y1)/2))),box=[[x0,y0],[x1,y0],[x0,y1],[x1,y1]].map(([a,b])=>V3.add(c0,V3.add(V3.mul(v.r,a),V3.mul(v.up,b))));return {c,dist:shotFit(vs.concat(box),c,v,asp)};};
   // ракурс: между элементом и соседями (острый шов — иначе соседи за элементом), потом — со стороны элемента, повороты
   const nE=V3.norm(x.ps.reduce((s,p)=>V3.add(s,V3.mul(p.n,p.area)),[0,0,0])),nN=NL?V3.norm(nq.reduce((s,o)=>V3.add(s,V3.mul(o.p.n,o.len)),[0,0,0])):nE,vb=stepView([{n:V3.norm(V3.add(nE,nN)),area:1}]),v0=stepView(x.ps),cand=[vb,v0,viewTurn(vb,30),viewTurn(vb,-30),viewTilt(vb,25),viewTurn(v0,30),viewTurn(v0,-30),viewTilt(v0,25),viewTilt(v0,-20),viewTurn(v0,55),viewTurn(v0,-55)];let best=null;
