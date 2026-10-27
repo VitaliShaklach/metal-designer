@@ -41,7 +41,7 @@ function build3D(M3,R,o){if(!ok)return;req3D();while(root.children.length){const
     if(o.mark&&o.mark.length){const mg=new THREE.BufferGeometry();mg.setAttribute('position',new THREE.Float32BufferAttribute(o.mark.map(i=>V[i]).flat(),3));root.add(new THREE.Points(mg,new THREE.PointsMaterial({color:0xd0561f,size:13,sizeAttenuation:false,depthTest:false})));}
     if(o.sv>=0&&V[o.sv]){const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(V[o.sv],3));root.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xd0561f,size:13,sizeAttenuation:false,depthTest:false})));}}
   if(o.nums)R.parts.forEach(p=>{const el=document.createElement('span');el.className='pno'+(p.id===o.sel?' on':'');el.textContent=p.no;const l=new THREE.CSS2DObject(el);
-    l.position.set(...V3.add(p.c,V3.mul(p.n,3)));l.userData.n=p.n;root.add(l);LBL.push(l);});}
+    l.position.set(...V3.add(partLabelPt(p,M3),V3.mul(p.n,3)));l.userData.n=p.n;root.add(l);LBL.push(l);});}
 // номера — только у граней, повёрнутых к камере
 function lblVis(){const cp=camera.position;LBL.forEach(l=>{const p=l.position,n=l.userData.n,v=(cp.x-p.x)*n[0]+(cp.y-p.y)*n[1]+(cp.z-p.z)*n[2];l.visible=v>0;});}
 function flyTo(p,t){req3D();camAnim={p0:camera.position.clone(),t0:controls.target.clone(),p1:p,t1:t,s:performance.now()};}
@@ -161,7 +161,8 @@ function bendShot(own,l,asp){if(!ok||!CUR||!CUR.M3||!CUR.BP)return null;let S;tr
   const eye=shotCam(S,P,best.v,best.c,best.dist);S.r.render(S.sc,S.cam);const url=S.r.domElement.toDataURL('image/jpeg',.9);
   // подписи: номера деталей (видимые, в кадре и не ребром к нам), номер сгиба у линии, уголок
   const prj=q=>{const p=new THREE.Vector3(...q).project(S.cam);return [(p.x+1)/2,(1-p.y)/2];},inF=f=>f[0]>.05&&f[0]<.95&&f[1]>.06&&f[1]<.94,labs=[];
-  ps.forEach(p=>{const q=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):p.c,f=prj(q),fc=Math.abs(V3.dot(p.n,V3.norm(V3.sub(eye,q))));if(inF(f)&&fc>.2&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
+  // у сгиба — поперёк грани от середины линии; у вогнутой детали эта точка бывает в вырезе — тогда в самое просторное место
+  ps.forEach(p=>{const q0=p.id===j.p?V3.add(M,V3.mul(e1,Ep*.62)):p.id===j.q?V3.add(M,V3.mul(w2,Eq*.62)):null,q=q0&&partHasPt(p,CUR.M3,q0,4)?q0:partLabelPt(p,CUR.M3),f=prj(q),fc=Math.abs(V3.dot(p.n,V3.norm(V3.sub(eye,q))));if(inF(f)&&fc>.2&&!eyeHit(eye,V3.add(q,V3.mul(V3.norm(V3.sub(eye,q)),1))))labs.push({x:f[0],y:f[1],t:String(p.no),k:'no'});});
   const fb=prj(V3.sub(M,V3.mul(b,6)));labs.push({x:fb[0],y:fb[1],t:String(l.k),k:'bend'});
   if(tp||arc){const f=prj(tc);labs.push({x:f[0],y:f[1],t:tp?tplNo(a):a+'°',k:'tpl'});}
   done();return {url,labs,hit:T.hit,how:tp?'tpl':a>=TPL_MAX?'ruler':'none'};}
@@ -186,7 +187,7 @@ function stepGroup(done,mine,nbs){const {R}=CUR,{V,F}=CUR.M3,pos=[],cf=[],cb=[],
   if(Gh.length)seg(Gh,new THREE.LineBasicMaterial({color:0x8d969e,transparent:true,opacity:.6})).renderOrder=2;
   if(Nb.length)seg(Nb,new THREE.LineDashedMaterial({color:0x3a4046,dashSize:3,gapSize:2,depthTest:false,transparent:true,opacity:.7})).renderOrder=3;
   return {grp,hl,ms,G};}
-const backPts=p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))),partC=p=>p.back?V3.sub(p.c,V3.mul(p.n,BACK_DEPTH)):p.c;
+const backPts=p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))),partC=p=>p.back?V3.sub(p.c,V3.mul(p.n,BACK_DEPTH)):partLabelPt(p,CUR.M3);
 /* st — шаг (asmSteps), asp — ширина/высота клетки. Металлом — stepShown (другая половина фигуры — призраком). Вид — со стороны элемента (stepView); заслоняет — пробуем повернуть/наклонить.
    Кадр — элемент целиком и соседи, к кому варить, рядом с ним (не меньше 150 мм и 2,5 размера элемента). Швы шага — толстые красные.
    → {url, txt — откуда смотрим, labs: [{x, y, t, k: 'new' | 'nb'}] — номера в долях кадра, только видимые и не ребром}; нет WebGL → null */
@@ -197,7 +198,7 @@ function stepShot(st,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScen
   const sm=W.flatMap(q=>q.ed).map(([a,b])=>V3.mul(V3.add(V[a],V[b]),.5)),vs=ev.concat(nbs.flatMap(p=>p.full.map(i=>V[i])).filter(q=>V3.len(V3.sub(q,c0))<=lim));
   const eyeHit=(eye,q)=>{const dv=V3.sub(q,eye),dl=V3.len(dv);S.ray.set(new THREE.Vector3(...eye),new THREE.Vector3(...V3.mul(dv,1/dl)));const h=S.ray.intersectObjects(P.ms);return h.length&&h[0].distance<dl-Math.max(1.5,dl*.006);};
   // соседи у шва: точки на их гранях рядом со швом (сюда же — номера), вес — длина шва
-  const nq=nbs.map(p=>{const ed=W.filter(q=>q.nb===p.id).flatMap(q=>q.ed);return {p,len:ed.reduce((s,[a,b])=>s+V3.len(V3.sub(V[b],V[a])),0),qs:ed.map(([a,b])=>{const m=V3.mul(V3.add(V[a],V[b]),.5),d=V3.sub(p.c,m),l=V3.len(d);return V3.add(m,V3.mul(d,Math.min(.5,Math.max(8,er*.25)/(l||1))));})};});
+  const nq=nbs.map(p=>{const ed=W.filter(q=>q.nb===p.id).flatMap(q=>q.ed);return {p,len:ed.reduce((s,[a,b])=>s+V3.len(V3.sub(V[b],V[a])),0),qs:ed.map(([a,b])=>{const m=V3.mul(V3.add(V[a],V[b]),.5),d=V3.sub(partC(p),m),l=V3.len(d);return V3.add(m,V3.mul(d,Math.min(.5,Math.max(8,er*.25)/(l||1))));})};});
   const probe=x.ps.map(partC).concat(sm,nq.flatMap(o=>o.qs)).slice(0,32),A=x.ps.reduce((s,p)=>s+p.area,0)||1,NL=nq.reduce((s,o)=>s+o.len,0);
   const face=v=>{const e=x.ps.reduce((s,p)=>s+p.area*Math.max(0,V3.dot(p.n,v.d)),0)/A;return NL?(e+nq.reduce((s,o)=>s+o.len*Math.max(0,V3.dot(o.p.n,v.d)),0)/NL)/2:e;};
   // кадр под вид v: рамка по точкам vs в плоскости вида, не меньше 150 мм и 2,5 размера элемента — вокруг видно фигуру призраком (где элемент)
@@ -213,9 +214,9 @@ function stepShot(st,asp){if(!ok||!CUR||!CUR.M3)return null;let S;try{S=shotScen
     cy.position.set(...V3.mul(V3.add(A2,B2),.5));cy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...V3.norm(V3.sub(B2,A2))));P.grp.add(cy);});
   const eye=shotCam(S,P,v,best.c,best.dist);P.hl.position.set(...V3.add(eye,V3.add(V3.mul(v.up,best.dist*.2),V3.mul(v.r,-best.dist*.12))));   // свет почти от глаза — видимая грань не тёмная
   S.r.render(S.sc,S.cam);const url=S.r.domElement.toDataURL('image/jpeg',.9);
-  // номера: у нового элемента — в центре грани, у соседа — рядом со швом на его грани; видимые, в кадре, не ребром
+  // номера: у нового элемента — в самом просторном месте грани (partLabelPt), у соседа — рядом со швом на его грани; видимые, в кадре, не ребром
   const prj=q=>{const p=new THREE.Vector3(...q).project(S.cam);return [(p.x+1)/2,(1-p.y)/2];},inF=f=>f[0]>.03&&f[0]<.97&&f[1]>.05&&f[1]<.95,labs=[];
   const put=(p,qs,k)=>{for(const q of qs){const dv=V3.norm(V3.sub(eye,q)),f=prj(q);if(inF(f)&&Math.abs(V3.dot(p.n,dv))>.2&&!eyeHit(eye,V3.add(q,dv))){labs.push({x:f[0],y:f[1],t:String(p.no),k});return;}}};
   x.ps.forEach(p=>put(p,[partC(p),...W.filter(q=>q.ed.length).map(q=>V3.mul(V3.add(partC(p),V3.mul(V3.add(V[q.ed[0][0]],V[q.ed[0][1]]),.5)),.5))],'new'));
-  nq.forEach(o=>put(o.p,o.qs.concat([o.p.c]),'nb'));
+  nq.forEach(o=>put(o.p,o.qs.concat([partC(o.p)]),'nb'));
   done();return {url,txt:v.txt,labs};}

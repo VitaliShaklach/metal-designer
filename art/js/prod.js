@@ -136,6 +136,19 @@ function innerPoint(P){const d=polyDist(P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x
   for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
   if(!best)return null;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const p=[c[0]+i*step,c[1]+j*step];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}}
   return {p:best,r:bd};}
+// точка для номера детали в 3D: самое просторное место на её грани (как у гравировки), а не среднее углов p.c — у вогнутой детали оно за контуром.
+// внутри — по треугольникам детали (дырки глаз не в счёт), даль — от кромок, включая края дырок; подложка (p.back) выпуклая — p.c. Кэш на детали
+function partLabelPt(p,M3){if(p._lp&&p._lpV===M3.V)return p._lp;const {V,F}=M3;p._lpV=V;if(p.back||!p.tris||!p.tris.length)return p._lp=p.c;
+  const n=p.n;let u=Math.abs(n[0])<.9?[1,0,0]:[0,1,0];u=V3.norm(V3.sub(u,V3.mul(n,V3.dot(u,n))));const w=V3.cross(n,u),pr=i=>[V3.dot(V[i],u),V3.dot(V[i],w)];
+  const T=p.tris.map(fi=>F[fi].map(pr)),ec=new Map();p.tris.forEach(fi=>{const f=F[fi];for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+'_'+b:b+'_'+a;ec.set(key,(ec.get(key)||0)+1);}});
+  const S=[...ec].filter(([,c])=>c===1).map(([k])=>k.split('_').map(Number).map(pr)),inT=q=>T.some(([a,b,c])=>{const d1=(b[0]-a[0])*(q[1]-a[1])-(b[1]-a[1])*(q[0]-a[0]),d2=(c[0]-b[0])*(q[1]-b[1])-(c[1]-b[1])*(q[0]-b[0]),d3=(a[0]-c[0])*(q[1]-c[1])-(a[1]-c[1])*(q[0]-c[0]);return (d1>=0&&d2>=0&&d3>=0)||(d1<=0&&d2<=0&&d3<=0);});
+  const d=q=>S.reduce((m,[a,b])=>Math.min(m,ptSegD(q,a,b)),Infinity),xs=T.flat().map(q=>q[0]),ys=T.flat().map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const q=[x,y];if(!inT(q))continue;const v=d(q);if(v>bd){bd=v;best=q;}}
+  if(!best)return p._lp=p.c;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const q=[c[0]+i*step,c[1]+j*step];if(!inT(q))continue;const v=d(q);if(v>bd){bd=v;best=q;}}}
+  const h=p.full.reduce((s2,i)=>s2+V3.dot(V[i],n),0)/(p.full.length||1);return p._lp=V3.add(V3.add(V3.mul(u,best[0]),V3.mul(w,best[1])),V3.mul(n,h));}
+// точка q (в плоскости детали) на самой детали — по её треугольникам; m — запас от кромки: 8 точек на круге радиуса m тоже на детали
+function partHasPt(p,M3,q,m=0){if(!p.tris||!p.tris.length)return true;const {V,F}=M3,n=p.n,on=z=>p.tris.some(fi=>{const [a,b,c]=F[fi].map(i=>V[i]),s=(x,y)=>V3.dot(V3.cross(V3.sub(y,x),V3.sub(z,x)),n);return s(a,b)>=-1e-6&&s(b,c)>=-1e-6&&s(c,a)>=-1e-6;});
+  if(!on(q))return false;if(!m)return true;const d=V3.norm(V3.cross(n,Math.abs(n[0])<.9?[1,0,0]:[0,1,0])),e=V3.cross(n,d);return [0,1,2,3,4,5,6,7].every(k=>on(V3.add(q,V3.add(V3.mul(d,m*Math.cos(k*Math.PI/4)),V3.mul(e,m*Math.sin(k*Math.PI/4))))));}
 // отрезки гравировки номера внутри детали P (координаты те же, y вверх); null — деталь слишком узкая (меньше 3 мм высоты цифр)
 function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2,  // ширина/высота блока в единицах
     clear=o.clear??2,u=Math.min((o.maxH||20)/2,(ip.r-clear)/Math.hypot(uw/2,uh/2));if(2*u<(o.minH||3))return null;
