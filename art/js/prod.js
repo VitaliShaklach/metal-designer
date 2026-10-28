@@ -15,7 +15,16 @@ const area2=P=>{let a=0;P.forEach((p,i)=>{const q=P[(i+1)%P.length];a+=p[0]*q[1]
 function cutContour(p,t,gap,useT){const P=p.pts,n=P.length;if(n<3)return {pts:[],bad:true,s:[]};const ccw=area2(P)>0?1:-1;
   const s=p.segs.map(g=>edgeSetback(g,t,gap,useT));
   const L=P.map((a,i)=>{const b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l*ccw,ny=dx/l*ccw;return {p:[a[0]+nx*s[i],a[1]+ny*s[i]],d:[dx/l,dy/l]};});
-  const r=meetLines(L,ccw);return {pts:r.pts,bad:r.bad,s};}
+  const r=meetLines(L,ccw);if(r.bad)return {pts:r.pts,bad:true,s};const u=untwist(r.pts,ccw);return {pts:u.pts,bad:u.bad,s};}
+// узкий шип при сдвиге кромок выворачивается петлёй: несоседние стороны перекрещиваются («бантик»). Режем контур в точке пересечения на две петли,
+// вывернутую (обход в другую сторону, снаружи детали) выбрасываем. Обе петли нормальные — деталь распалась на две: bad
+function untwist(Q,ccw){for(let it=0;it<20;it++){const n=Q.length;let hit=null;
+    for(let i=0;i<n&&!hit;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(segX(Q[i],Q[(i+1)%n],Q[j],Q[(j+1)%n])){hit=[i,j];break;}}
+    if(!hit)return {pts:Q,bad:Q.length<3};
+    const [i,j]=hit,a=Q[i],b=Q[i+1],c=Q[j],d=Q[(j+1)%n],ab=[b[0]-a[0],b[1]-a[1]],cd=[d[0]-c[0],d[1]-c[1]],k=((c[0]-a[0])*cd[1]-(c[1]-a[1])*cd[0])/(ab[0]*cd[1]-ab[1]*cd[0]),X=[a[0]+ab[0]*k,a[1]+ab[1]*k];
+    const A=[X,...Q.slice(i+1,j+1)],B=[X,...Q.slice(j+1),...Q.slice(0,i+1)],sa=area2(A)*ccw,sb=area2(B)*ccw;
+    if(sa>0&&sb>0)return {pts:sa>sb?A:B,bad:true};Q=sa>sb?A:B;}
+  return {pts:Q,bad:true};}
 // стороны-прямые {p, d}, уже сдвинутые внутрь → многоугольник: соседние пересекаем.
 // Короткая сторона между острыми углами при сдвиге выворачивается — её убираем, соседи сходятся. eps — какую длину стороны ещё считать нормальной.
 // bevel: у вогнутого угла, где продолжения сторон сходятся дальше 2s от вершины (острая выемка), — срез: две точки напротив вершины (нужен s — сдвиг стороны)

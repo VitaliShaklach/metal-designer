@@ -1,6 +1,7 @@
 /* Сверка страницы «Искусства» в превью — одним вызовом javascript_tool:
      (await import('/.claude/skills/art-verify/page-check.js?'+Date.now())).default()
-   Опции: {layout:false} — без вёрстки, {numbers:false} — без вкладок и цифр (быстро, для телефона).
+   Опции: {layout:false} — без вёрстки, {numbers:false} — без вкладок и цифр (быстро, для телефона),
+   {dxf:true} — только DXF: оба файла (раскрой и детали) разобрать и проверить для цеха.
    Ходит по вкладкам «Детали», «Итого», «Раскрой», «Чертежи», «Карты» и возвращает, что не сходится.
    Трогает только открытую вкладку, вид таблицы «Детали» и разделы панели — всё возвращает как было.
    Вёрстка меряется при текущей ширине: запускать на телефоне (resize_window mobile) и на обычном экране. */
@@ -105,7 +106,61 @@ async function texts(){const out={declension:[],staleTips:[],figOrder:'',default
   out.defaultFig=d?(lastOpt&&d[1]===lastOpt.value?'ок: '+d[1]:`новый посетитель видит «${(opts.find(o=>o.value===d[1])||{}).text||d[1]}», последняя — «Доберман ${last}»`):'не нашёл в ui.js';
   return out;}
 
+// ---------- DXF: жмёт обе кнопки, файлы перехватывает (в «Загрузки» не падают) и разбирает ----------
+function dxfParse(t){const L=t.split('\r\n'),E=[];let cur=null;
+  for(let i=0;i+1<L.length;i+=2){const g=L[i].trim(),v=L[i+1];
+    if(g==='0'){if(v==='VERTEX'&&cur&&cur.type==='POLYLINE'){cur._v={};continue;}if(v==='SEQEND'){cur=null;continue;}cur={type:v,lay:'',P:[]};if(['POLYLINE','LINE','TEXT'].includes(v))E.push(cur);continue;}
+    if(!cur)continue;if(g==='8'&&!cur._v)cur.lay=v;if(g==='70'&&!cur._v)cur.closed=(+v&1)===1;if(g==='1')cur.text=v;
+    if(cur._v){if(g==='10')cur._v.x=+v;if(g==='20'){cur.P.push([cur._v.x,+v]);}}
+    else if(cur.type==='LINE'){if(g==='10')cur.a=[+v];if(g==='20')cur.a.push(+v);if(g==='11')cur.b=[+v];if(g==='21')cur.b.push(+v);}
+    else if(cur.type==='TEXT'){if(g==='10')cur.a=[+v];if(g==='20')cur.a.push(+v);}}
+  E.forEach(e=>delete e._v);return E;}
+const dSeg=(p,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy,k=l?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l)):0;return Math.hypot(p[0]-a[0]-dx*k,p[1]-a[1]-dy*k);};
+const inPoly=(p,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
+const dEdge=(p,P)=>Math.min(...P.map((a,i)=>dSeg(p,a,P[(i+1)%P.length])));
+const out=(p,P)=>inPoly(p,P)?0:dEdge(p,P);   // насколько точка за контуром
+const crossS=(a,b,c,d)=>{const o=(p,q,r)=>Math.sign((q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]));return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0;};
+const selfX=P=>{const n=P.length;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++)if(!(i===0&&j===n-1)&&crossS(P[i],P[(i+1)%n],P[j],P[(j+1)%n]))return true;return false;};
+const box=P=>{const xs=P.map(p=>p[0]),ys=P.map(p=>p[1]);return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];};
+const polyGap=(A,B)=>{let m=Infinity;for(let i=0;i<A.length;i++){const a=A[i],a2=A[(i+1)%A.length];for(let j=0;j<B.length;j++){const b=B[j],b2=B[(j+1)%B.length];
+  if(crossS(a,a2,b,b2))return 0;m=Math.min(m,dSeg(a,b,b2),dSeg(a2,b,b2),dSeg(b,a,a2),dSeg(b2,a,a2));}}return inPoly(A[0],B)||inPoly(B[0],A)?0:m;};
+const r1=v=>Math.round(v*100)/100;
+function dxfCheck(name,t,nest,nos){const E=dxfParse(t),f={name,kb:Math.round(t.length/1024),problems:[]},bad=s=>f.problems.push(s);
+  if(!/\r\n0\r\nEOF\r\n$/.test(t))bad('нет EOF в конце');if(/NaN|undefined|Infinity/.test(t))bad('в файле NaN / undefined');
+  const C=E.map((e,i)=>({e,i})).filter(o=>o.e.type==='POLYLINE'&&o.e.lay==='CUT');f.cut=C.length;
+  C.forEach(({e},k)=>{const P=e.P,id=nos&&nos.length===C.length?'деталь '+nos[k]:'CUT №'+(k+1);if(!e.closed)bad(id+' не замкнут');if(P.length<3)bad(id+' меньше 3 точек');
+    P.forEach((p,i)=>{const q=P[(i+1)%P.length];if(Math.hypot(p[0]-q[0],p[1]-q[1])<1e-3)bad(id+': точка '+(i+1)+' повторяется (нулевой отрезок)');});
+    if(selfX(P))bad(id+': контур пересекает сам себя');});
+  // метки (ENGRAVE, BEND_*, PERF) идут перед CUT своей детали — по этому порядку и привязываем; лежит внутри другой детали — порядок сбит
+  const own={},over={},perf=[];let order=0;
+  E.forEach((e,i)=>{if(e.type!=='LINE'||e.lay==='SHEET')return;const best=C.find(c=>c.i>i);if(!best){order++;return;}const mid=[(e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2];
+    if(out(mid,best.e.P)>0.5&&C.some(c=>c!==best&&inPoly(mid,c.e.P)))order++;own[e.lay]=(own[e.lay]||0)+1;
+    const d=Math.max(out(e.a,best.e.P),out(e.b,best.e.P));if(d>0.05){over[e.lay]=over[e.lay]||{n:0,max:0};over[e.lay].n++;over[e.lay].max=Math.max(over[e.lay].max,d);}
+    if(e.lay==='PERF'){const m=Math.min(dEdge(e.a,best.e.P),dEdge(e.b,best.e.P));if(m<3)perf.push(r1(m));}});
+  f.marks=own;if(order)bad(order+' меток стоят не перед CUT своей детали');
+  Object.entries(over).forEach(([l,o])=>bad(`${l}: ${o.n} линий заходят за контур, до ${r1(o.max)} мм`));
+  if(perf.length)bad(`PERF: ${perf.length} прорезей ближе 3 мм к кромке, от ${Math.min(...perf)} мм`);
+  const N2=(()=>{try{return DXF_N2;}catch(e){return null;}})(),tig=(()=>{try{return weldOf()==='tig';}catch(e){return false;}})();
+  const n2=E.filter(e=>e.type==='TEXT'&&N2&&e.text===N2);
+  if(tig&&(!n2.length||n2.some(e=>e.lay!=='SHEET')||!/_N2_/.test(name)))bad('TIG: нет надписи N2 на слое SHEET или «_N2» в имени');if(!tig&&(n2.length||/_N2_/.test(name)))bad('не TIG, а N2 есть');
+  if(nest){const S=E.filter(e=>e.type==='POLYLINE'&&e.lay==='SHEET').map(e=>box(e.P)),gap=(cur()&&cur().N&&cur().N.gap)||ST.ngap;f.sheets=S.length;let edge=Infinity,mg=Infinity;
+    const on=S.map(()=>[]);C.forEach(c=>{const b=box(c.e.P),s=S.findIndex(q=>b[0]>=q[0]&&b[1]>=q[1]&&b[2]<=q[2]&&b[3]<=q[3]);if(s<0){bad('CUT за пределами листа');return;}on[s].push({P:c.e.P,b});
+      edge=Math.min(edge,b[0]-S[s][0],b[1]-S[s][1],S[s][2]-b[2],S[s][3]-b[3]);});
+    on.forEach(L=>L.forEach((A,i)=>L.slice(i+1).forEach(B=>{if(A.b[0]-gap>B.b[2]||B.b[0]-gap>A.b[2]||A.b[1]-gap>B.b[3]||B.b[1]-gap>A.b[3])return;mg=Math.min(mg,polyGap(A.P,B.P));})));
+    f.minGap=r1(mg);f.minEdge=r1(edge);if(mg<gap-0.05)bad(`детали ближе зазора: ${r1(mg)} < ${gap} мм`);if(edge<10-0.05)bad(`до края листа ${r1(edge)} < 10 мм`);}
+  return f;}
+async function dxf(){if(!cur())return {error:'фигура не построена'};if(!cur().PC)prodCalc();
+  const got=[],orig=HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click=function(){if(this.download&&this.href.startsWith('blob:')){got.push(fetch(this.href).then(r=>r.text()).then(t=>({name:this.download,t})));return;}return orig.call(this);};
+  try{$('bDxfNest').click();await until(()=>got.length>=1,90000);$('bDxfParts').click();await until(()=>got.length>=2,10000);}finally{HTMLAnchorElement.prototype.click=orig;}
+  const F=await Promise.all(got);if(F.length<2)return {error:'файлы не скачались: '+F.map(f=>f.name).join(', ')};
+  // номера деталей — в том же порядке, что CUT в файле: раскрой — по листам, детали — позиции, потом уголки
+  const tpl=(cur().TPL||[]).map(o=>{try{return tplNo(o.a);}catch(e){return 'уголок';}}),NOS={raskroy:cur().N?cur().N.sheets.flatMap(s=>s.items.map(o=>o.no)):null,detali:cur().PC.filter(o=>!o.bad).map(o=>o.no).concat(tpl)};
+  const R=F.map(f=>{const k=/raskroy/.test(f.name)?'raskroy':'detali',r=dxfCheck(f.name,f.t,k==='raskroy',NOS[k]);if(NOS[k]&&r.cut!==NOS[k].length)r.problems.push(`CUT ${r.cut}, а позиций на резку ${NOS[k].length}`);return r;});
+  return R;}
+
 export default async function(o={}){const t0=performance.now(),keep=document.querySelector('.tabbar [aria-selected="true"]');const r={};
+  if(o.dxf){r.dxf=await dxf();r.sec=Math.round((performance.now()-t0)/100)/10;return r;}
   if(o.layout!==false)r.layout=await layout();
   if(o.numbers!==false){r.numbers=await numbers();Object.assign(r,await pairs());r.texts=await texts();}
   if(keep)keep.click();r.sec=Math.round((performance.now()-t0)/100)/10;return r;}

@@ -153,6 +153,14 @@ run(`LPin=(M,R)=>R.parts.filter(p=>!p.back&&p.tris.length).filter(p=>{const q=pa
   M10={V:D10.V,F:D10.F,T:D10.T,S:D10.S};R10n=buildParts(M10,1.5,1.5);addBacking(R10n,M10);pairNumbers(R10n,M10.V);M9={V:D9.V,F:D9.F,T:D9.T,S:D9.S};R9n=buildParts(M9,1.5,1.5);addBacking(R9n,M9);pairNumbers(R9n,M9.V);`);
 console.log("     номер в 3D: среднее углов за контуром — Д9 "+run("CIN(M9,R9n)")+", Д10 "+run("CIN(M10,R10n)")+" деталей; точка номера мимо или у кромки — Д9 ["+run("LPin(M9,R9n)")+"], Д10 ["+run("LPin(M10,R10n)")+"]");
 ok(run("LPin(M9,R9n).length")===0&&run("LPin(M10,R10n).length")===0&&run("CIN(M10,R10n)")>0,"номер детали в 3D — на самой грани, не ближе 3 мм к кромке, и у вогнутых (у Д10 среднее углов уходит за контур)");
+// v0.18.3 контур реза не пересекает сам себя: у плиты с вывернутым тонким пальцем (сама грань — «бантик», в редакторе синяя) контур реза тоже перекручен (было: Д7 41/41.1, Д8 43, Д9 46, Д10 31/31.1).
+// Площадь — с треугольниками детали: у перекрученного контура area2 = тело − петля, меньше настоящей
+run(`XS=Q=>{const n=Q.length;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++)if(!(i===0&&j===n-1)&&segX(Q[i],Q[(i+1)%n],Q[j],Q[(j+1)%n]))return true;return false;};CX={x:[],big:[],bad:0,n:0};
+  [["Д7",D7],["Д8",D8],["Д9",D9],["Д10",D10]].forEach(([nm,D])=>{const M={V:D.V,F:D.F,T:D.T,S:D.S},R=buildParts(M,1.5,1.5);addBacking(R,M);pairNumbers(R,M.V);
+    R.parts.forEach(p=>[[2,0.5,true],[2,1,true],[2,1,false]].forEach(([t,g,u])=>{const r=cutContour(p,t,g,u);CX.n++;if(r.bad){CX.bad++;return;}const a=area2(r.pts),a0=area2(p.pts);
+      if(XS(r.pts))CX.x.push(nm+" "+p.no);if(a*a0<=0||Math.abs(a)>p.area+1e-6)CX.big.push(nm+" "+p.no);}));});`);
+console.log("     контуры реза Д7–Д10 (t 2, зазор 0,5 / 1, с толщиной и без): "+run("CX.n")+", выродилось "+run("CX.bad")+"; пересекают сами себя ["+run("CX.x")+"], больше детали или вывернуты ["+run("CX.big")+"]");
+ok(run("CX.x.length")===0&&run("CX.big.length")===0&&run("CX.bad")===0,"контур реза не пересекает сам себя (вывернутая петля узкого шипа срезана), не больше детали и обходит её в ту же сторону; у Д7–Д10 ни одна деталь не выродилась");
 // чистка: у куба срезаны два угла крошечными треугольниками (рёбра 4 мм) — сводятся обратно в точку, куб снова из 6 граней
 {const C=require('./plates/clean.js')(run);run(`CB=blankBox(300,400,260);[[6,1],[7,-1]].forEach(([v,s])=>{const p=CB.V[v],n=CB.V.length;CB.V.push([p[0]-s*3,p[1],p[2]],[p[0],p[1]-3,p[2]],[p[0],p[1],p[2]-3]);
     CB.P=CB.P.map(Q=>{const k=Q.indexOf(v);if(k<0)return Q;const nb=[Q[(k+Q.length-1)%Q.length],Q[(k+1)%Q.length]],pick=w=>{const d=V3.sub(CB.V[w],p);return Math.abs(d[0])>1?n:Math.abs(d[1])>1?n+1:n+2;};
