@@ -145,6 +145,10 @@ ok(run("SH9.every(([a,b])=>OV9.has(a)||OV9.has(b))")&&run("DD9.near")>=run("DD8.
 run(`D10=figureMesh("doberman10");R10=buildParts(D10,1.5,1.5);DD10=traceDiff(R10.edges,D10.V,D10.F,traceMap(B7,FB8),TT);`);
 console.log("     доберман 10: граней "+run("D10.P.length")+", деталей "+run("R10.parts.length")+" (у 9-го "+run("R9.parts.length")+"); сверка по рамке: на шве "+run("Math.round(DD10.on*100)")+"%, рядом "+run("Math.round(DD10.near*100)")+"%, лишних "+run("DD10.red.length"));
 ok(run("nonPlanar({V:D10.V,P:D10.P},1).length")===0&&run("mirrorMap(D10.V).every(j=>j!==-1)")&&run("selfXPolys(D10).length")<=2&&run("R10.parts.every(p=>p.minW>=14.5)")&&run("R10.parts.length<R9.parts.length")&&run("DD10.red.length")<=run("DD9.red.length"),"доберман 10: плоский, симметричен, самопересечений не больше 2, узких нет, деталей и лишних швов не больше, чем у 9-го");
+// v0.19.0 Доберман 11 = Д10 со слитыми 31+30 и 31.1+30.1 (плоский шов 180°, излом 0,26°): плиты-«бантика» больше нет
+run(`D11=figureMesh("doberman11");R11=buildParts(D11,1.5,1.5);`);
+console.log("     доберман 11: граней "+run("D11.P.length")+", деталей "+run("R11.parts.length")+" (у 10-го "+run("R10.parts.length")+"), самопересечений "+run("selfXPolys(D11).length")+" (у 10-го "+run("selfXPolys(D10).length")+")");
+ok(run("nonPlanar({V:D11.V,P:D11.P},1).length")===0&&run("mirrorMap(D11.V).every(j=>j!==-1)")&&run("selfXPolys(D11).length")===0&&run("R11.parts.every(p=>p.minW>=14.5)")&&run("R11.parts.length")===run("R10.parts.length")-2,"доберман 11: плоский, симметричен, без самопересечений, узких нет, деталей на 2 меньше, чем у 10-го");
 // номер детали в 3D (partLabelPt): на самой грани, не ближе 3 мм к кромке — у вогнутых деталей среднее углов p.c уходит за контур (лоб 22 у Д10)
 run(`LPin=(M,R)=>R.parts.filter(p=>!p.back&&p.tris.length).filter(p=>{const q=partLabelPt(p,M),n=p.n,ins=p.tris.some(fi=>{const f=M.F[fi],[a,b,c]=f.map(i=>M.V[i]),s=(x,y)=>V3.dot(V3.cross(V3.sub(y,x),V3.sub(q,x)),n);return s(a,b)>=-1e-6&&s(b,c)>=-1e-6&&s(c,a)>=-1e-6;});
   if(!ins)return true;const ec=new Map();p.tris.forEach(fi=>{const f=M.F[fi];for(let k=0;k<3;k++){const a=f[k],b=f[(k+1)%3],key=a<b?a+"_"+b:b+"_"+a;ec.set(key,(ec.get(key)||0)+1);}});
@@ -156,11 +160,11 @@ ok(run("LPin(M9,R9n).length")===0&&run("LPin(M10,R10n).length")===0&&run("CIN(M1
 // v0.18.3 контур реза не пересекает сам себя: у плиты с вывернутым тонким пальцем (сама грань — «бантик», в редакторе синяя) контур реза тоже перекручен (было: Д7 41/41.1, Д8 43, Д9 46, Д10 31/31.1).
 // Площадь — с треугольниками детали: у перекрученного контура area2 = тело − петля, меньше настоящей
 run(`XS=Q=>{const n=Q.length;for(let i=0;i<n;i++)for(let j=i+2;j<n;j++)if(!(i===0&&j===n-1)&&segX(Q[i],Q[(i+1)%n],Q[j],Q[(j+1)%n]))return true;return false;};CX={x:[],big:[],bad:0,n:0};
-  [["Д7",D7],["Д8",D8],["Д9",D9],["Д10",D10]].forEach(([nm,D])=>{const M={V:D.V,F:D.F,T:D.T,S:D.S},R=buildParts(M,1.5,1.5);addBacking(R,M);pairNumbers(R,M.V);
+  [["Д7",D7],["Д8",D8],["Д9",D9],["Д10",D10],["Д11",D11]].forEach(([nm,D])=>{const M={V:D.V,F:D.F,T:D.T,S:D.S},R=buildParts(M,1.5,1.5);addBacking(R,M);pairNumbers(R,M.V);
     R.parts.forEach(p=>[[2,0.5,true],[2,1,true],[2,1,false]].forEach(([t,g,u])=>{const r=cutContour(p,t,g,u);CX.n++;if(r.bad){CX.bad++;return;}const a=area2(r.pts),a0=area2(p.pts);
       if(XS(r.pts))CX.x.push(nm+" "+p.no);if(a*a0<=0||Math.abs(a)>p.area+1e-6)CX.big.push(nm+" "+p.no);}));});`);
-console.log("     контуры реза Д7–Д10 (t 2, зазор 0,5 / 1, с толщиной и без): "+run("CX.n")+", выродилось "+run("CX.bad")+"; пересекают сами себя ["+run("CX.x")+"], больше детали или вывернуты ["+run("CX.big")+"]");
-ok(run("CX.x.length")===0&&run("CX.big.length")===0&&run("CX.bad")===0,"контур реза не пересекает сам себя (вывернутая петля узкого шипа срезана), не больше детали и обходит её в ту же сторону; у Д7–Д10 ни одна деталь не выродилась");
+console.log("     контуры реза Д7–Д11 (t 2, зазор 0,5 / 1, с толщиной и без): "+run("CX.n")+", выродилось "+run("CX.bad")+"; пересекают сами себя ["+run("CX.x")+"], больше детали или вывернуты ["+run("CX.big")+"]");
+ok(run("CX.x.length")===0&&run("CX.big.length")===0&&run("CX.bad")===0,"контур реза не пересекает сам себя (вывернутая петля узкого шипа срезана), не больше детали и обходит её в ту же сторону; у Д7–Д11 ни одна деталь не выродилась");
 // чистка: у куба срезаны два угла крошечными треугольниками (рёбра 4 мм) — сводятся обратно в точку, куб снова из 6 граней
 {const C=require('./plates/clean.js')(run);run(`CB=blankBox(300,400,260);[[6,1],[7,-1]].forEach(([v,s])=>{const p=CB.V[v],n=CB.V.length;CB.V.push([p[0]-s*3,p[1],p[2]],[p[0],p[1]-3,p[2]],[p[0],p[1],p[2]-3]);
     CB.P=CB.P.map(Q=>{const k=Q.indexOf(v);if(k<0)return Q;const nb=[Q[(k+Q.length-1)%Q.length],Q[(k+1)%Q.length]],pick=w=>{const d=V3.sub(CB.V[w],p);return Math.abs(d[0])>1?n:Math.abs(d[1])>1?n+1:n+2;};
@@ -180,6 +184,12 @@ run(`D9=modelPoly('doberman9');R9=buildParts(polyBase(D9.V,D9.P,D9.S),1.5,1.5);P
 console.log('     Д9 с гибкой: '+JSON.stringify(run("P9.st"),['parts','blanks','multi','single','V','m','weld']));
 ok(run("P9.st.blanks")>=50&&run("P9.st.blanks")<=56&&run("(()=>{const c=new Array(R9.parts.length).fill(0);P9.blanks.forEach(b=>b.parts.forEach(p=>c[p]++));return c.every(x=>x===1);})()")&&run("B9.every(b=>!b.bad&&b.lines.every(l=>l.segs.length>0))")&&run("P9.st.maxBends")<=7,
   "гибка: Доберман 9 — 50–56 кусков на резку, каждая деталь ровно в одной заготовке, все контуры целые, линии сгиба внутри, сгибов на заготовку ≤ 7");
+// v0.19.0 линия сгиба обрезана по контуру и там, где идёт ровно через вершину: пересечение с кромкой выходило u = −1e-17 и терялось — линия торчала за заготовку до 2,6 мм (Д11 Г13, Д10 Г8, Г7.1)
+run(`BOUT={n:0,x:[]};[["Д9",D9],["Д10",D10],["Д11",D11]].forEach(([nm,D])=>{const E=modelPoly(nm==="Д9"?"doberman9":nm==="Д10"?"doberman10":"doberman11"),R=buildParts(polyBase(E.V,E.P,E.S),1.5,1.5),P=bendPlan(R,E.V,{sheet:[1250,2500]});
+  P.blanks.filter(b=>b.parts.length>1).forEach(b=>{const B=bendBlank(b,R,E.V,P,{t:2,gap:0.5,useT:true});if(B.bad)return;const Q=B.pts,ds=p=>Math.min(...Q.map((a,i)=>{const c=Q[(i+1)%Q.length],d=[c[0]-a[0],c[1]-a[1]],k=Math.max(0,Math.min(1,((p[0]-a[0])*d[0]+(p[1]-a[1])*d[1])/(d[0]*d[0]+d[1]*d[1]||1)));return Math.hypot(p[0]-a[0]-d[0]*k,p[1]-a[1]-d[1]*k);}));
+    B.lines.forEach(l=>l.segs.forEach(z=>[[z[0],z[1]],[z[2],z[3]]].forEach(p=>{BOUT.n++;if(!inPoly(p,Q)&&ds(p)>0.05)BOUT.x.push(nm+" "+l.kind+l.ang+" "+ds(p).toFixed(1));})));});});`);
+console.log("     концы линий сгиба Д9–Д11 (t 2, шов 0,5): "+run("BOUT.n")+", за контуром ["+run("BOUT.x")+"]");
+ok(run("BOUT.n")>0&&run("BOUT.x.length")===0,"линии сгиба Д9–Д11 не выходят за контур заготовки, и там, где идут ровно через вершину");
 // угол коробки: на одной детали две гнутые линии не сходятся в вершине (коробку при 90° — только полосами), на Д9 тоже
 run(`BXC=bendPlan(BXR,BXE.V,{ang:90});corner=P=>{const L=[...P.bent].map(id=>P.J[id]);return L.some((a,i)=>L.some((b,k)=>k>i&&[a.p,a.q].some(x=>x===b.p||x===b.q)&&[a.A,a.B].some(v=>v===b.A||v===b.B)));}`);
 ok(run("BXC.blanks.length")>1&&!run("corner(BXC)")&&!run("corner(P9)"),"гибка: две линии сгиба на одной детали не сходятся в вершине — коробка распадается на полосы, у Д9 таких нет");

@@ -135,10 +135,10 @@ function dxfCheck(name,t,nest,nos){const E=dxfParse(t),f={name,kb:Math.round(t.l
   const own={},over={},perf=[];let order=0;
   E.forEach((e,i)=>{if(e.type!=='LINE'||e.lay==='SHEET')return;const best=C.find(c=>c.i>i);if(!best){order++;return;}const mid=[(e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2];
     if(out(mid,best.e.P)>0.5&&C.some(c=>c!==best&&inPoly(mid,c.e.P)))order++;own[e.lay]=(own[e.lay]||0)+1;
-    const d=Math.max(out(e.a,best.e.P),out(e.b,best.e.P));if(d>0.05){over[e.lay]=over[e.lay]||{n:0,max:0};over[e.lay].n++;over[e.lay].max=Math.max(over[e.lay].max,d);}
+    const d=Math.max(out(e.a,best.e.P),out(e.b,best.e.P));if(d>0.05){over[e.lay]=over[e.lay]||{n:0,max:0};const o=over[e.lay];o.n++;if(d>o.max){o.max=d;const k=C.indexOf(best);o.at=nos&&nos.length===C.length?nos[k]:'CUT №'+(k+1);}}
     if(e.lay==='PERF'){const m=Math.min(dEdge(e.a,best.e.P),dEdge(e.b,best.e.P));if(m<3)perf.push(r1(m));}});
   f.marks=own;if(order)bad(order+' меток стоят не перед CUT своей детали');
-  Object.entries(over).forEach(([l,o])=>bad(`${l}: ${o.n} линий заходят за контур, до ${r1(o.max)} мм`));
+  Object.entries(over).forEach(([l,o])=>bad(`${l}: ${o.n} линий заходят за контур, до ${r1(o.max)} мм (больше всего — ${o.at})`));
   if(perf.length)bad(`PERF: ${perf.length} прорезей ближе 3 мм к кромке, от ${Math.min(...perf)} мм`);
   const N2=(()=>{try{return DXF_N2;}catch(e){return null;}})(),tig=(()=>{try{return weldOf()==='tig';}catch(e){return false;}})();
   const n2=E.filter(e=>e.type==='TEXT'&&N2&&e.text===N2);

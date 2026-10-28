@@ -109,7 +109,7 @@ function bendBlank(b,R,V,P,o){const J=P.J,F2=P.F2,bent=new Set(b.bends),EB=new M
   return {pts,bad,regions,lines,W,L:Lg,area:Math.abs(area2(pts))};}
 // отрезок a–b внутри многоугольника P: куски
 function clipSeg(a,b,P){const ts=[0,1],d=[b[0]-a[0],b[1]-a[1]];P.forEach((p,i)=>{const q=P[(i+1)%P.length],e=[q[0]-p[0],q[1]-p[1]],den=d[0]*e[1]-d[1]*e[0];if(Math.abs(den)<1e-12)return;
-    const w=[p[0]-a[0],p[1]-a[1]],t=(w[0]*e[1]-w[1]*e[0])/den,u=(w[0]*d[1]-w[1]*d[0])/den;if(t>0&&t<1&&u>=0&&u<=1)ts.push(t);});
+    const w=[p[0]-a[0],p[1]-a[1]],t=(w[0]*e[1]-w[1]*e[0])/den,u=(w[0]*d[1]-w[1]*d[0])/den;if(t>0&&t<1&&u>=-1e-9&&u<=1+1e-9)ts.push(t);});   // допуск: линия ровно через вершину контура — пересечение с кромкой выходит u = −1e-17 и терялось
   ts.sort((x,y)=>x-y);const out=[];for(let i=0;i+1<ts.length;i++){const t0=ts[i],t1=ts[i+1];if(t1-t0<1e-6)continue;const m=(t0+t1)/2;if(inPoly([a[0]+d[0]*m,a[1]+d[1]*m],P))out.push([a[0]+d[0]*t0,a[1]+d[1]*t0,a[0]+d[0]*t1,a[1]+d[1]*t1]);}
   return out;}
 // поворот плоского контура: длинная сторона — по X, узкая — по Y, от нуля; f — зеркально (вид изнутри, как на листе) → преобразование для trPt
