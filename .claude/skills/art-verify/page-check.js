@@ -160,7 +160,8 @@ async function dxf(){if(!cur())return {error:'фигура не построен
   return R;}
 
 export default async function(o={}){const t0=performance.now(),keep=document.querySelector('.tabbar [aria-selected="true"]');const r={};
-  if(o.dxf){r.dxf=await dxf();r.sec=Math.round((performance.now()-t0)/100)/10;return r;}
+  // плиты-«бантики» в самой модели: контур реза их лечит (untwist), но площадь и масса в таблицах считают вывернутый палец
+  if(o.dxf){r.dxf=await dxf();if(cur())r.bowtiePlates=cur().R.parts.filter(p=>selfX(p.pts)).map(p=>p.no);r.sec=Math.round((performance.now()-t0)/100)/10;return r;}
   if(o.layout!==false)r.layout=await layout();
   if(o.numbers!==false){r.numbers=await numbers();Object.assign(r,await pairs());r.texts=await texts();}
   if(keep)keep.click();r.sec=Math.round((performance.now()-t0)/100)/10;return r;}
