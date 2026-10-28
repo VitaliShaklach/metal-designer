@@ -328,7 +328,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} швов, которых у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} участков швов эталона, которых нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.19.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.19.1';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть
@@ -359,4 +359,4 @@ $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&
 if(/og/.test(location.hash)){document.body.classList.add('og');ST.nums=false;ST.small=false;$('cNums').checked=false;}
 metalUI();
 if(typeof THREE==='undefined'){loading(true,'Не загрузилась 3D-библиотека — проверьте интернет');}
-else{const hf=/f=([a-z0-9]+)/.exec(location.hash),f=hf&&FIGURES[hf[1]]?hf[1]:FIGURES[store('art-fig')]?store('art-fig'):'doberman';$('figSel').value=f;loadFigure(f);}
+else{const hf=/f=([a-z0-9]+)/.exec(location.hash),f=hf&&FIGURES[hf[1]]?hf[1]:FIGURES[store('art-fig')]?store('art-fig'):'doberman11';$('figSel').value=f;loadFigure(f);}
