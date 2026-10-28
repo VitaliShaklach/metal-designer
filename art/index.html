@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=0.18.1">
+<link rel="stylesheet" href="css/style.css?v=0.18.2">
 </head>
 <body>
 <div class="wrap">
@@ -81,7 +81,7 @@
           <div class="row2"><label>Лист<select id="sSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option><option value="1500x6000">1500 × 6000</option><option value="own">Свой размер</option></select></label>
             <label>Резка<select id="sCut"><option value="laser" selected>Лазер</option><option value="plasma">Плазма</option></select></label></div>
           <div class="row2"><label>Сварка<select id="sWeld"><option value="tig" selected>TIG (аргон)</option><option value="mig">Полуавтомат (MIG/MAG)</option></select></label><label>Зазор под сварку, мм<input class="inp" id="sGap" type="number" value="0.5" min="0" step=".5"></label></div>
-          <div class="row2"><label>Между деталями на листе, мм<input class="inp" id="sNGap" type="number" value="3" min="1" step=".5"></label></div>
+          <div class="row2"><label>Между деталями на листе, мм<input class="inp" id="sNGap" type="number" value="5" min="1" step=".5"></label></div>
           <label class="chk"><input type="checkbox" id="cUseT" checked><span>Учитывать толщину листа</span></label>
           <label class="chk"><input type="checkbox" id="cEngrave" checked><span>Гравировка деталей</span></label>
           <label class="chk"><input type="checkbox" id="cTpl"><span>Уголки-шаблоны для сварки</span></label>
@@ -122,7 +122,7 @@
       <p class="tabnote">Листов — по раскладке деталей (вкладка «Раскрой»). DXF и PDF — во вкладках «Раскрой» и «Чертежи»</p>
     </div>
     <div class="tabpane" id="tab-nest" role="tabpanel" hidden>
-      <p class="tabnote">Детали разложены на лист металла с зазором под рез (поле «Между деталями на листе» в разделе «Металл»: лазеру хватает 3 мм, плазме нужно 6–8 мм) и отступом 10 мм от края. Контуры — уже с учётом толщины и шва</p>
+      <p class="tabnote">Детали разложены на лист металла с зазором под рез (поле «Между деталями на листе» в разделе «Металл»: по умолчанию 5 мм: лазеру хватает 3–5, плазме нужно 6–8) и отступом 10 мм от края. Контуры — уже с учётом толщины и шва</p>
       <div class="dimbar"><button id="bDxfNest" type="button">DXF раскрой</button><span class="dxfmsg" id="nestMsg"></span></div>
       <div class="sheets" id="nestBox"></div>
     </div>
@@ -139,7 +139,7 @@
   </section>
 
   <footer>
-    <span class="ver">v0.18.1</span>
+    <span class="ver">v0.18.2</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -148,18 +148,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/mesh.js?v=0.18.1"></script>
-<script src="js/models.js?v=0.18.1"></script>
-<script src="js/models-poly.js?v=0.18.1"></script>
-<script src="js/figures.js?v=0.18.1"></script>
-<script src="js/edit.js?v=0.18.1"></script>
-<script src="js/trace.js?v=0.18.1"></script>
-<script src="js/view3d.js?v=0.18.1"></script>
-<script src="js/prod.js?v=0.18.1"></script>
-<script src="js/bend.js?v=0.18.1"></script>
-<script src="js/sheets.js?v=0.18.1"></script>
-<script src="js/ui.js?v=0.18.1"></script>
-<script src="js/tips.js?v=0.18.1"></script>
+<script src="js/mesh.js?v=0.18.2"></script>
+<script src="js/models.js?v=0.18.2"></script>
+<script src="js/models-poly.js?v=0.18.2"></script>
+<script src="js/figures.js?v=0.18.2"></script>
+<script src="js/edit.js?v=0.18.2"></script>
+<script src="js/trace.js?v=0.18.2"></script>
+<script src="js/view3d.js?v=0.18.2"></script>
+<script src="js/prod.js?v=0.18.2"></script>
+<script src="js/bend.js?v=0.18.2"></script>
+<script src="js/sheets.js?v=0.18.2"></script>
+<script src="js/ui.js?v=0.18.2"></script>
+<script src="js/tips.js?v=0.18.2"></script>
 <div id="printBox"></div>
 </body>
 </html>
