@@ -1,6 +1,6 @@
 // проверка ядра «Искусства»: node art/tools/smoke.js
 const fs=require('fs'),vm=require('vm'),P=__dirname+'/../js/';const c={console,TextDecoder,Math};vm.createContext(c);
-vm.runInContext(['mesh','edit','models','models-poly','figures','prod','sheets','bend'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
+vm.runInContext(['mesh','edit','models','models-poly','figures','prod','sheets','bend','bend3d'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),c);
 const run=s=>vm.runInContext(s,c);let bad=0;const ok=(b,t)=>{console.log((b?'ok  ':'FAIL')+' '+t);if(!b)bad++;};
 // куб из OBJ: 12 треугольников → 6 деталей-квадратов
 run(`cube=parseOBJ("v 0 0 0\\nv 100 0 0\\nv 100 100 0\\nv 0 100 0\\nv 0 0 100\\nv 100 0 100\\nv 100 100 100\\nv 0 100 100\\nf 1 4 3 2\\nf 5 6 7 8\\nf 1 2 6 5\\nf 2 3 7 6\\nf 3 4 8 7\\nf 4 1 5 8")`);
@@ -247,6 +247,9 @@ run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[{x:.
   if(k!==CD5.length)BG.bad++;`);
 console.log('     снимков сгибов '+run('BG.img')+', листов «Гибка» '+run('BG.sheets')+' из '+run('BG.want')+', всего листов '+run('CD5.length'));
 ok(run('BG.img===BS.lines&&BG.bad===0&&BG.sheets===BG.want&&BG.want>0&&BG.num===0&&BG.rows===0&&!CD4.some(c=>c.svg.includes(\'class="bsh"\'))'),'гибка картинками: снимок на каждый сгиб — 1–2 на карте, больше — лист «Гибка» после карты; листы в штампе по порядку; без WebGL — только строки');
+// v0.20 у снимка сгиба data-b (заготовка) и data-k (номер сгиба): по ним окно «крутить сгиб» знает, что открыть; на каждый сгиб — своя пара, пары не повторяются
+run(`BD={n:0,bad:0,u:new Set()};CD5.forEach(c=>(c.svg.match(/<image class="bsh"[^>]*>/g)||[]).forEach(t=>{BD.n++;const m=t.match(/data-b="([0-9]+)" data-k="([0-9]+)"/);if(!m){BD.bad++;return;}const B=CUR.BL[+m[1]];if(!B||!B.lines.some(l=>l.k===+m[2]))BD.bad++;BD.u.add(m[1]+':'+m[2]);}));`);
+ok(run('BD.n>0&&BD.n===BS.lines&&BD.bad===0&&BD.u.size===BD.n'),'снимки сгибов: у каждого data-b и data-k — есть такая заготовка и такой сгиб, пары не повторяются');
 // уголков нет — на снимке дуга угла: листы «Гибка — проверка угла», слова «уголком» нет
 run(`globalThis.bendShot=(own,l,a)=>({url:'data:image/jpeg;base64,AA',labs:[],hit:false,how:'none'});CD6=buildCards().filter(c=>c.svg.includes('class="bsh"'));delete globalThis.bendShot;`);
 ok(run("CD6.length>0&&CD6.filter(c=>c.title.startsWith('Гибка ')).every(c=>c.svg.includes('Гибка — проверка угла')&&!c.svg.includes('уголком'))&&CD6.filter(c=>!c.title.startsWith('Гибка ')).every(c=>c.svg.includes('дуга угла'))"),'гибка картинками без уголков: лист «Гибка — проверка угла», на карте — «дуга угла»');
@@ -316,4 +319,26 @@ run(`SW={steps:0,cut:0,bad:0,mid:0};asmSteps().steps.forEach(st=>{const S=stepSh
   const gone=[...st.done].filter(pi=>!S.has(pi));SW.cut+=gone.length;if(gone.some(pi=>RP.parts[pi].c[0]*Math.sign(cx)>-15))SW.bad++;if(st.u[1]&&st.u[1].ps.some(p=>Math.abs(p.c[0])>=15&&S.has(p.id)))SW.bad++;});`);
 console.log('     шаги сборки Д9: '+run('SW.steps')+' (посередине '+run('SW.mid')+'), деталей другой половины призраком всего '+run('SW.cut'));
 ok(run('SW.steps>0&&SW.cut>0&&SW.bad===0'),'шаг сборки: другая половина фигуры (зеркальная пара) — призраком, элемент и соседи — металлом, посередине — всё собранное');
+// v0.20 окно «крутить сгиб»: сцена сгиба bendScene — одна на снимок и на окно. Д11: сцена на каждый сгиб — линия сгиба, уголок/линейка/дуга, номера деталей элемента, номер сгиба;
+// шапка — номер сгиба, V/m и угол те же, что у заготовки и в геометрии (угол между гранями, V — клин против наружных нормалей). THREE, pieceGroup, shotFit (view3d.js) — заглушки
+run(`S3=()=>{const t={children:[],add(...a){t.children.push(...a);return p;}},p=new Proxy(t,{get(t,k){if(k in t||typeof k==='symbol')return t[k];if(k==='intersectObjects')return ()=>[];if(k==='position'||k==='quaternion')return t[k]=S3();return ()=>p;}});return p;};
+  globalThis.THREE=new Proxy({},{get:()=>function(){return S3();}});globalThis.pieceGroup=own=>({grp:new THREE.Group(),hl:new THREE.DirectionalLight(),ms:[],G:[]});
+  globalThis.shotFit=(vs,c,v,asp)=>{const tv=Math.tan(17.5*Math.PI/180);let d=0;vs.forEach(q=>{const o=V3.sub(q,c),z=V3.dot(o,v.d);d=Math.max(d,Math.abs(V3.dot(o,v.r))/(tv*asp*.88)+z,Math.abs(V3.dot(o,v.up))/(tv*.88)+z);});return d;};
+  ST={t:2,gap:0.5,useT:true,engrave:true,mat:'steel',name:'Д11',tpl:true,bend:true,pairs:true,minW:15};E11=figureMesh('doberman11');M11={V:E11.V,F:E11.F,T:E11.T,S:E11.S};RB=buildParts(M11,1.5,1.5);addBacking(RB,M11);pairNumbers(RB,M11.V);
+  CUR={R:RB,M3:M11};CUR.BP=bendPlan(RB,M11.V,{sheet:[1250,2500]});CUR.BL=CUR.BP.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,RB,M11.V,CUR.BP,{t:2,gap:.5,useT:true}))).filter(b=>!b.bad);blankNumbers(CUR.BL,RB);
+  CUR.bentKey=new Set(CUR.BL.flatMap(b=>b.bends.map(id=>bendKey(CUR.BP.J[id].p,CUR.BP.J[id].q))));
+  BWT=tpl=>{CUR.TPL=tpl?weldTemplates(RB,2,15,(p,q)=>CUR.bentKey.has(bendKey(p,q)),CUR.BL.flatMap(b=>b.lines.map(l=>l.ang))):null;const o={n:0,bad:[],how:{}},nm=pi=>RB.parts[pi].no;
+    CUR.BL.forEach((B,bi)=>{const own=new Set(B.parts);B.lines.forEach(l=>{o.n++;const S=bendScene(own,l),j=CUR.BP.J[l.id],a=Math.round(l.ang),no='Г'+B.no+' '+l.k;if(!S){o.bad.push(no+' нет сцены');return;}o.how[S.how]=(o.how[S.how]||0)+1;
+      const nos=S.labs.filter(x=>x.k==='no').map(x=>x.t),bl=S.labs.filter(x=>x.k==='bend'),tl=S.labs.filter(x=>x.k==='tpl'),tp=CUR.TPL&&CUR.TPL.some(x=>x.a===a),want=tp?'tpl':a>=TPL_MAX?'ruler':'none';
+      if(S.how!==want)o.bad.push(no+' how '+S.how);if(S.P.grp.children.length!==(want==='tpl'?3:2))o.bad.push(no+' в сцене '+S.P.grp.children.length);
+      if(nos.length!==own.size||!B.parts.every(pi=>nos.includes(String(nm(pi)))))o.bad.push(no+' номера '+nos);if(bl.length!==1||bl[0].t!==String(l.k))o.bad.push(no+' номер сгиба');
+      if(tl.length!==(want==='ruler'?0:1)||tl.length&&tl[0].t!==(tp?tplNo(a):a+'°'))o.bad.push(no+' подпись угла');if(!S.labs.every(x=>x.q.every(isFinite)))o.bad.push(no+' подпись не число');
+      const v=bendView(S,1.6);if(!v||!(v.dist>0)||!isFinite(v.dist)||Math.abs(V3.dot(v.v.d,v.v.up))>1e-6)o.bad.push(no+' вид');
+      const ang=Math.acos(Math.max(-1,Math.min(1,V3.dot(S.T.e1,S.T.w2))))*180/Math.PI,sg=l.kind==='V'?-1:1;if(Math.abs(ang-l.ang)>1)o.bad.push(no+' угол '+ang.toFixed(1)+' ≠ '+l.ang);
+      if(l.kind!==j.kind||V3.dot(S.b,RB.parts[j.p].n)*sg<=0||V3.dot(S.b,RB.parts[j.q].n)*sg<=0)o.bad.push(no+' V/m');
+      const h=bendHead(bi,l,S),h0='Г'+B.no+' · сгиб '+l.k+' из '+B.lines.length+' · '+l.kind+a+' — '+(l.kind==='V'?'на себя':'от себя')+' · между № '+nm(l.p)+' и '+nm(l.q)+' · ';
+      if(!h.startsWith(h0)||!h.slice(h0.length).startsWith(tp?'уголок '+tplNo(a):a>=TPL_MAX?'по линейке':a<TPL_MIN?'по месту':'транспортиром'))o.bad.push(no+' шапка «'+h+'»');});});return o;};
+  BW1=BWT(true);BW2=BWT(false);delete globalThis.THREE;delete globalThis.pieceGroup;delete globalThis.shotFit;`);
+console.log('     сгибы Д11 в 3D: '+run('BW1.n')+' (с уголками '+run('JSON.stringify(BW1.how)')+', без '+run('JSON.stringify(BW2.how)')+'), напр. «'+run('bendHead(0,CUR.BL[0].lines[0])')+'»; ошибок ['+run('BW1.bad.concat(BW2.bad).slice(0,5)')+']');
+ok(run('BW1.n')>20&&run('BW1.bad.length+BW2.bad.length')===0&&run('BW1.how.tpl>0&&!BW2.how.tpl&&BW2.how.none>0'),'окно «крутить сгиб»: Д11 — сцена на каждый сгиб (линия, уголок/линейка/дуга, номера деталей, номер сгиба), шапка — номер, V/m и угол как у заготовки и в геометрии');
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

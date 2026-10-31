@@ -318,7 +318,7 @@ function cardPiece(x,y){const R=CUR.R,V=CUR.M3.V,B=x.bi>=0?CUR.BL[x.bi]:null,o=C
     +(bsh?`<text class="sm" x="202" y="${r2(yy+4.3)}" text-anchor="end">${onC?`элемент готовый, в угле — ${bsh.some(o=>o.how==='tpl')?'уголок':'дуга угла'}`:`снимки — лист «Гибка ${x.name}»`}</text>`:'');
     // строкой: номер по порядку, V/m и угол, куда гнуть, между какими деталями, длина линии, чем выставить угол (картинки гибки — потом)
     B.lines.forEach((l,i)=>{const cx=20+(bc>1?(i%2)*92.5:0),cy=yy+6+(onC?BIH+1:0)+Math.floor(i/bc)*BRH,V=l.kind==='V',col=V?'#c33':'#33c';
-      if(onC)s+=bendImg(20.5+i*92.5,yy+6,91.5,BIH,l,bsh[i]);
+      if(onC)s+=bendImg(20.5+i*92.5,yy+6,91.5,BIH,l,bsh[i],x.bi);
       s+=`<g class="br"><circle cx="${r2(cx+4.5)}" cy="${r2(cy+2.2)}" r="1.6" fill="#fff" stroke="${col}" stroke-width=".25"/><text class="no" x="${r2(cx+4.5)}" y="${r2(cy+3.05)}" text-anchor="middle" style="font-size:2.3px;fill:${col}">${l.k}</text>`
         +`<text class="td" x="${r2(cx+7.2)}" y="${r2(cy+3.2)}" style="font-size:${bc>1?2.6:2.8}px"><tspan style="fill:${col};font-weight:bold;font-style:normal">${l.kind}${l.ang}</tspan> — ${V?'на себя':'от себя'} · между № ${nm(l.p)} и ${nm(l.q)} · линия ${Math.round(l.len)} мм · ${shEsc(onC?bendHow(l,bsh[i],true):tplSay(l.ang,true))}</text></g>`;});
     yy+=hb;s+=`<path class="t" style="stroke-width:.08" d="M20,${r2(yy)}H205"/>`;}ln.slice(0,nl).forEach((l,i)=>{const by=r2(yy+rh*.78),cw=l[0].w?185/wc:185,X=cw<100?[33,45,64]:[106,122,144];l.forEach((r,j)=>{const x0=20+j*cw;
@@ -332,9 +332,9 @@ const bsGrid=n=>{const ch=Math.min(124,245/Math.ceil(Math.min(8,n)/2));return {c
 // чем проверить угол сгиба по снимку; short — для строки на карте
 const bendHow=(l,o,short)=>{const t=tplNo(Math.round(l.ang));return o.how==='tpl'?(o.hit?(short?`уголок ${t} — сразу после сгиба`:`уголок ${t} — сразу после этого сгиба: в готовом элементе мешает соседняя грань`):`уголок ${t}${short?'':' — в угол, прилегает к обеим граням'}`)
   :o.how==='ruler'?'по линейке'+(short?'':' — грани почти в одну плоскость'):tplSay(l.ang,true);};
-// снимок сгиба в клетке x0, y0, w × h: поверх — номера деталей, номер сгиба кружком, номер уголка (текстом — чёткие при любом увеличении)
-function bendImg(x0,y0,w,h,l,o){const col=l.kind==='V'?'#c33':'#33c',X=f=>r2(x0+f*w),Y=(f,d=0)=>r2(y0+f*h+d),hs='paint-order:stroke;stroke:#fff;stroke-linejoin:round';
-  return `<image class="bsh" href="${o.url}" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}" preserveAspectRatio="none"/><rect class="t" style="stroke-width:.12" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}"/>`
+// снимок сгиба в клетке x0, y0, w × h: поверх — номера деталей, номер сгиба кружком, номер уголка (текстом — чёткие при любом увеличении); bi — заготовка: data-b и data-k — клик открывает сгиб в 3D (bend3d.js)
+function bendImg(x0,y0,w,h,l,o,bi){const col=l.kind==='V'?'#c33':'#33c',X=f=>r2(x0+f*w),Y=(f,d=0)=>r2(y0+f*h+d),hs='paint-order:stroke;stroke:#fff;stroke-linejoin:round';
+  return `<image class="bsh" data-b="${bi}" data-k="${l.k}" href="${o.url}" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}" preserveAspectRatio="none"/><rect class="t" style="stroke-width:.12" x="${r2(x0)}" y="${r2(y0)}" width="${r2(w)}" height="${r2(h)}"/>`
     +o.labs.map(b=>b.k==='bend'?`<circle cx="${X(b.x)}" cy="${Y(b.y)}" r="2" fill="#fff" stroke="${col}" stroke-width=".3"/><text class="no" x="${X(b.x)}" y="${Y(b.y,1.05)}" text-anchor="middle" style="font-size:2.9px;fill:${col}">${b.t}</text>`
       :b.k==='tpl'?`<text class="no" x="${X(b.x)}" y="${Y(b.y,.9)}" text-anchor="middle" style="font-size:2.6px;fill:#b01818;${hs};stroke-width:.5">${shEsc(b.t)}</text>`
       :`<text class="no" x="${X(b.x)}" y="${Y(b.y,1.1)}" text-anchor="middle" style="font-size:3.2px;${hs};stroke-width:.7">${b.t}</text>`).join('');}
@@ -343,7 +343,7 @@ function cardBends(c){const {x,y,B,shots}=c.bends,tq=shots.some(o=>o.how==='tpl'
   for(let p0=0;p0<B.lines.length;p0+=8){let s=`<text class="h2" x="23" y="22.5">Гибка — проверка ${tq?'уголком':'угла'} · элемент в готовом виде${pg>1?` · ${p0/8+1} из ${pg}`:''}</text>`
       +`<text class="sm" x="23" y="26.3">${shEsc(tq?'после каждого сгиба уголок — в угол: прилегает без щели — верно; щель к концам уголка — догнуть; не доходит до вершины — перегнут':'после каждого сгиба — угол транспортиром: дуга на снимке показывает, какой угол мерить, цифра — угол между гранями')}</text>`;
     B.lines.slice(p0,p0+8).forEach((l,i)=>{const o=shots[p0+i],cx=20.5+(i%2)*92.5,cy=29+Math.floor(i/2)*g.ch,V=l.kind==='V',col=V?'#c33':'#33c',ty=cy+g.ih+3.6;
-      s+=bendImg(cx,cy,91.5,g.ih,l,o)+`<g class="bs"><circle cx="${r2(cx+2.2)}" cy="${r2(ty-1)}" r="1.7" fill="#fff" stroke="${col}" stroke-width=".25"/><text class="no" x="${r2(cx+2.2)}" y="${r2(ty-.1)}" text-anchor="middle" style="font-size:2.4px;fill:${col}">${l.k}</text>`
+      s+=bendImg(cx,cy,91.5,g.ih,l,o,x.bi)+`<g class="bs"><circle cx="${r2(cx+2.2)}" cy="${r2(ty-1)}" r="1.7" fill="#fff" stroke="${col}" stroke-width=".25"/><text class="no" x="${r2(cx+2.2)}" y="${r2(ty-.1)}" text-anchor="middle" style="font-size:2.4px;fill:${col}">${l.k}</text>`
         +`<text class="td" x="${r2(cx+5)}" y="${r2(ty)}" style="font-size:2.7px"><tspan style="fill:${col};font-weight:bold;font-style:normal">${l.kind}${l.ang}</tspan> — ${V?'на себя':'от себя'} · между № ${nm(l.p)} и ${nm(l.q)} · линия ${Math.round(l.len)} мм</text>`
         +`<text class="sm" x="${r2(cx+5)}" y="${r2(ty+3.3)}"${o.hit?' style="fill:#c00"':''}>${shEsc(bendHow(l,o))}</text></g>`;});
     out.push({head:'Гибка '+x.name+(y?` и ${y.name}`:''),title:'Гибка — проверка '+(tq?'уголком':'угла'),scale:'—',mass:c.mass,body:s,rows:0});}
