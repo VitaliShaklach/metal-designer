@@ -19,3 +19,6 @@ art/tools/plates/out/
 
 # временные страницы снимков и проверок (art/tools/plates/marks/README.md)
 art/_*
+
+# закрытые фигуры Виталия — только локально, в git и на GitHub не идут
+art/private/
