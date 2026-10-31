@@ -1,5 +1,5 @@
 // конвейер: модель Meshy с текстурой → плиты (геометрия + швы текстуры + глаза), симметрично → многогранник {V,P}
-// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [merge=4] [mina=6e-4] [pen=0.5] [clean=13] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
+// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [eyey=0 — глаза не ниже, мм] [merge=4] [mina=6e-4] [pen=0.5] [clean=13] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
 // dump=1 — замеры «швы на изломах эталона» по стадиям (creases.js): метки после VSA, после выпрямления, итог; углы до выравнивания; готовый многогранник
 const fs=require('fs'),vm=require('vm'),path=require('path'),OUT=path.join(__dirname,'out'),JS=path.join(__dirname,'../../js/'),O=f=>path.join(OUT,f);const {render}=require('./rend.js');
 const c={console,Math};vm.createContext(c);vm.runInContext(fs.readFileSync(JS+'mesh.js','utf8')+';'+fs.readFileSync(JS+'edit.js','utf8'),c);
@@ -14,7 +14,7 @@ const NB=F.map(()=>[]);E.forEach(fs=>{if(fs.length===2){NB[fs[0]].push(fs[1]);NB
 const dark=TM.map(t=>t[1]<45),seam=TM.map((t,i)=>t[0]>SEAM||dark[i]);
 // ---------- глаза: крупные связные пятна тёмной текстуры ----------
 const eye=new Uint8Array(NT);{const seen=new Uint8Array(NT);for(let s=0;s<NT;s++){if(!dark[s]||seen[s])continue;const q=[s];seen[s]=1;let a=0;for(let i=0;i<q.length;i++){a+=A[q[i]];NB[q[i]].forEach(o=>{if(dark[o]&&!seen[o]){seen[o]=1;q.push(o);}});}
-  if(a>250){const cc=V3.mul(q.reduce((s2,t)=>V3.add(s2,V3.mul(Cn[t],A[t])),[0,0,0]),1/a);if(cc[2]>200){q.forEach(t=>eye[t]=1);console.log('глаз: площадь',Math.round(a),'мм², центр',cc.map(Math.round).join(','));}}}}
+  if(a>250){const cc=V3.mul(q.reduce((s2,t)=>V3.add(s2,V3.mul(Cn[t],A[t])),[0,0,0]),1/a);if(cc[2]>200&&cc[1]>=(ARG.eyey??0)){q.forEach(t=>eye[t]=1);console.log('глаз: площадь',Math.round(a),'мм², центр',cc.map(Math.round).join(','));}}}}
 // ---------- зеркальный треугольник (для левой половины — ближайший справа) ----------
 const cell=6,HS=new Map(),hk=(x,y,z)=>x+','+y+','+z;F.forEach((_,t)=>{if(Cn[t][0]<0)return;const p=Cn[t],k=hk(Math.floor(p[0]/cell),Math.floor(p[1]/cell),Math.floor(p[2]/cell));(HS.get(k)||HS.set(k,[]).get(k)).push(t);});
 const MT=new Int32Array(NT).fill(-1);F.forEach((_,t)=>{if(Cn[t][0]>=0)return;const p=[-Cn[t][0],Cn[t][1],Cn[t][2]],X=Math.floor(p[0]/cell),Y=Math.floor(p[1]/cell),Z=Math.floor(p[2]/cell);let bd=1e9,bt=-1;
