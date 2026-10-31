@@ -350,6 +350,28 @@ svg.flat text.no{font-weight:600;fill:var(--muted)}
 .zoombar button{min-width:36px;height:34px;padding:0 10px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font:inherit;cursor:pointer;border-radius:4px}.zoombar #zoomK{min-width:48px;text-align:center}
 .zoombox{flex:1;overflow:auto;cursor:grab;touch-action:none;padding:2px}.zoombox.drag{cursor:grabbing}.zoombox svg{display:block;height:auto;background:#fff}
 body.noscroll{overflow:hidden}
+/* окно «крутить сгиб» (bend3d.js): клик по снимку сгиба */
+#cards .sheet svg image.bsh,#sheets .sheet svg image.bsh,.zoombox image.bsh{cursor:pointer}
+.bw{position:fixed;inset:0;z-index:1100;background:#1c2023;color:#fff;display:flex;flex-direction:column}
+.bwbar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 12px;font-size:14px}
+.bwttl{flex:1 1 300px;min-width:0;line-height:1.3}
+.bwbtns{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.bwbar button{min-width:38px;height:36px;padding:0 10px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font:inherit;cursor:pointer;border-radius:4px}
+.bwbar button[data-a="prev"],.bwbar button[data-a="next"]{font-size:20px;line-height:1}
+.bwbar button:disabled{opacity:.3;cursor:default}
+.bwst{flex:1;position:relative;min-height:0;overflow:hidden}
+.bwst canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.bwlb{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.bwlb span{position:absolute;left:0;top:0;white-space:nowrap}
+.bwlb .no{font:600 15px var(--f-mono);color:#1b2124;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.bwlb .bend{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid currentColor;box-sizing:border-box;font:700 12px/20px var(--f-mono);text-align:center}
+.bwlb .tpl{font:700 14px var(--f-mono);color:#b01818;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff}
+.bwhint{position:absolute;left:10px;right:10px;bottom:6px;font-size:12px;color:#5d666c;pointer-events:none}
+.bwdots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.bwdots button{width:36px;height:36px;border-radius:50%;border:2px solid;background:transparent;font:600 13px var(--f-mono);cursor:pointer;padding:0}
+.bwdots .v{border-color:#e05555;color:#ff9090}.bwdots .m{border-color:#5a78e6;color:#a8b8ff}
+.bwdots .v.on{background:#c33;color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.55)}.bwdots .m.on{background:#33c;color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.55)}
+@media (max-width:600px){.bwbar{font-size:13px;padding:6px 8px}.bwbar button{height:40px}.bwhint{display:none}}
 svg .bl{fill:none;stroke-width:1.2;stroke-dasharray:5 3}svg.mini .bl{stroke-width:.8;stroke-dasharray:3 2}
 svg .bl.bkv{stroke:#c33}svg .bl.bkm{stroke:#36c}
 svg.flat text.bkt{stroke:#fff;stroke-width:3px;stroke-linejoin:round;paint-order:stroke;font-weight:600}svg.flat text.bkv{fill:#c33}svg.flat text.bkm{fill:#36c}svg.flat text.bkno{fill:var(--ink)}

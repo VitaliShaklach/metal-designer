@@ -249,13 +249,17 @@ function zoomSet(k,cx,cy){const box=$('zoomBox'),s=box.querySelector('svg');if(!
 function zoomOpen(svg,title,fx=.5,fy=.5){const z=$('zoom');$('zoomTtl').textContent=title||'';const c=svg.cloneNode(true);c.removeAttribute('width');c.removeAttribute('height');$('zoomBox').replaceChildren(c);z.hidden=false;document.body.classList.add('noscroll');ZM.k=1;zoomSet(1);
   const box=$('zoomBox'),r=box.getBoundingClientRect();zoomSet(3,fx*c.clientWidth-box.scrollLeft,fy*c.clientHeight-box.scrollTop);box.scrollLeft=fx*c.clientWidth-r.width/2;box.scrollTop=fy*c.clientHeight-r.height/2;}
 function zoomClose(){$('zoom').hidden=true;$('zoomBox').replaceChildren();document.body.classList.remove('noscroll');}
-['nestBox','sheets','cards'].forEach(id=>$(id).addEventListener('click',e=>{const f=e.target.closest('figure.sheet'),s=f&&f.querySelector('svg');if(!s)return;const r=s.getBoundingClientRect();zoomOpen(s,f.querySelector('figcaption')?.textContent,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);}));
+// снимок сгиба (карта, лист «Гибка») — крутить сгиб в 3D (bend3d.js); остальное — лист крупно
+['nestBox','sheets','cards'].forEach(id=>$(id).addEventListener('click',e=>{const im=e.target.closest('image.bsh[data-b]');if(im){bwOpen(+im.getAttribute('data-b'),+im.getAttribute('data-k'));return;}const f=e.target.closest('figure.sheet'),s=f&&f.querySelector('svg');if(!s)return;const r=s.getBoundingClientRect();zoomOpen(s,f.querySelector('figcaption')?.textContent,(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);}));
 $('zoomIn').addEventListener('click',()=>zoomSet(ZM.k*1.5));$('zoomOut').addEventListener('click',()=>zoomSet(ZM.k/1.5));$('zoomFit').addEventListener('click',()=>zoomSet(1));$('zoomX').addEventListener('click',zoomClose);
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('zoom').hidden)zoomClose();});
 $('zoomBox').addEventListener('wheel',e=>{e.preventDefault();const r=$('zoomBox').getBoundingClientRect();zoomSet(ZM.k*(e.deltaY<0?1.2:1/1.2),e.clientX-r.left,e.clientY-r.top);},{passive:false});
 (()=>{const box=$('zoomBox');let d=null;box.addEventListener('pointerdown',e=>{d={x:e.clientX,y:e.clientY,l:box.scrollLeft,t:box.scrollTop};box.setPointerCapture(e.pointerId);box.classList.add('drag');});
   box.addEventListener('pointermove',e=>{if(!d)return;box.scrollLeft=d.l-(e.clientX-d.x);box.scrollTop=d.t-(e.clientY-d.y);});
   ['pointerup','pointercancel'].forEach(t=>box.addEventListener(t,()=>{d=null;box.classList.remove('drag');}));})();
+// на листе крупно — тоже: тап по снимку сгиба без сдвига (лист тянут — не открываем); цель — по точке: при захвате указателя click приходит в само окно
+(()=>{const box=$('zoomBox');let p0=null;box.addEventListener('pointerdown',e=>{p0=[e.clientX,e.clientY];});
+  box.addEventListener('click',e=>{if(!p0||Math.hypot(e.clientX-p0[0],e.clientY-p0[1])>6)return;const el=document.elementFromPoint(e.clientX,e.clientY),im=el&&el.closest&&el.closest('image.bsh[data-b]');if(im)bwOpen(+im.getAttribute('data-b'),+im.getAttribute('data-k'));});})();
 ['shGo','cdGo'].forEach(id=>$(id).addEventListener('change',e=>{const el=$(e.target.value);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}));
 // печать листов: А3 альбомная или А4 книжная — размер страницы задаём на время печати (один PDF с А3 и А4 вперемешку браузеры печатают ненадёжно)
 function printSvgs(L,what,a4){const pb=$('printBox'),pg=document.createElement('style');pb.innerHTML=L.join('');pb.classList.toggle('a4',!!a4);pg.textContent=`@media print{@page{size:${a4?'A4 portrait':'A3 landscape'};margin:0}}`;document.head.appendChild(pg);
