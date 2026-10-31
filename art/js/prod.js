@@ -9,6 +9,8 @@ const weldOf=()=>ST.weld==='mig'?'mig':'tig',weldGap=(w,t)=>w==='mig'&&t>1.5?1:0
 // сменили толщину t0 → t1: стоял рекомендуемый зазор — новый рекомендуемый, свой — не трогаем
 const mmT=g=>String(+g).replace('.',',');   // зазор словами: 0,5 · 1 · 1,25
 const gapAfterT=(gap,w,t0,t1)=>gap===weldGap(w,t0)?weldGap(w,t1):gap;
+// зазор между деталями на листе — под ширину реза: лазер 5 мм, плазма 7 (рез шире, кромка греется); сменили резку — рекомендуемый, свой (меняли руками) — не трогаем
+const nestGap=c=>c==='plasma'?7:5,ngapAfterCut=(gap,own,c)=>own?gap:nestGap(c);
 function edgeSetback(g,t,gap,useT){if(g.nb<0)return 0;let s=gap/2;if(useT&&g.dih<179.5)s+=Math.min(2*t,t/Math.tan(g.dih*Math.PI/360));return s;}   // на острых углах — не больше 2t, остальное заберёт шов
 const area2=P=>{let a=0;P.forEach((p,i)=>{const q=P[(i+1)%P.length];a+=p[0]*q[1]-q[0]*p[1];});return a/2;};
 // контур реза детали p в тех же координатах, что p.pts; bad — деталь выродилась

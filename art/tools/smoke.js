@@ -316,4 +316,26 @@ run(`SW={steps:0,cut:0,bad:0,mid:0};asmSteps().steps.forEach(st=>{const S=stepSh
   const gone=[...st.done].filter(pi=>!S.has(pi));SW.cut+=gone.length;if(gone.some(pi=>RP.parts[pi].c[0]*Math.sign(cx)>-15))SW.bad++;if(st.u[1]&&st.u[1].ps.some(p=>Math.abs(p.c[0])>=15&&S.has(p.id)))SW.bad++;});`);
 console.log('     шаги сборки Д9: '+run('SW.steps')+' (посередине '+run('SW.mid')+'), деталей другой половины призраком всего '+run('SW.cut'));
 ok(run('SW.steps>0&&SW.cut>0&&SW.bad===0'),'шаг сборки: другая половина фигуры (зеркальная пара) — призраком, элемент и соседи — металлом, посередине — всё собранное');
+// ревью 28.10: склонение счётчиков, зазор раскроя от резки, порядок в списке «Фигура», подсказки — на свежей фигуре с настоящими числами
+const PL=(n,f)=>run(`plural(${n},'${f[0]}','${f[1]}','${f[2]}')`),PF=['позиция','позиции','позиций'];
+ok([1,21,101].every(n=>PL(n,PF)===PF[0])&&[2,3,4,22,54].every(n=>PL(n,PF)===PF[1])&&[0,5,11,12,13,14,48,111,114].every(n=>PL(n,PF)===PF[2]),"склонение: 1, 21 позиция; 2–4, 54 позиции; 5+, 11–14, 111 позиций");
+const UI=fs.readFileSync(P+'ui.js','utf8'),HT=fs.readFileSync(__dirname+'/../index.html','utf8');
+ok(!/\$\{(?!plural\()[^{}]+\} (позиций|треугольников|угла|швов|участков)/.test(UI)&&/\$\{CUR\.PC\.length\} \$\{plural\(CUR\.PC\.length,'позиция','позиции','позиций'\)\} на резку/.test(UI),"склонение: в ui.js число перед «позиций / треугольников / угла / швов / участков» — через plural");
+ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasma')===7&&ngapAfterCut(7,false,'laser')===5&&ngapAfterCut(4,true,'plasma')===4&&ngapAfterCut(9,true,'laser')===9")
+  &&/\$\('sCut'\)[^\n]*ST\.ngap=ngapAfterCut\(ST\.ngap,ST\.ngapOwn,ST\.cut\);\$\('sNGap'\)\.value=ST\.ngap/.test(UI)&&/\$\('sNGap'\)[^\n]*ST\.ngapOwn=true/.test(UI)&&/ngapOwn:false/.test(UI),
+  "раскрой: «Между деталями на листе» от резки — лазер 5 мм, плазма 7; поменяли руками — смена резки не трогает");
+{const sel=/<select id="figSel">([\s\S]*?)<\/select>/.exec(HT)[1],O=[...sel.matchAll(/<option value="([^"]*)"[^>]*>([^<]*)</g)].map(m=>({v:m[1],t:m[2]})).filter(o=>o.v),ND=O.filter(o=>/^Доберман \d+$/.test(o.t)).map(o=>+o.t.split(' ')[1]),ib=O.findIndex(o=>o.v==='bull');
+  ok(ND.every((n,i)=>!i||n>ND[i-1])&&ib===O.length-1&&O[ib-1].v==='doberman11'&&O.every(o=>run(`!!FIGURES['${o.v}']`)),"список «Фигура»: Доберманы по порядку, голова быка — после Добермана 11, у каждого пункта есть фигура");}
+{const tc={};vm.createContext(tc);const src=fs.readFileSync(P+'tips.js','utf8');vm.runInContext(src.slice(0,src.indexOf('\n(()=>'))+'\nthis.TIPS=TIPS;',tc);const TP=tc.TIPS;
+  // Д11 как на странице: растянут до высоты 600, подложки глаз, гибка с повтором без «плохих» заготовок, уголки под швы и сгибы
+  run(`ST={t:2,gap:0.5,useT:true,minW:15,bend:true,tpl:true};M11=figureMesh('doberman11',12);{const z=meshBox(M11.V).size,H=FIGURES.doberman11.H;M11=polyBase(fitMesh({V:M11.V,F:[]},{H,W:Math.round(z[0]*H/z[1]),D:Math.round(z[2]*H/z[1])}).V,M11.P,M11.S);}M11={V:M11.V,F:M11.F,T:M11.T,S:M11.S};R11=buildParts(M11,1.5,1.5);addBacking(R11,M11);pairNumbers(R11,M11.V);
+    (()=>{const ban=new Set();for(let k=0;k<4;k++){P11=bendPlan(R11,M11.V,{sheet:[1250,2500],ban});const BL=P11.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,R11,M11.V,P11,{t:2,gap:0.5,useT:true})));BL11=BL.filter(b=>!b.bad);if(BL11.length===BL.length)break;BL.filter(b=>b.bad).forEach(b=>b.bends.forEach(id=>ban.add(id)));}})();
+    BJ11=BL11.flatMap(b=>b.bends.map(id=>P11.J[id]));BK11=new Set(BJ11.map(j=>bendKey(j.p,j.q)));N11=R11.parts.length;BN11=BL11.reduce((a,b)=>a+b.parts.length,0);
+    TPL11=weldTemplates(R11,2,15,(p,q)=>BK11.has(bendKey(p,q)),BL11.flatMap(b=>b.lines.map(l=>l.ang)));BLEN11=BJ11.reduce((a,j)=>a+j.len,0);`);
+  const n=run('N11'),bl=run('BL11.length'),ns=n-run('BN11'),pc=bl+ns,tp=run('TPL11.length'),bm=(run('BLEN11')/1000).toFixed(1).replace('.',',');
+  console.log(`     Д11 для подсказок: деталей ${n} → позиций ${pc} (заготовок ${bl} + деталей ${ns}), сгибов ${bm} м, уголков ${tp}`);
+  ok([1,2,3,4,5,6,7,8,9,10,11].every(i=>new RegExp(`(^|[^\\d])${i}([^\\d]|$)`).test(TP.figSel))&&/быка/.test(TP.figSel),"подсказка «Фигура»: названы все Доберманы 1–11 и голова быка");
+  ok(TP.cBend.includes(`У Добермана 11 вместо ${n} деталей — ${pc} позиций на резку (${bl} заготовок со сгибами и ${ns} отдельных деталей), сварки на ${bm} м меньше`)&&TP.cTpl.includes(`у Добермана 11 их ${tp}`)&&!/Доберман\S* ([1-9]|10)\b/.test(TP.cBend+TP.cTpl),
+    "подсказки «Гнуть» и «Уголки»: пример на Добермане 11, числа — как считает программа");
+  ok(/плазма — 7 мм/.test(TP.sNGap)&&/руками/.test(TP.sNGap),"подсказка «Между деталями на листе»: плазма 7 мм, свой зазор не сбивается");}
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
