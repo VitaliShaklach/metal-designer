@@ -39,6 +39,14 @@ ok(run("R2d.parts.length")>=55&&run("R2d.parts.length")<=120&&run("nonPlanar({V:
 ok(run("[...E2d.values()].every(n=>n===2)")&&run("mirrorMap(D2.V).every(j=>j!==-1)"),"доберман 2: сетка замкнута (спина — пластина), симметричен");
 ok(run("R2d.parts.filter(p=>p.tris.every(t=>D2.F[t].every(i=>Math.abs(D2.V[i][2])<.01))).length")===1,"доберман 2: пластина крепления — одна деталь на стене");
 ok(run("buildParts(fitMesh(D2,{W:400,H:700,D:300}),1.5,1.5).parts.length")===run("R2d.parts.length"),"доберман 2 растянут 400×700×300 — деталей столько же");
+// грани, протыкающие другие: крест из плит — обе; общее ребро — не пересечение; у встроенных поли-фигур — ни одной
+ok(run(`piercePolys({V:[[-50,0,0],[50,0,0],[50,100,0],[-50,100,0],[0,0,-50],[0,0,50],[0,100,50],[0,100,-50]],P:[[0,1,2,3],[4,5,6,7]]}).join()`)==='0,1'&&run(`piercePolys({V:[[0,0,0],[100,0,0],[100,100,0],[0,100,0],[0,0,100],[0,100,100]],P:[[0,1,2,3],[0,3,5,4]]}).length`)===0&&run(`piercePolys({V:[[0,0,0],[100,0,0],[100,100,0],[0,100,0],[0,0,0],[0,100,0],[0,100,100],[0,0,100]],P:[[0,1,2,3],[4,5,6,7]]}).length`)===0,"протыкание: плиты крест-накрест — обе в списке, с общим ребром (и ребро из своих точек) — пусто");
+{const PF=run("Object.keys(FIGURES).filter(k=>FIGURES[k].poly)"),PX=PF.map(id=>[id,run(`(M=>piercePolys({V:M.V,P:M.P}).length)(figureMesh('${id}'))`)]);
+  ok(PF.length>=7&&PX.every(x=>x[1]===0),"протыкание: у всех поли-фигур ("+PF.length+") ни одна грань не протыкает другую"+(PX.some(x=>x[1])?" — "+PX.filter(x=>x[1]).map(x=>x.join(':')).join(', '):""));
+  const BIG=run("(()=>{let b=null;Object.keys(FIGURES).forEach(k=>{const M=figureMesh(k);if(!b||M.F.length>b.F.length)b={id:k,V:M.V,F:M.F};});return b;})()");
+  const t0=Date.now();const nb=c.piercePolys({V:BIG.V,P:BIG.F}).length,dt=Date.now()-t0,n3=Math.min(3000,BIG.F.length),t1=Date.now();c.piercePolys({V:BIG.V,P:BIG.F.slice(0,n3)});const dt3=Date.now()-t1;
+  console.log(`     протыкание: самая большая модель ${BIG.id} — ${BIG.F.length} тр за ${dt} мс (протыкают ${nb}), первые ${n3} тр — ${dt3} мс`);
+  ok(dt3<200,"протыкание: 3000 граней считаются быстрее 200 мс");}
 // производство
 run(`RC=buildParts(polyBase(blankBox(100,100,100).V,blankBox(100,100,100).P));CC=RC.parts.map(p=>cutContour(p,2,1,true))`);
 ok(run("CC.every(c=>!c.bad&&Math.abs(Math.abs(area2(c.pts))-95*95)<1e-6)"),"куб 100, t=2, шов 1: каждая деталь 95×95");

@@ -76,6 +76,23 @@ function polySelfX(V,Q){const n=Q.length;if(n<4)return false;const N=polyNorm(V,
   const X=(a,b,c,d)=>{const d1=cr(c,d,a),d2=cr(c,d,b),d3=cr(a,b,c),d4=cr(a,b,d);return d1&&d2&&d3&&d4&&(d1>0)!==(d2>0)&&(d3>0)!==(d4>0);};
   for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(X(P[i],P[(i+1)%n],P[j],P[(j+1)%n]))return true;}return false;}
 function selfXPolys(E){const r=[];E.P.forEach((Q,i)=>{if(polySelfX(E.V,Q))r.push(i);});return r;}
+// грани, которые протыкают другую грань (без общей точки): из листа не собрать — детали шли бы друг сквозь друга
+// треугольники каждой грани; пары — по габаритам (сортировка по x); треугольник–треугольник: каждый пересекает плоскость другого,
+// отрезки на линии пересечения плоскостей перекрываются больше eps. Касание (точкой, ребром, плоскостью) — не считаем
+function triX(A,B,eps){const pl=T=>{const n=V3.cross(V3.sub(T[1],T[0]),V3.sub(T[2],T[0])),l=V3.len(n);if(l<1e-9)return null;const u=V3.mul(n,1/l);return [u,V3.dot(u,T[0])];};
+  const pa=pl(A),pb=pl(B);if(!pa||!pb)return false;const dist=(T,p)=>T.map(q=>V3.dot(p[0],q)-p[1]),db=dist(B,pa),da=dist(A,pb);
+  const cut=d=>Math.max(...d)>eps&&Math.min(...d)<-eps;if(!cut(da)||!cut(db))return false;
+  const D=V3.cross(pa[0],pb[0]);if(V3.len(D)<1e-9)return false;
+  // отрезок треугольника T на плоскости другого: точки на рёбрах, где знак расстояния меняется, → проекции на D
+  const span=(T,d)=>{const t=[];for(let k=0;k<3;k++){const j=(k+1)%3;if(Math.abs(d[k])<=eps)t.push(V3.dot(D,T[k]));if((d[k]>eps&&d[j]<-eps)||(d[k]<-eps&&d[j]>eps)){const s=d[k]/(d[k]-d[j]);t.push(V3.dot(D,V3.add(T[k],V3.mul(V3.sub(T[j],T[k]),s))));}}return [Math.min(...t),Math.max(...t)];};
+  const a=span(A,da),b=span(B,db);return Math.min(a[1],b[1])-Math.max(a[0],b[0])>eps*V3.len(D);}
+function piercePolys(E,eps=.01){const V=E.V,F=[];E.P.forEach((Q,pi)=>{if(Q.length<3)return;const ts=Q.length===3?[Q]:earClip(V,Q),T=ts.map(t=>t.map(i=>V[i])),mn=[1e18,1e18,1e18],mx=[-1e18,-1e18,-1e18];
+    T.forEach(t=>t.forEach(p=>{for(let k=0;k<3;k++){if(p[k]<mn[k])mn[k]=p[k];if(p[k]>mx[k])mx[k]=p[k];}}));F.push({pi,T,mn,mx,vs:new Set(Q)});});
+  F.sort((a,b)=>a.mn[0]-b.mn[0]);const hit=new Set();
+  for(let i=0;i<F.length;i++){const a=F[i];for(let j=i+1;j<F.length;j++){const b=F[j];if(b.mn[0]>a.mx[0]+eps)break;if(hit.has(a.pi)&&hit.has(b.pi))continue;
+    if(b.mn[1]>a.mx[1]+eps||a.mn[1]>b.mx[1]+eps||b.mn[2]>a.mx[2]+eps||a.mn[2]>b.mx[2]+eps)continue;let sh=false;for(const v of b.vs)if(a.vs.has(v)){sh=true;break;}if(sh)continue;
+    if(a.T.some(ta=>b.T.some(tb=>triX(ta,tb,eps)))){hit.add(a.pi);hit.add(b.pi);}}}
+  return [...hit].sort((a,b)=>a-b);}
 // есть ли у граней общее ребро
 function polysAdjacent(E,a,b){const A=E.P[a],B=E.P[b];if(!A||!B||a===b)return false;const s=new Set();B.forEach((x,k)=>s.add(B[(k+1)%B.length]+'_'+x));return A.some((x,k)=>s.has(x+'_'+A[(k+1)%A.length]));}
 // контур двух граней без общих рёбер; null — общих рёбер нет или их несколько участков (вышла бы дыра)

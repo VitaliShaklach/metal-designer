@@ -339,6 +339,7 @@ svg.flat text.nb{fill:var(--accent)}
 svg.flat text.no{font-weight:600;fill:var(--muted)}
 .selh{margin:0 0 8px;font:600 16px var(--f-display);text-transform:uppercase;letter-spacing:.04em}
 .bad{color:#d01f1f}
+.prc{color:#8a2fc4}
 .selh .bad{font:500 11px var(--f-mono);border:1px solid #d01f1f;padding:1px 5px;margin-left:6px;vertical-align:middle}
 #parts tr[data-p],#parts tr[data-b]{cursor:pointer}
 /* лист крупно */

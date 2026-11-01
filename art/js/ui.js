@@ -13,6 +13,8 @@ const DENSE=2000;                    // больше стольких треуг
 const isDense=()=>!ST.base.P&&ST.base.F.length>DENSE;
 const isPoly=()=>!!ST.base.P;   // модель из граней-многоугольников (руками / в редакторе) — живёт в мм как есть
 const E=()=>({V:ST.base.V,P:ST.base.P,S:ST.base.S||[]});
+// грани, протыкающие другие: считаем только в редакторе или с подсветкой; на одну модель — один раз
+const PRC=new WeakMap(),pierceOn=()=>isPoly()&&(ST.edit||ST.small),pierceOf=b=>{let s=PRC.get(b);if(!s){s=new Set(piercePolys({V:b.V,P:b.P}));PRC.set(b,s);}return s;};
 // размеры многоугольной модели: тянем саму модель (x — от оси, y — от пола, z — от стены)
 function setPolyDims(){ST.base=polyBase(fitMesh({V:ST.base.V,F:[]},ST.dims).V,ST.base.P,ST.base.S);}
 function syncDims(){const s=meshBox(ST.base.V).size;ST.dims={W:Math.round(s[0]),H:Math.round(s[1]),D:Math.round(s[2])};}
@@ -54,7 +56,7 @@ function ensureNest(cb){if(CUR&&CUR.N){cb&&cb();return;}if(cb)NEST.wait.push(cb)
   setTimeout(step,0);}
 function compute0(){const b=ST.base;let S=b;
   if(isPoly()){const M3={V:b.V,F:b.F,T:b.T,S:b.S},R=buildParts(M3,1.5,1.5),wl=FIGURES[ST.fig]?.noBack?0:addBacking(R,M3,FIGURES[ST.fig]?.backIf),_p=pairNumbers(R,M3.V),T=totals(R,{t:ST.t,mat:ST.mat,sheet:sheetWL()});T.weld+=wl;T.open=Math.max(0,T.open-wl);
-    CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5)),selfx:new Set(selfXPolys(E()))};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
+    CUR={M3,R,T,small:new Set(R.parts.filter(p=>p.minW<ST.minW-.5).map(p=>p.id)),bad:new Set(nonPlanar(E(),1.5)),selfx:new Set(selfXPolys(E())),pierce:pierceOn()?pierceOf(b):null};if(ST.sel>=R.parts.length)ST.sel=-1;if(ST.sp>=b.P.length)ST.sp=-1;if(ST.sv>=b.V.length)ST.sv=-1;return;}
   if(isDense()&&ST.faces<b.F.length){const key=b.F.length+':'+b.V.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   else if(!isDense()&&ST.faces<b.F.length){const key='low:'+b.F.length+':'+ST.faces+':'+b.V[0];if(SIMP.key!==key){SIMP={key,m:simplify(b,ST.faces)};}S=SIMP.m;}
   const asIs=!isDense()&&ST.faces>=b.F.length;   // гранёная как есть: грани уже плоские, не трогаем
@@ -67,8 +69,8 @@ function compute0(){const b=ST.base;let S=b;
 function mergeFlat(M3){const G=dissolve(M3,ST.diss,Math.max(ST.dims.W,ST.dims.H,ST.dims.D)*.01),open=openVerts(G);
   const V=planarize(G.V,G.P,(i,q)=>{if(open.has(i)&&Math.abs(G.V[i][2])<.5)q[2]=0;return q;},400);return fitMesh(polyMesh(V,G.P),ST.dims);}
 
-function renderAll(fit){if(!CUR)return;const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
-  build3D(CUR.M3,CUR.R,{sel:ST.sel,bent:CUR.bentKey&&CUR.bentKey.size?e=>e.p.length===2&&CUR.bentKey.has(bendKey(e.p[0],e.p[1])):null,grp:selBlank()>=0?new Set(CUR.BL[selBlank()].parts):null,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),diff:ed&&traceOn()?TRC.diff:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
+function renderAll(fit){if(!CUR)return;if(pierceOn()&&!CUR.pierce)CUR.pierce=pierceOf(ST.base);const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
+  build3D(CUR.M3,CUR.R,{sel:ST.sel,bent:CUR.bentKey&&CUR.bentKey.size?e=>e.p.length===2&&CUR.bentKey.has(bendKey(e.p[0],e.p[1])):null,grp:selBlank()>=0?new Set(CUR.BL[selBlank()].parts):null,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,pierce:pierceOn()&&CUR.pierce?tri(CUR.pierce):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),diff:ed&&traceOn()?TRC.diff:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
   stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
   $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],CUR.BL&&CUR.BL.length?[`${T.n} → ${CUR.PC.length}`,`${plural(T.n,'деталь','детали','деталей')} → ${plural(CUR.PC.length,'позиция','позиции','позиций')} на резку (${CUR.BL.length} ${plural(CUR.BL.length,'гнутая','гнутые','гнутых')})`]:[`${T.n}`,plural(T.n,'деталь','детали','деталей')],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(weldLen()/1000,1)} м`,'швов']]
@@ -298,10 +300,10 @@ function edUI(){const on=ST.edit&&isPoly();$('hint').textContent=on?(ST.seam?'П
   const B=ST.base;let h='<p class="note">Кликните точку или грань на модели</p>';
   if(ST.sv>=0&&B.V[ST.sv]){const p=B.V[ST.sv];h=`<b>Точка</b> — тяните мышкой или введите координаты, мм<div class="xyz3"><label>X<input class="inp" id="vX" type="number" value="${Math.round(p[0])}"></label><label>Y<input class="inp" id="vY" type="number" value="${Math.round(p[1])}"></label><label>Z<input class="inp" id="vZ" type="number" value="${Math.round(p[2])}"></label></div>`;}
   else if(ST.sp>=0&&ST.sp2>=0&&B.P[ST.sp2])h=polysAdjacent(B,ST.sp,ST.sp2)?'<b>Две грани</b> — «Убрать шов» сольёт их в одну':'<b>Две грани</b> — они не соседние, слить нельзя';
-  else if(ST.sp>=0&&B.P[ST.sp]){const Q=B.P[ST.sp],dev=polyDev(B.V,Q);h=`<b>Грань</b> — ${Q.length} ${plural(Q.length,'угол','угла','углов')}${Q.length>4?' (многоугольник)':''}${dev>1.5?', <span class="bad">неплоская на '+Math.round(dev)+' мм</span>':''}`;}
+  else if(ST.sp>=0&&B.P[ST.sp]){const Q=B.P[ST.sp],dev=polyDev(B.V,Q);h=`<b>Грань</b> — ${Q.length} ${plural(Q.length,'угол','угла','углов')}${Q.length>4?' (многоугольник)':''}${dev>1.5?', <span class="bad">неплоская на '+Math.round(dev)+' мм</span>':''}${CUR&&CUR.pierce&&CUR.pierce.has(ST.sp)?', <span class="prc">протыкает другую грань</span>':''}`;}
   if(ST.seam)h=`<b>Провести шов</b> — выбрано точек: ${ST.seam.length} из 2`;$('edSel').innerHTML=h;$('edOps').querySelectorAll('button').forEach(b=>b.classList.toggle('off',ST.sp<0));
   $('edOps').querySelector('[data-op=merge]').classList.toggle('off',!(ST.sp>=0&&ST.sp2>=0&&polysAdjacent(B,ST.sp,ST.sp2)));$('edOps').querySelector('[data-op=cut]').classList.toggle('on',!!ST.seam);
-  const n=CUR&&CUR.bad?CUR.bad.size:0,nx=CUR&&CUR.selfx?CUR.selfx.size:0,nw=CUR&&CUR.small?CUR.small.size:0;$('edPlan').className='note'+(n||nx||nw?' warn':'');$('edPlan').textContent=(nx?`Самопересекающихся граней: ${nx} — синие, разрежьте их «Провести шов». `:'')+(nw?`Узких деталей: ${nw} — красные. `:'')+(n?`Неплоских граней: ${n} — подсвечены жёлтым. Плоский лист так не согнёшь: выровняйте (точки сдвинутся на миллиметры) или разбейте на треугольники`:'Все грани плоские — каждая режется одним куском');
+  const n=CUR&&CUR.bad?CUR.bad.size:0,nx=CUR&&CUR.selfx?CUR.selfx.size:0,nw=CUR&&CUR.small?CUR.small.size:0,np=CUR&&CUR.pierce?CUR.pierce.size:0;$('edPlan').className='note'+(n||nx||nw||np?' warn':'');$('edPlan').textContent=(np?`${np} ${plural(np,'грань протыкает','грани протыкают','граней протыкают')} другие — фиолетовые: детали прошли бы друг сквозь друга, отодвиньте точки. `:'')+(nx?`Самопересекающихся граней: ${nx} — синие, разрежьте их «Провести шов». `:'')+(nw?`Узких деталей: ${nw} — красные. `:'')+(n?`Неплоских граней: ${n} — подсвечены жёлтым. Плоский лист так не согнёшь: выровняйте (точки сдвинутся на миллиметры) или разбейте на треугольники`:'Все грани плоские — каждая режется одним куском');
   ['bFlat','bTri'].forEach(id=>$(id).classList.toggle('off',!n));$('bUndo').classList.toggle('off',!UNDO.length);$('bRedo').classList.toggle('off',!REDO.length);}
 $('cEdit').addEventListener('change',e=>{ST.edit=e.target.checked;if(ST.edit&&CUR){toPoly();compute();}renderAll();});
 $('cSym').addEventListener('change',e=>{ST.sym=e.target.checked;});
