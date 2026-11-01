@@ -363,4 +363,5 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
   ok(TP.cBend.includes(`У Добермана 11 вместо ${n} деталей — ${pc} позиций на резку (${bl} заготовок со сгибами и ${ns} отдельных деталей), сварки на ${bm} м меньше`)&&TP.cTpl.includes(`у Добермана 11 их ${tp}`)&&!/Доберман\S* ([1-9]|10)\b/.test(TP.cBend+TP.cTpl),
     "подсказки «Гнуть» и «Уголки»: пример на Добермане 11, числа — как считает программа");
   ok(/плазма — 7 мм/.test(TP.sNGap)&&/руками/.test(TP.sNGap),"подсказка «Между деталями на листе»: плазма 7 мм, свой зазор не сбивается");}
+ok(UI.includes('wl=FIGURES[ST.fig]?.noBack?0:addBacking(R,M3)'),'фигура с noBack: открытые края — не прорези, подложек глаз нет');
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

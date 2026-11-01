@@ -1,5 +1,5 @@
 // конвейер: модель Meshy с текстурой → плиты (геометрия + швы текстуры + глаза), симметрично → многогранник {V,P}
-// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [eyey=0 — глаза не ниже, мм] [merge=4] [mina=6e-4] [pen=0.5] [clean=13] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
+// node art/tools/plates/plates.js [ang=4] [mm=3] [seam=185] [eyey=0 — глаза не ниже, мм] [seed=1e-3 — меньшая затравка, доля площади] [merge=4] [mina=6e-4] [pen=0.5] [clean=13] [tag=_x] [dump=1] — после prep.js; результат и картинки в out/
 // dump=1 — замеры «швы на изломах эталона» по стадиям (creases.js): метки после VSA, после выпрямления, итог; углы до выравнивания; готовый многогранник
 const fs=require('fs'),vm=require('vm'),path=require('path'),OUT=path.join(__dirname,'out'),JS=path.join(__dirname,'../../js/'),O=f=>path.join(OUT,f);const {render}=require('./rend.js');
 const c={console,Math};vm.createContext(c);vm.runInContext(fs.readFileSync(JS+'mesh.js','utf8')+';'+fs.readFileSync(JS+'edit.js','utf8'),c);
@@ -27,7 +27,7 @@ let lab=new Int32Array(NT).fill(-1);{const cos=Math.cos(ANG*Math.PI/180);let id=
 // плиты-затравки: крупные области правой половины (и средние)
 const PL=[];{const ar=new Map();F.forEach((_,t)=>{if(lab[t]>=0)ar.set(lab[t],(ar.get(lab[t])||0)+A[t]);});
   const fitL=l=>{let n=[0,0,0],cc=[0,0,0],a=0,e=0;F.forEach((_,t)=>{if(lab[t]!==l)return;n=V3.add(n,V3.mul(N[t],A[t]));cc=V3.add(cc,V3.mul(Cn[t],A[t]));a+=A[t];e+=eye[t];});return {n:V3.norm(n),c:V3.mul(cc,1/a),a,eye:e>0};};
-  ar.forEach((a,l)=>{if(a<tot*(eye.some((x,t)=>x&&lab[t]===l)?1e-4:1e-3))return;const p=fitL(l);p.l=l;p.mid=Math.abs(p.c[0])<10&&Math.abs(p.n[0])<.15;if(p.c[0]<0&&!p.mid)return;PL.push(p);});}
+  ar.forEach((a,l)=>{if(a<tot*(eye.some((x,t)=>x&&lab[t]===l)?1e-4:(ARG.seed??1e-3)))return;const p=fitL(l);p.l=l;p.mid=Math.abs(p.c[0])<10&&Math.abs(p.n[0])<.15;if(p.c[0]<0&&!p.mid)return;PL.push(p);});}
 {const rm=new Map(PL.map((p,i)=>[p.l,i]));lab=lab.map(l=>rm.has(l)?rm.get(l):-1);}
 console.log('затравок',PL.length,'из них средних',PL.filter(p=>p.mid).length,'глаз',PL.filter(p=>p.eye).length);
 // ---------- 2. VSA на правой половине; левая — зеркало ----------
