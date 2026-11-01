@@ -65,7 +65,7 @@ const PDF_PART={coal:'grill',side0:'grill',side1:'grill',gBot:'grill',gEnd:'gril
   man:'env',legs:'legs',legTw:'legs',pads:'legs',feet:'legs',wheels:'wheels',tubes:'roof',bars:'roof',bolts:'roof',wsh1:'roof',wsh2:'roof',nuts:'roof',sheet:'roof'};
 const elOf=id=>PARTS.find(e=>e.id===id);
 // режим: элемент и деталь есть в текущем проекте?
-const elOk=el=>!(el==='grill'&&!gOn())&&!(el==='stove'&&!sOn());
+const elOk=el=>!(el==='grill'&&!gOn())&&!(el==='stove'&&!sOn())&&!(el==='roof'&&!S.rain);   // крыша — только с галочкой «Крыша от дождя»
 const partOk=id=>{let seen=false;for(const e of PARTS){const d=e.d.find(x=>x[0]===id);if(!d)continue;seen=true;if(elOk(e.id)&&(!d[3]||d[3].split(',').includes(S.mode)))return true;}return !seen;};
 const partName=id=>{for(const e of PARTS){const d=e.d.find(x=>x[0]===id);if(d)return d[1];}return id;};
 // выбранные детали: null — показывать всё

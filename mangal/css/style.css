@@ -105,6 +105,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .controls .gt::before{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
 .controls .grp.shut .gt::before{transform:rotate(-45deg)}
 .controls .grp.shut>*:not(.gt){display:none!important}
+.controls .grp>[hidden]{display:none!important}   /* пункты крыши без галочки «Крыша от дождя» */
 .controls .gt:hover{color:var(--accent)}
 .pick{display:flex;gap:14px;align-items:end;flex-wrap:wrap}
 .pick label,.pick .lbl{display:flex;flex-direction:column;gap:4px}
@@ -126,7 +127,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .controls .chk small{display:none}
 .tip{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:5px;border:1px solid var(--line);border-radius:50%;font:600 10px/1 var(--f-mono);color:var(--muted);cursor:help;vertical-align:1px;flex:none}
 .tip:hover{border-color:var(--accent);color:var(--accent)}
-#tipBox{position:fixed;z-index:50;max-width:280px;padding:7px 10px;background:var(--ink);color:var(--panel);font-size:12px;line-height:1.35;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#tipBox{white-space:pre-line;position:fixed;z-index:50;max-width:280px;padding:7px 10px;background:var(--ink);color:var(--panel);font-size:12px;line-height:1.35;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 #tipBox[hidden]{display:none}
 /* фото покупных деталей рядом с узлом (размер «Крепление листа») */
 .ph3{display:flex;gap:10px;align-items:flex-end;padding:8px;background:#fff;border:1.5px solid var(--accent);font:11px/1.25 var(--f-body);color:#1B2124}

@@ -4,16 +4,27 @@ const P=path.join(__dirname,'..');
 const dimIds=[...fs.readFileSync(P+'/js/dims.js','utf8').matchAll(/^\s*\['([A-Za-z]\w*)',/gm)].map(m=>m[1]);
 const mk=()=>{const U=new Proxy(function(){},{get:(t,k)=>{if(k===Symbol.toPrimitive)return()=>0;if(k===Symbol.iterator)return function*(){};if(k==='then')return undefined;return U;},apply:()=>U,construct:()=>U,set:()=>true});return U;};
 let fails=0,airMM=null,hookMM=null;   // габариты развёртки задвижки и скобы из partMM — для раскладки на прямоугольниках
-for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true}]){
+// {rain:false} — без крыши от дождя (галочка снята): ни крыши, ни трубок, ни строк крыши в размерах, «Массе», «Что купить», «Заметках»
+for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true},{rain:false,man:true}]){
   const U=mk(),errs=[];
   const flags=JSON.stringify(Object.assign({rain:true,mode},extra));
-  const ctx={THREE:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&dims='+dimIds.join(',')+'&flags='+encodeURIComponent(flags)},
+  const ctx={THREE:U,__U:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&dims='+dimIds.join(',')+'&flags='+encodeURIComponent(flags)},
     addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>0},navigator:U,URLSearchParams,console,Math,JSON,Set,Object,Array,Number,String,Symbol,setTimeout,clearTimeout};
   vm.createContext(ctx);
   // классические скрипты делят одну лексическую область — склеиваем
   const src=['params','parts','model','dims','cut','dxf','nest','ui'].map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n');
   try{vm.runInContext(src,ctx,{filename:'all.js'});
       vm.runInContext("dimVisible().forEach(r=>{try{r.fn()}catch(e){throw new Error('dim '+r.id+': '+e.message)}});drawCut();",ctx);
+      // крыша от дождя: тексты шапки, «Общего», «Массы», проката и «Заметок» — с крышей есть, без неё ни слова; элемент «Крыша», её детали и размеры — только с крышей
+      vm.runInContext(`{const box={},E=()=>{const st={};return new Proxy(function(){},{get:(t,k)=>k in st?st[k]:k===Symbol.toPrimitive?()=>0:k==='then'?undefined:__U,set:(t,k,v)=>{st[k]=v;return true;},apply:()=>__U});};
+        const D0=document;document=new Proxy({},{get:(t,k)=>k==='getElementById'?(id=>box[id]||(box[id]=E())):D0[k]});
+        try{updUI();drawCut();}finally{document=D0;}
+        const tx=k=>String(box[k]&&box[k].innerHTML||''),all=['lede','fit','stats','cut','metal','notesBox'].map(tx).join('\\n'),roofRx=/[Кк]рыш(?!к)|стоек|Арматура Ø16|Ø26/;
+        const roofEl=PARTS.some(e=>e.id==='roof'&&elOk(e.id)),roofPt=PARTS.find(e=>e.id==='roof').d.some(([id])=>partOk(id)),roofDim=dimVisible().filter(r=>r.el==='roof'||RAIN_DIMS.has(r.id)).map(r=>r.id);
+        if(S.rain){if(!roofEl||!roofPt||!roofDim.length)throw new Error('крыша включена, а элемента/деталей/размеров крыши нет');
+          [['cut',/Крыша — защита от дождя/],['metal',/Арматура Ø16/],['metal',/Труба Ø26×3/],['notesBox',/Крыша от дождя/],['lede',/Крыша от дождя/],['fit',/Крыша спереди/],['stats',/верх стоек/]].forEach(([k,rx])=>{if(!rx.test(tx(k)))throw new Error('крыша включена, а в '+k+' нет '+rx);});}
+        else{if(roofEl||roofPt)throw new Error('крыша выключена, а элемент «Крыша» есть в списке');if(roofDim.length)throw new Error('крыша выключена, а размеры остались: '+roofDim.join(', '));
+          const m=all.match(roofRx);if(m)throw new Error('крыша выключена, а в тексте «'+m[0]+'»: '+all.slice(Math.max(0,m.index-60),m.index+40).replace(/<[^>]+>/g,''));}}`,ctx);
       // раскрой листа: детали для раскладки (у боковин в Node контур пустой — пропускаются), раскладка и рисунок
       vm.runInContext("{const N=nestJob(),res=N.groups.map(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);return v.value;});nestDraw(N,res);nestUI();nestUI(true);}",ctx);
       // колосник мангала: на листе 5 мм, когда он есть на модели; галочка «на листе» снята — нет; у половины 18 × 19 отверстий Ø10
@@ -78,6 +89,16 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
         if(nestJob({gil:true}).key===N0.key&&N0.groups.some(G=>G.types.some(t=>t.kind!=='list')))throw new Error('gil: ключ раскладки не меняется от галочки');}`,ctx);}
   catch(e){errs.push(e.message+' '+(e.stack.split('\n')[1]||''));}
   console.log(mode,JSON.stringify(extra).slice(0,30),errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
+
+// по умолчанию (ссылка без flags) крыши нет: S.rain===false; старая ссылка «Поделиться видом» с flags {"rain":true} — крыша есть
+for(const [search,want] of [['',false],['?view=1,1,1,0,0,0',false],['?view=1,1,1,0,0,0&flags='+encodeURIComponent('{"rain":true}'),true]]){
+  const U=mk(),errs=[],ctx={THREE:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search},
+    addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>0},navigator:U,URLSearchParams,console,Math,JSON,Set,Object,Array,Number,String,Symbol,setTimeout,clearTimeout};
+  vm.createContext(ctx);
+  const src=['params','parts','model','dims','cut','dxf','nest','ui'].map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n');
+  try{vm.runInContext(src,ctx,{filename:'all.js'});const r=vm.runInContext('S.rain',ctx);if(r!==want)throw new Error('S.rain='+r+', ждали '+want);}
+  catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
+  console.log('крыша по ссылке',JSON.stringify(search.slice(0,40)),errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
 // виды деталей на настоящих контурах: THREE.Shape/Path — простые заглушки (как в tools/dxf_side.js), остальное THREE — пустышка.
 // gil — прямоугольник без отверстий (дно жаровни), zag — задняя боковина жаровни (рез по заготовке меньше; в _zag.dxf BLANK — 4 отрезка,

@@ -324,7 +324,8 @@ function dimRows(){let el=null,pts=null,mo=null;const r=[];
     else r.push({id:h,name:d[1],val:d[2],fn:d[3],el,pts:d[4]?d[4].split(','):pts,mo:d[5]||mo});});
   return r;}
 // размер есть в текущем режиме: элемент в проекте, хотя бы одна его деталь есть, режим строки подходит
-const modeOk=r=>elOk(r.el)&&(!r.mo||r.mo.split(',').includes(S.mode))&&(!r.pts||r.pts.some(partOk));
+const RAIN_DIMS=new Set(['gap','manRoof','manDist']);   // размеры до крыши в других группах — только с крышей
+const modeOk=r=>elOk(r.el)&&(S.rain||!RAIN_DIMS.has(r.id))&&(!r.mo||r.mo.split(',').includes(S.mode))&&(!r.pts||r.pts.some(partOk));
 const dimVisible=()=>dimRows().filter(r=>r.id&&modeOk(r)&&inSel(r.el,r.pts));
 // размеры боковин рисуются на передней стенке; если выбрана задняя боковина — зеркалим их на неё (z → W − z)
 const backSel=()=>['side0','side0A'].includes(S.sel.part);

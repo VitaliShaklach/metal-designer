@@ -1,8 +1,9 @@
 /* ---------- интерфейс ---------- */
+const ROOF=()=>S.rain?' <b>Крыша от дождя</b>: трубки по углам, стойки и лист.':'';   // в лиде — только с галочкой
 // режим: заголовок, лид, группы галочек, переключатель
-const LEDE={both:()=>`Три части. <b>Жаровня</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры — отдельный элемент. <b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} слева, под покупную плиту 450 × 450 мм с кольцами; топка с открытого левого торца. <b>Защита от дождя</b>: трубки по углам, стойки и лист. Ручка справа. Четыре ножки на поворотных колёсах Ø100 мм, под печью две — с тормозом. Ножки откручиваются (М16).`,
-  grill:()=>`<b>Мангал</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры: задвижки поддува, колосниковая решётка, съёмная перегородка, глубокие прорези. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом: выкатывается целиком. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`,
-  stove:()=>`<b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} под покупную плиту 450 × 450 мм с кольцами; топка с левого торца, труба сзади. Ручка на перегородке справа. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом. Ножки откручиваются (М16). <b>Защита от дождя</b>: трубки по углам, стойки и лист.`};
+const LEDE={both:()=>`Три части. <b>Жаровня</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры — отдельный элемент. <b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} слева, под покупную плиту 450 × 450 мм с кольцами; топка с открытого левого торца.${ROOF()} Ручка справа. Четыре ножки на поворотных колёсах Ø100 мм, под печью две — с тормозом. Ножки откручиваются (М16).`,
+  grill:()=>`<b>Мангал</b> ${u(L1)} × ${u(W)} × ${us(H1)} под шампуры: задвижки поддува, колосниковая решётка, съёмная перегородка, глубокие прорези. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом: выкатывается целиком. Ножки откручиваются (М16).${ROOF()}`,
+  stove:()=>`<b>Печь под казан</b> ${u(L2)} × ${u(WK)} × ${us(H2)} под покупную плиту 450 × 450 мм с кольцами; топка с левого торца, труба сзади. Ручка на перегородке справа. Четыре ножки на поворотных колёсах Ø100 мм, у ручки две — с тормозом. Ножки откручиваются (М16).${ROOF()}`};
 const TTL={both:'Мангал с казанницей',grill:'Мангал',stove:'Печь под казан'};
 function modeUI(){document.getElementById('ttl').textContent=document.title=TTL[S.mode];document.getElementById('lede').innerHTML=LEDE[S.mode]();
   document.getElementById('grpGrill').hidden=!gOn();document.getElementById('grpStove').hidden=!sOn();
@@ -12,7 +13,8 @@ function updUI(){modeUI();
   document.getElementById('hTopV').textContent=us(T);
   document.getElementById('hFireV').textContent=us(H2);
   document.getElementById('hBarV').textContent=`${u(BAR_F)} / ${us(BAR_B)}`;
-  document.getElementById('rainSm').textContent=`стойки ${u(BAR_F)} / ${us(BAR_B)}, лист 0,5 мм`;
+  document.getElementById('rainSm').textContent=`\nстойки ${u(BAR_F)} / ${us(BAR_B)}, лист 0,5 мм`;   // в подсказке «?» — второй строкой
+  document.querySelectorAll('.roofOpt').forEach(e=>e.hidden=!S.rain);   // без крыши — только сама галочка
   document.querySelectorAll('[data-u]').forEach(e=>e.textContent=us(+e.dataset.u));   // числа в кнопках: с подписью и без
   document.querySelectorAll('[data-n]').forEach(e=>e.textContent=u(+e.dataset.n));
   document.querySelectorAll('#unitSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===UNIT));
@@ -20,10 +22,10 @@ function updUI(){modeUI();
   const gap=Math.round(slopeY(W/2)-kzTop()), head=BAR_TOP_F;
   document.getElementById('fit').innerHTML=
     `<span>Верх жаровни: <b>${us(T)}</b> ${T>=95&&T<=100?'':`<span class="warn">· при росте 184 см удобно ${u(95)}–${us(100)}</span>`}</span>`+
-    `<span>Крыша спереди: <b>${us(head)}</b> ${head>=190?'':'<span class="warn">· ниже головы</span>'}</span>`+
+    (S.rain?`<span>Крыша спереди: <b>${us(head)}</b> ${head>=190?'':'<span class="warn">· ниже головы</span>'}</span>`:'')+
     (sOn()?`<span>Казан ${KZ.v} л в проёме Ø${u(KZ.open*2)}: в топке <b>${u(KZ.sink)}</b> из ${us(KZ.d)}</span>`:'')+
     (S.mode==='both'?`<span>Ножки без колёс: жаровня <b>${u(B-WH)}</b>, печь <b>${us(KB-WH)}</b></span>`:`<span>Ножки без колёс: <b>${us((gOn()?B:KB)-WH)}</b></span>`)+
-    (sOn()?`<span>От крышки казана до крыши: <b class="${gap<25?'warn':''}">${us(gap)}</b></span>`:'');
+    (sOn()&&S.rain?`<span>От крышки казана до крыши: <b class="${gap<25?'warn':''}">${us(gap)}</b></span>`:'');
 }
 // пробел + тянуть мышью = двигать эскиз (как в Figma)
 let spacePan=null,spaceHeld=false,overStage=false;
@@ -55,7 +57,7 @@ document.getElementById('cLegs').addEventListener('change',e=>{S.legs=e.target.c
 document.getElementById('cLegTw').addEventListener('change',e=>{S.legTw=e.target.checked;build3D();});
 document.getElementById('cWheels').addEventListener('change',e=>{S.wheels=e.target.checked;build3D();});
 document.getElementById('cKazan').addEventListener('change',e=>{S.kazan=e.target.checked;render();});
-document.getElementById('cRain').addEventListener('change',e=>{S.rain=e.target.checked;render();});
+document.getElementById('cRain').addEventListener('change',e=>{S.rain=e.target.checked;if(!elOk(S.sel.el))S.sel={el:null,part:null};render();fillParts();setHint();});   // сняли крышу — выбор крыши сбрасывается
 [['cSheet','sheet'],['cBolt','bolt'],['cWsh1','wsh1'],['cWsh2','wsh2'],['cNut','nut']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{S[k]=e.target.checked;build3D();}));
 document.getElementById('cAngles').addEventListener('change',e=>{S.angles=e.target.checked;build3D();});
 document.getElementById('cXray').addEventListener('change',e=>{if(!ok)return;const on=e.target.checked;M.steel.transparent=on;M.steel.opacity=on?.28:1;M.steel.depthWrite=!on;M.steel.needsUpdate=true;});
@@ -171,7 +173,7 @@ if(Q.has('view')&&ok){
   syncInputs();
   const v=Q.get('view').split(',').map(Number);camera.fov=+(Q.get('fov')||35);camera.updateProjectionMatrix();
   camera.position.set(v[0],v[1],v[2]);controls.target.set(v[3],v[4],v[5]);}
-if(Q.has('sel')){const [e,pt]=Q.get('sel').split('.');S.sel={el:e||null,part:pt||null};selEl.value=e||'';fillParts();}
+if(Q.has('sel')){const [e,pt]=Q.get('sel').split('.');if(!e||(elOf(e)&&elOk(e)))S.sel={el:e||null,part:pt||null};selEl.value=e||'';fillParts();}
 window.addEventListener('error',e=>SHOT&&document.body.insertAdjacentHTML('afterbegin','<h1 style="color:red">'+e.message+' @'+e.lineno+'</h1>'));
 render();setHint();
 if(ok&&!Q.has('view')&&!Q.has('sel')){sizeStage();fitSel();if(camAnim){camera.position.copy(camAnim.p1);controls.target.copy(camAnim.t1);camAnim=null;}}   // старт: камера на весь блок текущего режима
@@ -271,6 +273,7 @@ function partAt(ev){if(!ok||!group)return null;
 /* ---------- «Заметки» и «Что купить» — под то, что проектируем ---------- */
 function notesUI(){const g=gOn(),k=sOn(),both=S.mode==='both',el=document.getElementById('notesBox');
   document.querySelectorAll('#tab-buy li[data-m]').forEach(li=>{const m=li.dataset.m;li.hidden=!(m==='g'?g:m==='s'?k:m===S.mode);});
+  document.querySelectorAll('#tab-buy li[data-r]').forEach(li=>li.hidden=!S.rain);   // покупное для крыши
   const bw=document.getElementById('brakeWhere');if(bw)bw.textContent=both?'под печью':g?'у ручки мангала':'у ручки печи';
   if(!el)return;
   const how=[

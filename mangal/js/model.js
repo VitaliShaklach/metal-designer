@@ -229,9 +229,9 @@ function buildParts(tag){
   tag('man');if(S.man)man3D();
   {const d0=group.children.length;dims3D();for(let i=d0;i<group.children.length;i++)group.children[i].userData.dim=1;}
   // трубки + стойки + лист
-  tubes.forEach(([x,z])=>{tag('tubes');const m=ext(ringShape(TUBE_R,TUBE_RI),M.steel,TUBE_H);m.rotation.x=-Math.PI/2;m.position.set(x,T-TUBE_H,z);group.add(m);
-    const pb=new THREE.Mesh(new THREE.CylinderGeometry(TUBE_R,TUBE_R,.5,20),M.steel);pb.position.set(x,T-TUBE_H+.25,z);group.add(pb);});
-  if(S.rain){
+  if(S.rain){   // крыша от дождя — вся, с трубками на углах, только с галочкой
+    tubes.forEach(([x,z])=>{tag('tubes');const m=ext(ringShape(TUBE_R,TUBE_RI),M.steel,TUBE_H);m.rotation.x=-Math.PI/2;m.position.set(x,T-TUBE_H,z);group.add(m);
+      const pb=new THREE.Mesh(new THREE.CylinderGeometry(TUBE_R,TUBE_R,.5,20),M.steel);pb.position.set(x,T-TUBE_H+.25,z);group.add(pb);});
     tubes.forEach(([x,z])=>{const len=z>W/2?BAR_F:BAR_B,top=T-TUBE_H+.5+len;tag('bars');cyl(BAR_R,len,'y',x,T-TUBE_H+.5+len/2,z,M.bar,12);
       [['bolts','bolt'],['wsh1','wsh1'],['wsh2','wsh2'],['nuts','nut']].forEach(([id,k])=>{tag(id);if(!S[k])return;const bg=new THREE.Group();bg.position.set(x,top,z);group.add(bg);boltAsm(bg,k);});});
     tag('sheet');

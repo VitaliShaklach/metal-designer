@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=1.4.1">
+<link rel="stylesheet" href="css/style.css?v=1.4.2">
 </head>
 <body>
 <div class="wrap">
@@ -86,7 +86,7 @@
         <div class="grp" data-g="gen"><button type="button" class="gt">Общее</button>
           <div class="row"><label class="t" for="hTop">Высота верха от земли</label><span class="val" id="hTopV"></span></div>
           <input type="range" id="hTop" min="80" max="110" step="1" value="97">
-          <label class="chk"><input type="checkbox" id="cMan"><span>Человек 184 см<small>рост 184 см, стоит со стороны повара — видно, где край крыши относительно головы</small></span></label>
+          <label class="chk"><input type="checkbox" id="cMan"><span>Человек 184 см<small>рост 184 см, стоит со стороны повара — с крышей — видно, где её край относительно головы</small></span></label>
           <label class="chk"><input type="checkbox" id="cLogo"><span>Логотип Claude Code<small>сквозной вырез 80 × 50 мм на торце напротив ручки: у мангала — левый торец, с печью — глухой верх топки</small></span></label>
           <label class="chk"><input type="checkbox" id="cXray"><span>Прозрачный корпус<small>стенки и дно просвечивают — видно колосник, уголки, шибер</small></span></label>
           <div class="fit" id="fit"></div>
@@ -139,14 +139,14 @@
           <label class="chk"><input type="checkbox" id="cWheels" checked><span>Колёса<small>снимите — ножки с площадками без колёс</small></span></label>
         </div>
         <div class="grp" data-g="roof"><button type="button" class="gt">Крыша</button>
-          <label class="chk"><input type="checkbox" id="cRain" checked><span>Защита от дождя<small id="rainSm"></small></span></label>
-          <label class="chk"><input type="checkbox" id="cSheet" checked><span>Лист крыши<small>снимите — видно стойки и крепёж</small></span></label>
-          <label class="chk"><input type="checkbox" id="cBolt" checked><span>Болты М8×40<small>приварены головкой к торцу арматуры</small></span></label>
-          <label class="chk"><input type="checkbox" id="cWsh1" checked><span>Шайбы под листом<small>Ø24, лежат на головке болта</small></span></label>
-          <label class="chk"><input type="checkbox" id="cWsh2" checked><span>Шайбы над листом<small>Ø24, под барашек</small></span></label>
-          <label class="chk"><input type="checkbox" id="cNut" checked><span>Барашки М8<small>прижимают лист, затягиваются рукой</small></span></label>
-          <div class="row"><label class="t" for="hBar">Передняя стойка крыши</label><span class="val" id="hBarV"></span></div>
-          <input type="range" id="hBar" min="40" max="140" step="5" value="55">
+          <label class="chk"><input type="checkbox" id="cRain"><span>Крыша от дождя<small>включите — крыша на модели, в размерах, «Массе» и «Что купить»<span id="rainSm"></span></small></span></label>
+          <label class="chk roofOpt"><input type="checkbox" id="cSheet" checked><span>Лист крыши<small>снимите — видно стойки и крепёж</small></span></label>
+          <label class="chk roofOpt"><input type="checkbox" id="cBolt" checked><span>Болты М8×40<small>приварены головкой к торцу арматуры</small></span></label>
+          <label class="chk roofOpt"><input type="checkbox" id="cWsh1" checked><span>Шайбы под листом<small>Ø24, лежат на головке болта</small></span></label>
+          <label class="chk roofOpt"><input type="checkbox" id="cWsh2" checked><span>Шайбы над листом<small>Ø24, под барашек</small></span></label>
+          <label class="chk roofOpt"><input type="checkbox" id="cNut" checked><span>Барашки М8<small>прижимают лист, затягиваются рукой</small></span></label>
+          <div class="row roofOpt"><label class="t" for="hBar">Передняя стойка крыши</label><span class="val" id="hBarV"></span></div>
+          <input type="range" class="roofOpt" id="hBar" min="40" max="140" step="5" value="55">
         </div>
       </div>
     </div>
@@ -189,11 +189,11 @@
             <li data-m="s"><a href="https://tm.by/product/petlya-garazhnaya-s-sharom-14h70-bp-2-sht-v-upak-starfix-smp-21021-2" target="_blank" rel="noopener">Петля гаражная с шаром 14×70</a> · 2 шт · дверца печи</li>
             <li data-m="s"><a href="https://ozon.by/product/plita-s-perehodnymi-koltsami-dlya-pechi-pod-kazan-ili-mangala-45h45-sm-tolshchina-metalla-5mm-3555295837/" target="_blank" rel="noopener">Плита 450 × 450 × 5 с переходными кольцами</a> — проём Ø390, кольца Ø300, Ø210, Ø120 + заглушка · 1 шт</li>
             <li data-m="g">Решётка 400 × 400 · 2 шт (сверху) и решётка 400 × 360 · 1 шт (низкая) — готовые или из прутка Ø8/Ø4</li>
-            <li>Профлист С8 оцинкованный 0,5 мм, ~1480 × 570 · 1 шт (крыша, волна спереди назад, свес 50 мм за стойки)</li>
+            <li data-r>Профлист С8 оцинкованный 0,5 мм, ~1480 × 570 · 1 шт (крыша, волна спереди назад, свес 50 мм за стойки)</li>
             <li>Болт М8×20 + гайка + шайба · 16 шт (колёса)</li>
-            <li><a href="https://tm.by/product/bolt-m8h40-mm-shestigr-cink-klpr-88-din-933-5-sht-starfix" target="_blank" rel="noopener">Болт М8×40 шестигранный, DIN 933</a> · 4 шт · приварить к торцам стоек крыши</li>
-            <li><a href="https://tm.by/gayka-m8-barashkovaya-nerzh-stal-a2-din-315-10-sht-v-zip-loke-starfix-smz1-82453-10" target="_blank" rel="noopener">Гайка-барашек М8, DIN 315</a> · 4 шт · крыша</li>
-            <li><a href="https://tm.by/product/shayba-m8-ploskaya-uvelichennaya-cink-din-9021-10-sht-starfix-smz1-22766-10" target="_blank" rel="noopener">Шайба М8 увеличенная, DIN 9021</a> · 8 шт · крыша</li>
+            <li data-r><a href="https://tm.by/product/bolt-m8h40-mm-shestigr-cink-klpr-88-din-933-5-sht-starfix" target="_blank" rel="noopener">Болт М8×40 шестигранный, DIN 933</a> · 4 шт · приварить к торцам стоек крыши</li>
+            <li data-r><a href="https://tm.by/gayka-m8-barashkovaya-nerzh-stal-a2-din-315-10-sht-v-zip-loke-starfix-smz1-82453-10" target="_blank" rel="noopener">Гайка-барашек М8, DIN 315</a> · 4 шт · крыша</li>
+            <li data-r><a href="https://tm.by/product/shayba-m8-ploskaya-uvelichennaya-cink-din-9021-10-sht-starfix-smz1-22766-10" target="_blank" rel="noopener">Шайба М8 увеличенная, DIN 9021</a> · 8 шт · крыша</li>
             <li>Гайка М16 · 4 шт, шпилька М16×40 · 4 шт (съёмные ножки)</li>
             <li data-m="s">Болт М8 с гайкой · 1 шт (вертушок дверцы)</li>
             <li data-m="g">Деревянные рукоятки / втулки · 4 шт (ручка мангала, решётки)</li><li data-m="stove">Деревянная рукоятка / втулка · 1 шт (ручка печи)</li>
@@ -212,7 +212,7 @@
   </section>
 
   <footer>
-    <span class="ver">v1.4.1</span>
+    <span class="ver">v1.4.2</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -220,13 +220,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/params.js?v=1.4.1"></script>
-<script src="js/parts.js?v=1.4.1"></script>
-<script src="js/model.js?v=1.4.1"></script>
-<script src="js/dims.js?v=1.4.1"></script>
-<script src="js/cut.js?v=1.4.1"></script>
-<script src="js/dxf.js?v=1.4.1"></script>
-<script src="js/nest.js?v=1.4.1"></script>
-<script src="js/ui.js?v=1.4.1"></script>
+<script src="js/params.js?v=1.4.2"></script>
+<script src="js/parts.js?v=1.4.2"></script>
+<script src="js/model.js?v=1.4.2"></script>
+<script src="js/dims.js?v=1.4.2"></script>
+<script src="js/cut.js?v=1.4.2"></script>
+<script src="js/dxf.js?v=1.4.2"></script>
+<script src="js/nest.js?v=1.4.2"></script>
+<script src="js/ui.js?v=1.4.2"></script>
 </body>
 </html>
