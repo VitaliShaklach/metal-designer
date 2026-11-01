@@ -137,7 +137,12 @@ function* nestGen(items,W,H,gap,margin,cell=2.5,mode=2,innerUp=false){const r=ga
   return {sheets,too,W,H,gap,used:sheets.length?sheets.reduce((a,s)=>a+s.used,0)/sheets.length:0};}
 
 /* ---------- DXF (R12, ASCII): контур — POLYLINE, гравировка и сгибы — LINE, TEXT — номера ---------- */
-function dxfDoc(ents){return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC','0','SECTION','2','ENTITIES',...ents,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
+// слои объявлены в таблице LAYER (с цветом, линия сплошная): без таблицы CAD создаёт их сам, но программа станка может не показать список слоев
+const DXF_LAY={CUT:7,SHEET:8};
+function dxfDoc(ents){const L=['0'];for(let i=0;i<ents.length;i+=2)if(ents[i]==='8'&&!L.includes(ents[i+1]))L.push(ents[i+1]);
+  const tab=['0','SECTION','2','TABLES','0','TABLE','2','LTYPE','70',1,'0','LTYPE','2','CONTINUOUS','70',0,'3','Solid line','72',65,'73',0,'40',0,'0','ENDTAB',
+    '0','TABLE','2','LAYER','70',L.length,...L.flatMap(n=>['0','LAYER','2',n,'70',0,'62',DXF_COL[n]||DXF_LAY[n]||7,'6','CONTINUOUS']),'0','ENDTAB','0','ENDSEC'];
+  return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC',...tab,'0','SECTION','2','ENTITIES',...ents,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
 const dn=v=>Math.round(v*100)/100;
 // контур — одна замкнутая полилиния (R12 POLYLINE, флаг 70 = 1): цеха просят контур целиком, а не россыпь отрезков
 function dxfPoly(e,P,lay,ox=0,oy=0){e.push('0','POLYLINE','8',lay,'66',1,'10',0,'20',0,'30',0,'70',1);P.forEach(a=>e.push('0','VERTEX','8',lay,'10',dn(a[0]+ox),'20',dn(a[1]+oy),'30',0));e.push('0','SEQEND','8',lay);}
@@ -157,10 +162,11 @@ const DIGITS={0:[[[0,0],[1,0],[1,2],[0,2],[0,0]]],1:[[[.5,0],[.5,2],[.2,1.7]],[[
   'У':[[[0,2],[.5,1]],[[1,2],[.3,0]]],'°':[[[.2,2],[.8,2],[.8,1.4],[.2,1.4],[.2,2]]],   // У152° — уголок-шаблон
   V:[[[0,2],[.5,0],[1,2]]],'.':[[[.35,0],[.65,0],[.65,.3],[.35,.3],[.35,0]]],   // 7.1 — зеркальная пара
   m:[[[0,0],[0,1.2]],[[0,.9],[.25,1.2],[.5,.9],[.5,0]],[[.5,.9],[.75,1.2],[1,.9],[1,0]]],'(':[[[.7,2],[.35,1.4],[.35,.6],[.7,0]]],')':[[[.3,2],[.65,1.4],[.65,.6],[.3,0]]]};   // V144 (2) — сгиб
-// самое просторное место внутри детали: точка, дальше всего от кромок (перебор по сетке + уточнение)
-function innerPoint(P){const d=polyDist(P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;
-  for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
-  if(!best)return null;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const p=[c[0]+i*step,c[1]+j*step];if(!inPoly(p,P))continue;const v=d(p);if(v>bd){bd=v;best=p;}}}
+// самое просторное место внутри детали: точка, дальше всего от кромок (перебор по сетке + уточнение).
+// C — второй контур (контур реза заготовки): место внутри обоих, даль — от кромок обоих
+function innerPoint(P,C){const dP=polyDist(P),dC=C&&polyDist(C),d=dC?p=>Math.min(dP(p),dC(p)):dP,inP=dC?p=>inPoly(p,P)&&inPoly(p,C):p=>inPoly(p,P),xs=P.map(p=>p[0]),ys=P.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);let best=null,bd=-1,step=Math.max(x1-x0,y1-y0)/24;
+  for(let x=x0+step/2;x<x1;x+=step)for(let y=y0+step/2;y<y1;y+=step){const p=[x,y];if(!inP(p))continue;const v=d(p);if(v>bd){bd=v;best=p;}}
+  if(!best)return null;for(let k=0;k<3;k++){step/=3;const c=best;for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++){const p=[c[0]+i*step,c[1]+j*step];if(!inP(p))continue;const v=d(p);if(v>bd){bd=v;best=p;}}}
   return {p:best,r:bd};}
 // точка для номера детали в 3D: самое просторное место на её грани (как у гравировки), а не среднее углов p.c — у вогнутой детали оно за контуром.
 // внутри — по треугольникам детали (дырки глаз не в счёт), даль — от кромок, включая края дырок; подложка (p.back) выпуклая — p.c. Кэш на детали
@@ -175,8 +181,9 @@ function partLabelPt(p,M3){if(p._lp&&p._lpV===M3.V)return p._lp;const {V,F}=M3;p
 // точка q (в плоскости детали) на самой детали — по её треугольникам; m — запас от кромки: 8 точек на круге радиуса m тоже на детали
 function partHasPt(p,M3,q,m=0){if(!p.tris||!p.tris.length)return true;const {V,F}=M3,n=p.n,on=z=>p.tris.some(fi=>{const [a,b,c]=F[fi].map(i=>V[i]),s=(x,y)=>V3.dot(V3.cross(V3.sub(y,x),V3.sub(z,x)),n);return s(a,b)>=-1e-6&&s(b,c)>=-1e-6&&s(c,a)>=-1e-6;});
   if(!on(q))return false;if(!m)return true;const d=V3.norm(V3.cross(n,Math.abs(n[0])<.9?[1,0,0]:[0,1,0])),e=V3.cross(n,d);return [0,1,2,3,4,5,6,7].every(k=>on(V3.add(q,V3.add(V3.mul(d,m*Math.cos(k*Math.PI/4)),V3.mul(e,m*Math.sin(k*Math.PI/4))))));}
-// отрезки гравировки номера внутри детали P (координаты те же, y вверх); null — деталь слишком узкая (меньше 3 мм высоты цифр)
-function engraveSegs(no,P,o={}){const ip=innerPoint(P);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2,  // ширина/высота блока в единицах
+// отрезки гравировки номера внутри детали P (координаты те же, y вверх); null — деталь слишком узкая (меньше 3 мм высоты цифр).
+// o.clip — контур, за который тоже нельзя (у заготовки: деталь P — грань модели, её край у шва срезан зазором под сварку)
+function engraveSegs(no,P,o={}){const ip=innerPoint(P,o.clip);if(!ip)return null;const t=String(no),n=t.length,uw=n*1.5-.5,uh=2,  // ширина/высота блока в единицах
     clear=o.clear??2,u=Math.min((o.maxH||20)/2,(ip.r-clear)/Math.hypot(uw/2,uh/2));if(2*u<(o.minH||3))return null;
   const ox=ip.p[0]-uw*u/2,oy=ip.p[1]-uh*u/2,seg=[];
   [...t].forEach((ch,i)=>(DIGITS[ch]||[]).forEach(L=>{for(let k=0;k+1<L.length;k++)seg.push([ox+(i*1.5+L[k][0])*u,oy+L[k][1]*u,ox+(i*1.5+L[k+1][0])*u,oy+L[k+1][1]*u]);}));

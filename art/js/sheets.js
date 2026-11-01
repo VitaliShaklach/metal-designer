@@ -203,12 +203,16 @@ function perfHoles(S,C){const d=ST.perfL,st=ST.perfStep,ed=ST.perfEdge,mb=perfBr
       if(s>0&&(put.length&&t-put[put.length-1]<d+mb-1e-9||T[i+1]!=null&&T[i+1]-t<d+mb-1e-9))break;   // сдвинутая — не ближе перемычки к соседним прорезям
       if(!C||perfGap(hole(t),C)>=mb-1e-9){put.push(t);break;}}});
     put.forEach(t=>out.push(hole(t)));});return out;}
+// номер детали P внутри заготовки C. Деталь — грань модели, а у шва контур реза заготовки срезан зазором под сварку: номер по грани
+// вылез за кромку или ближе 0,5 мм к ней (Г5 у Д9–Д11, до 2,1 мм) — ставим заново внутри обоих контуров (сдвиг, при нужде мельче)
+function blankNumSegs(no,P,C,maxH=20){const g=engraveSegs(no,P,{maxH});if(!g)return null;const d=polyDist(C);
+  return g.every(s=>[[s[0],s[1]],[s[2],s[3]]].every(q=>inPoly(q,C)&&d(q)>=.5))?g:engraveSegs(no,P,{maxH,clip:C});}
 function itemMarks(o){const eng=ST.engrave||isTpl(o),pk=perfKey();if(o._mk&&o._mk.bl===CUR.BL&&o._mk.e===eng&&o._mk.pk===pk)return o._mk.r;let r;
   if(!isBlank(o)){const g=eng?engraveSegs(o.no,o.pts):null;r={eng:g||[],miss:eng&&!g?[itemName(o)]:[],V:[],M:[],P:[]};}
   else{const B=CUR.BL[+o.id.slice(1)],T=q=>trPt(o.tr,q);r={eng:[],miss:[],V:[],M:[],P:[],num:[],labs:[]};
     // сначала номера деталей (по ним собирают), потом подписи сгибов — не ближе 1 мм к номерам и друг к другу.
     // Подписи нет места — номера рядом с линией мельче, ступенями до 5 мм (номер остаётся в той же точке, только меньше)
-    const N=B.regions.map(z=>({no:CUR.R.parts[z.pi].no,pts:z.pts.map(T),h:20})),put=n=>{n.g=engraveSegs(n.no,n.pts,{maxH:n.h});n.box=n.g?segBox(n.g,.5):null;};
+    const N=B.regions.map(z=>({no:CUR.R.parts[z.pi].no,pts:z.pts.map(T),h:20})),put=n=>{n.g=blankNumSegs(n.no,n.pts,o.pts,n.h);n.box=n.g?segBox(n.g,.5):null;};
     if(eng)N.forEach(put);
     B.lines.forEach(l=>{const S=l.segs.map(z=>{const a=T([z[0],z[1]]),b=T([z[2],z[3]]);return [a[0],a[1],b[0],b[1]];});(l.kind==='V'?r.V:r.M).push(...S);if(pk)r.P.push(...perfHoles(S,o.pts));if(!eng||!S.length)return;
       const z=S.reduce((a,b)=>Math.hypot(b[2]-b[0],b[3]-b[1])>Math.hypot(a[2]-a[0],a[3]-a[1])?b:a),L=Math.hypot(z[2]-z[0],z[3]-z[1])||1,ux=(z[2]-z[0])/L,uy=(z[3]-z[1])/L,e=15,
