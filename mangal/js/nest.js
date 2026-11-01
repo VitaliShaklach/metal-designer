@@ -67,18 +67,20 @@ function nestLoop(l){if(!Array.isArray(l))return null;const P=[],same=(a,b)=>Mat
   for(const p of l){if(!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1]))return null;if(!P.length||!same(P[P.length-1],p))P.push([p[0],p[1]]);}
   while(P.length>1&&same(P[0],P[P.length-1]))P.pop();
   return P.length>=3&&Math.abs(area2(P))>1?P:null;}
-// значения полей: зазор 1…50 мм с шагом 0,5; лист — из списка
-function nestOpts(){const gi=document.getElementById('nGap'),si=document.getElementById('nSheet');
+// значения полей: зазор 1…50 мм с шагом 0,5; лист — из списка; cgr — колосник мангала на листе (галочка)
+const NEST_CGR=p=>p.pt==='cgr1'||p.pt==='cgr2';
+function nestOpts(){const gi=document.getElementById('nGap'),si=document.getElementById('nSheet'),ci=document.getElementById('nCgr');
   let gap=parseFloat(String(gi&&gi.value!=null?gi.value:'').replace(',','.'));if(!Number.isFinite(gap))gap=5;gap=Math.min(50,Math.max(1,Math.round(gap*2)/2));
-  const v=si&&typeof si.value==='string'?si.value:'',sk=NEST_SHEETS[v]?v:'1250x2500',[W,H]=NEST_SHEETS[sk];return {gap,sk,W,H};}
-// задание: группы по толщине (5 мм первой), в каждой — типы деталей (номер, контур, кол-во) и штуки для раскладки; key — для кэша
-function nestJob(){const o=nestOpts(),L=laserParts(),ths=[...new Set(L.map(p=>p.mm))].sort((a,b)=>(b===5)-(a===5)||a-b),groups=[];let no=0;
+  const v=si&&typeof si.value==='string'?si.value:'',sk=NEST_SHEETS[v]?v:'1250x2500',[W,H]=NEST_SHEETS[sk];return {gap,sk,W,H,cgr:!(ci&&ci.checked===false)};}
+// задание: группы по толщине (5 мм первой), в каждой — типы деталей (номер, контур, кол-во) и штуки для раскладки; key — для кэша.
+// over — поменять поля (smoke: {cgr:false}); hasCgr — есть ли колосник мангала (показать галочку)
+function nestJob(over){const o=Object.assign(nestOpts(),over),all=laserParts(),hasCgr=all.some(NEST_CGR),L=o.cgr?all:all.filter(p=>!NEST_CGR(p)),ths=[...new Set(L.map(p=>p.mm))].sort((a,b)=>(b===5)-(a===5)||a-b),groups=[];let no=0;
   ths.forEach(mm=>{const G={mm,types:[],items:[]};
     L.filter(p=>p.mm===mm&&p.q>0).forEach(p=>{let m=null;try{m=partMM(p);}catch(e){}const P=m&&nestLoop(m.loops[0]);if(!P)return;   // пустой или вырожденный контур — пропускаем
       const ty={no:++no,p,m,P,q:p.q};G.types.push(ty);for(let j=0;j<p.q;j++)G.items.push({id:G.items.length,no:ty.no,pts:P,ty});});
     if(G.items.length)groups.push(G);});
   const key=JSON.stringify([o.W,o.H,o.gap,groups.map(G=>[G.mm,G.types.map(ty=>[ty.no,ty.q,ty.P.map(q=>q.map(v=>Math.round(v*10)))])])]);
-  return {...o,groups,key};}
+  return {...o,groups,key,hasCgr};}
 
 /* ---------- рисунок листа (SVG, мм) ---------- */
 const n1=v=>Math.round(v*10)/10;
@@ -120,12 +122,12 @@ const NST={key:'',res:null,run:null,t:0,init:false};
 const nestMsg=t=>{const m=document.getElementById('nestMsg');if(m)m.textContent=t;};
 // поля «Между деталями» и «Лист»: значения из памяти браузера (store — в ui.js, к первому показу вкладки он уже есть)
 function nestInit(){if(NST.init)return;NST.init=true;const gi=document.getElementById('nGap'),si=document.getElementById('nSheet');if(!gi||!si)return;
-  const g=store('md-ngap'),s=store('md-sheet');if(Number.isFinite(+g)&&g!==null)gi.value=g;if(s&&NEST_SHEETS[s])si.value=s;
-  const ch=()=>{const o=nestOpts();store('md-ngap',o.gap);store('md-sheet',o.sk);nestUI();};
-  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);}
+  const g=store('md-ngap'),s=store('md-sheet'),c=store('md-ncgr'),ci=document.getElementById('nCgr');if(Number.isFinite(+g)&&g!==null)gi.value=g;if(s&&NEST_SHEETS[s])si.value=s;if(ci&&typeof c==='boolean')ci.checked=c;
+  const ch=()=>{const o=nestOpts();store('md-ngap',o.gap);store('md-sheet',o.sk);store('md-ncgr',o.cgr);nestUI();};
+  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);if(ci)ci.addEventListener('change',ch);}
 function nestUI(now){clearTimeout(NST.t);if(!now){NST.t=setTimeout(()=>nestUI(true),300);return;}
   const pane=document.getElementById('tab-cut');if(!pane||pane.hidden!==false)return;
-  nestInit();const N=nestJob();
+  nestInit();const N=nestJob(),cb=document.getElementById('nCgrBox');if(cb)cb.hidden=!N.hasCgr;   // галочка колосника — только когда он есть (мангал, «Колосниковая решётка»)
   if(NST.res&&NST.key===N.key){NST.run=null;nestMsg('');nestDraw(N,NST.res);return;}   // уже посчитано (лишний счёт, если шёл, — останавливаем)
   if(NST.run&&NST.run.key===N.key)return;   // уже считается
   const run={key:N.key,res:[],gi:0,g:null,done:0},all=N.groups.reduce((a,G)=>a+G.items.length,0);NST.run=run;
