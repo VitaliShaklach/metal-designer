@@ -349,6 +349,17 @@ ok(!/\$\{(?!plural\()[^{}]+\} (позиций|треугольников|угл�
 ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasma')===7&&ngapAfterCut(7,false,'laser')===5&&ngapAfterCut(4,true,'plasma')===4&&ngapAfterCut(9,true,'laser')===9")
   &&/\$\('sCut'\)[^\n]*ST\.ngap=ngapAfterCut\(ST\.ngap,ST\.ngapOwn,ST\.cut\);\$\('sNGap'\)\.value=ST\.ngap/.test(UI)&&/\$\('sNGap'\)[^\n]*ST\.ngapOwn=true/.test(UI)&&/ngapOwn:false/.test(UI),
   "раскрой: «Между деталями на листе» от резки — лазер 5 мм, плазма 7; поменяли руками — смена резки не трогает");
+// скачивание (DXF, JSON): ссылка-blob живёт ≥ 60 с — iPad Safari не успевал за 2 с; все скачивания идут через saveBlob
+{const src=/const BLOB_TTL=\d+;\nfunction saveBlob[^\n]*/.exec(UI),ev=[],A={style:{},click(){ev.push('click:'+this.download+':'+this.href+':'+this.inDom);},remove(){this.inDom=false;}};
+  const sb={document:{createElement:()=>A,body:{appendChild:a=>{a.inDom=true;}}},URL:{createObjectURL:()=>'blob:x',revokeObjectURL:u=>ev.push('revoke:'+u)},Blob:function(){},setTimeout:(f,ms)=>{ev.push('timer:'+ms);f();}};
+  if(src){vm.createContext(sb);vm.runInContext(src[0]+';saveBlob("Д11_N2_raskroy.dxf",new Blob())',sb);}
+  ok(src&&ev.join(' ')==='click:Д11_N2_raskroy.dxf:blob:x:true timer:'+(+/BLOB_TTL=(\d+)/.exec(UI)[1])+' revoke:blob:x'&&+/BLOB_TTL=(\d+)/.exec(UI)[1]>=60000
+    &&(UI.match(/createObjectURL/g)||[]).length===1&&/function dl\(name,text\)\{saveBlob\(/.test(UI)&&fs.readdirSync(P).filter(f=>f!=='ui.js'&&/createObjectURL/.test(fs.readFileSync(P+f,'utf8'))).length===0,
+    "скачивание DXF/JSON: ссылка в документе, клик, отзыв через ≥ 60 с (iPad Safari); других createObjectURL нет");}
+// телефон / iPad (BACKLOG 5–8): поля ≥ 16 px, галочки и «?» под палец, выпадашки «Перейти» высокие, вкладки ровно
+{const CSS=fs.readFileSync(__dirname+'/../css/style.css','utf8'),T=/@media \(max-width:900px\),\(pointer:coarse\)\{([\s\S]*?)\n\}/.exec(CSS),t=T?T[1]:'',M6=/@media \(max-width:600px\)\{\s*\.tabbar\{display:grid;grid-template-columns:repeat\(6,1fr\)/.test(CSS);
+  ok(/select,textarea\{font-size:16px!important\}/.test(t)&&/\.chk input[^{]*\{width:24px;height:24px/.test(t)&&/\.tip\{[^}]*width:32px;height:32px/.test(t)&&/#shGo,#cdGo\{min-height:44px/.test(t)&&M6&&!/\.tabbar\{flex-wrap:wrap/.test(CSS),
+    "телефон/iPad: поля 16 px, галочки 24, «?» 32×32, «Перейти к листу/карте» 44 px, вкладки — сетка 3+2");}
 {const sel=/<select id="figSel">([\s\S]*?)<\/select>/.exec(HT)[1],O=[...sel.matchAll(/<option value="([^"]*)"[^>]*>([^<]*)</g)].map(m=>({v:m[1],t:m[2]})).filter(o=>o.v),ND=O.filter(o=>/^Доберман \d+$/.test(o.t)).map(o=>+o.t.split(' ')[1]),ib=O.findIndex(o=>o.v==='bull');
   ok(ND.every((n,i)=>!i||n>ND[i-1])&&ib===O.length-1&&O[ib-1].v==='doberman11'&&O.every(o=>run(`!!FIGURES['${o.v}']`)),"список «Фигура»: Доберманы по порядку, голова быка — после Добермана 11, у каждого пункта есть фигура");}
 {const tc={};vm.createContext(tc);const src=fs.readFileSync(P+'tips.js','utf8');vm.runInContext(src.slice(0,src.indexOf('\n(()=>'))+'\nthis.TIPS=TIPS;',tc);const TP=tc.TIPS;

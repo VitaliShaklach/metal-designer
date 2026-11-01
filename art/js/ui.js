@@ -180,7 +180,10 @@ function openFile(file){const ext=file.name.split('.').pop().toLowerCase(),name=
     msg(`Открыто: ${m.F.length} ${plural(m.F.length,'треугольник','треугольника','треугольников')}${isDense()?' — упрощаю до '+ST.faces:''}`);},'Читаю модель…'));}
 function save(){const j={type:'md-art',v:1,name:ST.name,dims:ST.dims,t:ST.t,mat:ST.mat,sheet:ST.sheet,sw:ST.sw,sl:ST.sl,cut:ST.cut,minW:ST.minW,weld:ST.weld,gap:ST.gap,useT:ST.useT,ngap:ST.ngap,engrave:ST.engrave,tpl:ST.tpl,bend:ST.bend,perf:ST.perf,perfL:ST.perfL,perfStep:ST.perfStep,perfEdge:ST.perfEdge,diss:0,
     V:CUR.M3.V.map(p=>p.map(x=>Math.round(x*100)/100)),F:CUR.M3.F};if(isPoly()){j.P=ST.base.P;j.S=ST.base.S||[];}if(ST.refId){j.ref=ST.refId;const fb=traceFrame();j.frame=[fb.min,fb.max].map(p=>p.map(x=>Math.round(x*100)/100));}
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download=(ST.name||'figura')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+  saveBlob((ST.name||'figura')+'.json',new Blob([JSON.stringify(j)],{type:'application/json'}));}
+// скачать файл. Ссылку-blob держим минуту: Safari на iPad начинает загрузку не сразу, и через 2 с файл иногда уже «не найден»
+const BLOB_TTL=60000;
+function saveBlob(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),BLOB_TTL);}
 function metalUI(){$('sNGap').value=ST.ngap;$('cEngrave').checked=ST.engrave;$('cTpl').checked=!!ST.tpl;$('cBend').checked=!!ST.bend;$('sWeld').value=weldOf();$('sGap').value=ST.gap;$('cUseT').checked=ST.useT;$('sT').value=ST.t;$('sMat').value=ST.mat;$('sSheet').value=ST.sheet;$('sCut').value=ST.cut;$('sW').value=ST.sw;$('sL').value=ST.sl;$('ownSheet').hidden=ST.sheet!=='own';perfUI();}
 // перфорация линий сгиба: только лазер и только с гибкой
 function perfUI(){$('cPerf').checked=!!ST.perf;$('pL').value=ST.perfL;$('pStep').value=ST.perfStep;$('pEdge').value=ST.perfEdge;const pl=ST.cut==='plasma',nb=!ST.bend;$('cPerf').disabled=pl||nb;
@@ -266,7 +269,7 @@ function printSvgs(L,what,a4){const pb=$('printBox'),pg=document.createElement('
   const t=document.title;document.title=(ST.name||'Фигура')+' — '+what;const done=()=>{document.title=t;pb.innerHTML='';pg.remove();removeEventListener('afterprint',done);};addEventListener('afterprint',done);window.print();}
 $('shPdf').addEventListener('click',()=>{if(!CUR||!CUR.N){msg('Подождите — раскладываю детали');ensureNest();return;}const sh=buildSheets();if(sh.length)printSvgs(sh.map(s=>s.svg),'чертежи');});
 $('shCards').addEventListener('click',()=>{const cd=CUR?buildCards():[];if(cd.length)printSvgs(cd.map(s=>s.svg),'карты деталей',true);});
-function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/dxf'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+function dl(name,text){saveBlob(name,new Blob([text],{type:'application/dxf'}));}
 const fname=()=>(ST.name||'figura').replace(/[\/:*?"<>|]+/g,'').trim()+`_${MATN[ST.mat]||ST.mat}_${ST.t}mm`;   // «Доберман 9_сталь_2mm_raskroy.dxf» — цех сразу видит материал и толщину
 $('bDxfNest').addEventListener('click',()=>CUR&&ensureNest(()=>dl(fname()+(weldOf()==='tig'?'_N2':'')+'_raskroy.dxf',dxfNest())));
 $('bDxfParts').addEventListener('click',()=>CUR&&dl(fname()+(weldOf()==='tig'?'_N2':'')+'_detali.dxf',dxfParts()));
