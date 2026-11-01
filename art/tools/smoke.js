@@ -266,7 +266,7 @@ run(`ST.engrave=true;SEGD=(a,b)=>{const d=(p,s)=>{const vx=s[2]-s[0],vy=s[3]-s[1
   GD=(G,H)=>{let m=1e9;G.forEach(a=>H.forEach(b=>{m=Math.min(m,SEGD(a,b));}));return m;};HT=g=>{const ys=g.flatMap(q=>[q[1],q[3]]);return Math.max(...ys)-Math.min(...ys);};
   EG={close:0,miss:0,shrunk:0,tiny:0,labs:0};CUR.BL.forEach((B,i)=>{const t=bendAlign(B.pts,true),P=B.pts.map(q=>trPt(t,q)),m=itemMarks({id:'b'+i,no:'Г'+B.no,pts:P,tr:t});EG.miss+=m.miss.length;EG.labs+=m.labs.length;
     m.labs.forEach((L,k)=>{m.num.forEach(n=>{if(n.g&&GD(L.g,n.g)<1)EG.close++;});m.labs.forEach((L2,k2)=>{if(k2>k&&GD(L.g,L2.g)<1)EG.close++;});});
-    m.num.forEach((n,j)=>{const g0=engraveSegs(n.no,B.regions[j].pts.map(q=>trPt(t,q)));if(!n.g||!g0)return;const h=HT(n.g),h0=HT(g0);if(h<h0-.01){EG.shrunk++;if(h<Math.min(h0,5)-.01)EG.tiny++;}});});
+    m.num.forEach((n,j)=>{const g0=blankNumSegs(n.no,B.regions[j].pts.map(q=>trPt(t,q)),P);if(!n.g||!g0)return;const h=HT(n.g),h0=HT(g0);if(h<h0-.01){EG.shrunk++;if(h<Math.min(h0,5)-.01)EG.tiny++;}});});
   ST.tpl=true;CD3=buildCards();`);
 console.log('     гравировка заготовок Д9: подписей сгибов '+run('EG.labs')+', номеров уменьшено '+run('EG.shrunk'));
 ok(run("EG.close")===0&&run("EG.miss")===0&&run("EG.tiny")===0&&run("EG.labs")===run("CUR.BL.reduce((a,b)=>a+b.lines.filter(l=>l.segs.length).length,0)")&&run("CD3.filter(c=>c.svg.includes('Карта заготовки')).every(c=>c.svg.includes('eng engb'))"),
@@ -415,4 +415,12 @@ ok(run('PB.n')>500&&run('PB.min')>=run('perfBridge()')-1e-6&&run('perfBridge()')
 // №20: в контуре заготовки нет повтора точки — соседние точки не ближе 0,05 мм, и после округления DXF до 0,01 тоже разные
 run(`ZS={n:0,bad:[]};FIGS.forEach(id=>{const C=PG(id);C.BL.forEach(b=>{const P=b.pts;ZS.n++;P.forEach((q,i)=>{const z=P[(i+1)%P.length];if(Math.hypot(z[0]-q[0],z[1]-q[1])<=.05||dn(z[0])===dn(q[0])&&dn(z[1])===dn(q[1]))ZS.bad.push(NM(id)+' Г'+b.no);});});});`);
 ok(run('ZS.n')>200&&run('ZS.bad.length')===0,'контур заготовки Д7–Д11 без нулевых отрезков (было: Д10 Г20, Г23, Г23.1, Г25; Д11 Г22, Г24): точки не ближе 0,05 мм, в DXF не совпадают');
+// №18 (остаток): номер детали в заготовке ставился по грани модели, а у шва контур реза срезан зазором — у Г5 (Д9–Д11) штрихи вылезали за кромку до 2,1 мм.
+// Теперь у всех деталей Д7–Д11 (в заготовках и отдельных) гравировка номера целиком внутри контура реза и не ближе 0,5 мм к кромке
+run(`EI={n:0,min:1e9,bad:[],miss:0};FIGS.forEach(id=>{const C=PG(id),inB=new Set(C.BL.flatMap(b=>b.parts)),chk=(no,g,P,w)=>{if(!g){if(/Г/.test(w))EI.miss++;return;}EI.n++;const d=polyDist(P);
+    g.forEach(s=>[[s[0],s[1]],[s[2],s[3]]].forEach(q=>{const v=inPoly(q,P)?d(q):-d(q);EI.min=Math.min(EI.min,v);if(v<.5&&!EI.bad.includes(w))EI.bad.push(w);}));};
+  C.BL.forEach((b,i)=>{const t=bendAlign(b.pts,true),P=b.pts.map(q=>trPt(t,q)),m=itemMarks({id:'b'+i,no:'Г'+b.no,pts:P,tr:t});m.num.forEach(n=>chk(n.no,n.g,P,NM(id)+' Г'+b.no+' №'+n.no));});
+  C.R.parts.forEach((p,pi)=>{if(inB.has(pi))return;const c=cutContour(p,2,.5,true);if(!c.bad)chk(p.no,engraveSegs(p.no,c.pts),c.pts,NM(id)+' №'+p.no);});});`);
+console.log('     гравировка номеров Д7–Д11: номеров '+run('EI.n')+', ближе всего к кромке реза '+run('EI.min.toFixed(2)')+' мм; за кромкой или ближе 0,5 мм ['+run('EI.bad.slice(0,6)')+']');
+ok(run('EI.n')>500&&run('EI.bad.length')===0&&run('EI.miss')===0,'гравировка номера у всех деталей Д7–Д11 (в заготовках — у каждой, и отдельных) целиком внутри контура реза, не ближе 0,5 мм к кромке (было: Г5 у Д9–Д11 — за кромкой до 2,1 мм)');
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

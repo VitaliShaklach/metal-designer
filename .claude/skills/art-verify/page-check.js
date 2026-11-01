@@ -101,9 +101,12 @@ async function texts(){const out={declension:[],staleTips:[],figOrder:'',default
   if(typeof TIPS!=='undefined')Object.entries(TIPS).forEach(([k,v])=>{
     if(k==='figSel'){const miss=[];for(let i=1;i<=last;i++)if(!new RegExp(`(^|[^\\d])${i}([^\\d]|$)`).test(v))miss.push(i);if(miss.length)out.staleTips.push(`figSel: не названы Доберманы ${miss.join(', ')}`);return;}
     const ns=[...v.matchAll(/Доберман\S* (\d+)/g)].map(m=>+m[1]);if(ns.length&&Math.max(...ns)<last)out.staleTips.push(`${k}: пример на Добермане ${Math.max(...ns)}, последний — ${last}`);});
-  const src=await fetch('js/ui.js?'+Date.now()).then(r=>r.text()).catch(()=>'');const d=/store\('art-fig'\):'([a-z0-9]+)'/.exec(src);
+  // фигура нового посетителя — по самому выражению из ui.js («f=#f= из адреса ? … : сохранённая ? … : FIGURES.doberman11 ? … : первая»):
+  // вычисляем его как у человека без #f= в адресе и без сохранённой фигуры, на настоящем FIGURES страницы
+  const src=await fetch('js/ui.js?'+Date.now()).then(r=>r.text()).catch(()=>'');const fx=/[,\s{]f=([^;]*store\('art-fig'\)[^;]*);\s*\$\('figSel'\)\.value=f\b/.exec(src);
+  let d=null;if(fx)try{d=new Function('FIGURES','store','hf','location','return ('+fx[1]+')')(FIGURES,()=>null,null,{hash:''});}catch(e){d=null;}
   const lastOpt=opts.find(o=>o.text==='Доберман '+last);
-  out.defaultFig=d?(lastOpt&&d[1]===lastOpt.value?'ок: '+d[1]:`новый посетитель видит «${(opts.find(o=>o.value===d[1])||{}).text||d[1]}», последняя — «Доберман ${last}»`):'не нашёл в ui.js';
+  out.defaultFig=d?(lastOpt&&d===lastOpt.value?'ок: '+d:`новый посетитель видит «${(opts.find(o=>o.value===d)||{}).text||d}», последняя — «Доберман ${last}»`):'не нашёл в ui.js, какая фигура открывается новому посетителю';
   return out;}
 
 // ---------- DXF: жмёт обе кнопки, файлы перехватывает (в «Загрузки» не падают) и разбирает ----------
