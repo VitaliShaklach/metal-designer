@@ -97,5 +97,6 @@ function drawDxf(){const tb=document.getElementById('dxfTbl');if(!tb)return;
   ps.forEach((p,i)=>{const m=partMM(p);tc+=m.cut*p.q;tp+=m.pierce*p.q;
     h+=`<tr><td>${p.name}${p.note?`<small>${p.note}</small>`:''}<small class="fn">${dxfName(p)}</small></td><td>${dxfSketch(m)}</td><td class="n r">${p.mm} мм</td><td class="n r">${p.q}</td><td class="n">${fmt(m.w,1)} × ${fmt(m.h,1)}</td><td class="n r">${fmt(m.cut/1000,2)}</td><td class="n r">${m.pierce}</td><td class="r"><button class="dxfbtn" data-i="${i}">DXF</button></td></tr>`;});
   h+=`<tr class="tot"><td colspan="5">Всего ${ps.length} деталей${S.sel.el?' (выбранное)':''}, с учётом количества</td><td class="n r">${fmt(tc/1000,2)}</td><td class="n r">${tp}</td><td></td></tr></tbody>`;
-  tb.innerHTML=h;tb.querySelectorAll('.dxfbtn').forEach(b=>b.addEventListener('click',()=>savePart(ps[+b.dataset.i])));}
+  tb.innerHTML=h;tb.querySelectorAll('.dxfbtn').forEach(b=>b.addEventListener('click',()=>savePart(ps[+b.dataset.i])));
+  if(typeof nestUI==='function')nestUI();}   // раскрой листа — от тех же галочек (многие зовут только build3D)
 document.getElementById('dxfAll')&&document.getElementById('dxfAll').addEventListener('click',saveAll);

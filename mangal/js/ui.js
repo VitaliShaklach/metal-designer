@@ -201,7 +201,7 @@ new MutationObserver(foldBtn).observe(document.getElementById('dimList'),{childL
 const TABS=[...document.querySelectorAll('.tabbar button')];
 function showTab(k){if(!TABS.some(b=>b.dataset.tab===k))k='dims';
   TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;document.getElementById('tab-'+b.dataset.tab).hidden=!on;});
-  store('md-tab',k);}
+  store('md-tab',k);if(k==='cut')nestUI(true);}   // раскрой листа — сразу при открытии вкладки
 TABS.forEach((b,i)=>{b.addEventListener('click',()=>showTab(b.dataset.tab));
   b.addEventListener('keydown',e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;const n=TABS[(i+d+TABS.length)%TABS.length];n.focus();showTab(n.dataset.tab);});});
 showTab((location.hash.match(/^#(dims|cut|dxf|buy|notes)$/)||[])[1]||store('md-tab')||'dims');
