@@ -222,11 +222,18 @@ $('cPerf').addEventListener('change',e=>{ST.perf=e.target.checked;perfUI();recal
 // пределы: прорезь 1–10 мм, шаг не меньше прорези + 3, от края не меньше 3
 const perfFix=()=>{ST.perfL=Math.min(10,Math.max(1,ST.perfL||2));ST.perfStep=Math.max(ST.perfL+3,ST.perfStep||20);ST.perfEdge=Math.max(3,ST.perfEdge||10);perfUI();recalc();};
 [['pL','perfL'],['pStep','perfStep'],['pEdge','perfEdge']].forEach(([id,k])=>$(id).addEventListener('change',e=>{ST[k]=+e.target.value;perfFix();}));
+// клик по модели: строку таблицы — в видимую часть её собственной прокрутки (если она есть); страницу не трогаем
+function revealRow(tr){for(let el=tr&&tr.parentElement;el&&el!==document.body;el=el.parentElement){const oy=getComputedStyle(el).overflowY;if((oy!=='auto'&&oy!=='scroll')||el.scrollHeight<=el.clientHeight)continue;
+  const r=tr.getBoundingClientRect(),b=el.getBoundingClientRect();if(r.top<b.top)el.scrollTop+=r.top-b.top;else if(r.bottom>b.bottom)el.scrollTop+=r.bottom-b.bottom;return;}}
+// клик по строке таблицы: открыть «Вид» и плавно показать эскиз детали; на телефоне — в шторке
+function showSel(){const pn=$('controls'),sb=$('selBox'),bh=matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';pn.querySelector('[data-g="view"]').classList.remove('shut');
+  if(getComputedStyle($('drawerBtn')).display==='none'){sb.scrollIntoView({behavior:bh,block:'nearest'});return;}
+  drawer(true);pn.scrollTo({top:pn.scrollTop+sb.getBoundingClientRect().top-pn.getBoundingClientRect().top-(pn.querySelector('.drawerhead')?.offsetHeight||0)-8,behavior:bh});}
 $('parts').addEventListener('click',e=>{const tb=e.target.closest('tr[data-b]'),tr=e.target.closest('tr[data-p]');if(!tb&&!tr)return;
   // заготовка: подсветить целиком, камера — на неё (средняя точка и нормаль по площади)
   if(tb){const b=CUR.BL[+tb.dataset.b];ST.selB=+tb.dataset.b;ST.sel=-1;renderAll();const ps=b.parts.map(i=>CUR.R.parts[i]),A=ps.reduce((s,p)=>s+p.area,0);
     focusPart({c:V3.mul(ps.reduce((s,p)=>V3.add(s,V3.mul(p.c,p.area)),[0,0,0]),1/A),n:V3.norm(ps.reduce((s,p)=>V3.add(s,V3.mul(p.n,p.area)),[0,0,0])),L:b.L,W:b.W},meshBox(CUR.M3.V));}
-  else{ST.sel=+tr.dataset.p;ST.selB=-1;renderAll();focusPart(CUR.R.parts[ST.sel],meshBox(CUR.M3.V));}
+  else{ST.sel=+tr.dataset.p;ST.selB=-1;renderAll();focusPart(CUR.R.parts[ST.sel],meshBox(CUR.M3.V));showSel();return;}
   $('controls').querySelector('[data-g="view"]').classList.remove('shut');});
 $('partsVw').addEventListener('click',e=>{const b=e.target.closest('[data-vw]');if(!b)return;ST.allParts=b.dataset.vw==='parts';partsTable();});
 document.querySelectorAll('.vbar [data-v]').forEach(b=>b.addEventListener('click',()=>CUR&&viewDir(b.dataset.v,meshBox(CUR.M3.V))));
@@ -236,8 +243,8 @@ const TABS=[...document.querySelectorAll('.tabbar button')];
 function showTab(k){TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));$('tab-'+b.dataset.tab).hidden=!on;});store('art-tab',k);if(k==='sheets'||k==='nest'||k==='cards')sheetsUI(true);if(k==='sum'&&CUR)sumTable();}
 TABS.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));showTab(['sum','nest','sheets','cards'].includes(store('art-tab'))?store('art-tab'):'parts');
 document.querySelectorAll('.controls .grp').forEach(g=>g.querySelector('.gt').addEventListener('click',()=>g.classList.toggle('shut')));
-(()=>{const pn=$('controls'),bt=$('drawerBtn'),set=o=>{pn.classList.toggle('open',o);bt.setAttribute('aria-expanded',String(o));bt.textContent=o?'Готово':'Панель';};
-  bt.addEventListener('click',()=>set(!pn.classList.contains('open')));$('drawerClose').addEventListener('click',()=>set(false));})();
+function drawer(o){const bt=$('drawerBtn');$('controls').classList.toggle('open',o);bt.setAttribute('aria-expanded',String(o));bt.textContent=o?'Готово':'Панель';}
+$('drawerBtn').addEventListener('click',()=>drawer(!$('controls').classList.contains('open')));$('drawerClose').addEventListener('click',()=>drawer(false));
 /* ---------- раскрой, чертежи, карты: строим только открытую вкладку, через 0,5 с после правки; картам раскладка не нужна ---------- */
 function sheetsUI(now){clearTimeout(SHEETS_T);const vis=!$('tab-sheets').hidden||!$('tab-nest').hidden||!$('tab-cards').hidden;if(!vis||!CUR)return;
   if(!now){SHEETS_T=setTimeout(()=>sheetsUI(true),500);return;}
@@ -363,7 +370,7 @@ $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&
       if(e.shiftKey&&ST.sp>=0&&fp>=0&&fp!==ST.sp){ST.sp2=fp;ST.sv=-1;renderAll();return;}
       ST.sv=-1;ST.sp=fp;ST.sp2=-1;ST.sel=pi;renderAll();return;}
     ST.sel=pi===ST.sel?-1:pi;ST.selB=-1;renderAll();
-    if(pi>=0){$('controls').querySelector('[data-g="view"]').classList.remove('shut');const tr=$('parts').querySelector(`tr[data-p="${pi}"]`);if(tr)tr.scrollIntoView({block:'nearest'});}});
+    if(pi>=0){$('controls').querySelector('[data-g="view"]').classList.remove('shut');revealRow($('parts').querySelector(`tr[data-p="${pi}"]`));}});
   cv.addEventListener('pointerleave',()=>tag.hidden=true);})();
 
 // старт
