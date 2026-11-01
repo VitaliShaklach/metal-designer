@@ -375,6 +375,24 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
   ok(src&&ev.join(' ')==='click:Д11_N2_raskroy.dxf:blob:x:true timer:'+(+/BLOB_TTL=(\d+)/.exec(UI)[1])+' revoke:blob:x'&&+/BLOB_TTL=(\d+)/.exec(UI)[1]>=60000
     &&(UI.match(/createObjectURL/g)||[]).length===1&&/function dl\(name,text\)\{saveBlob\(/.test(UI)&&fs.readdirSync(P).filter(f=>f!=='ui.js'&&/createObjectURL/.test(fs.readFileSync(P+f,'utf8'))).length===0,
     "скачивание DXF/JSON: ссылка в документе, клик, отзыв через ≥ 60 с (iPad Safari); других createObjectURL нет");}
+// клик по детали: в 3D — строка подсвечена, крутится только свой блок таблицы (страница на месте); по строке — «Вид» открыт, плавно к эскизу, на телефоне — шторка
+{const fn=n=>(new RegExp('\\nfunction '+n+'\\([\\s\\S]*?(?=\\n(//|\\$\\(|function ))').exec(UI)||[''])[0],ev=[];
+  const el=(id,o={})=>Object.assign({id,parentElement:null,scrollTop:0,scrollHeight:100,clientHeight:100,ov:'visible',top:0,h:20,cls:new Set(),
+    getBoundingClientRect(){return {top:this.top,bottom:this.top+this.h};},scrollIntoView(a){ev.push('into:'+this.id+':'+a.behavior+':'+a.block);},scrollTo(a){ev.push('to:'+this.id+':'+a.top+':'+a.behavior);},
+    classList:{remove:c=>ev.push('shut-:'+id),toggle:(c,on)=>ev.push('cls:'+id+':'+c+':'+on)},setAttribute(){},querySelector:q=>q==='.drawerhead'?{offsetHeight:50}:q==='[data-g="view"]'?{classList:{remove:()=>ev.push('view-open')}}:null},o);
+  const body=el('body'),wrap=el('wrap',{parentElement:body,ov:'auto'}),tr=el('tr',{parentElement:wrap,top:500}),E={controls:el('controls',{ov:'auto',top:100,scrollTop:40}),selBox:el('selBox',{top:700}),drawerBtn:el('drawerBtn',{disp:'none'})};
+  const sb={document:{body},getComputedStyle:e=>({overflowY:e.ov,display:e.disp||'block'}),matchMedia:()=>({matches:false}),$:id=>E[id],window:{scrollTo:()=>ev.push('page')}};
+  vm.createContext(sb);vm.runInContext(fn('revealRow')+fn('showSel')+fn('drawer'),sb);const T='деталь: клик в 3D не крутит страницу (только свой блок таблицы), клик по строке — «Вид» открыт, плавно к эскизу, на телефоне шторка открыта';
+  if(!/function revealRow/.test(UI)||!/function showSel/.test(UI))ok(false,T+' — нет revealRow / showSel');else{
+  vm.runInContext('revealRow(null)',sb);const a=ev.join(' ')+'|'+wrap.scrollTop;          // нет строки (вкладка скрыта и т. п.)
+  vm.runInContext('revealRow(E_tr)',Object.assign(sb,{E_tr:tr}));const b=ev.join(' ')+'|'+wrap.scrollTop;   // блок не прокручивается — ничего
+  wrap.scrollHeight=900;wrap.top=0;wrap.h=300;vm.runInContext('revealRow(E_tr)',sb);const c=wrap.scrollTop;         // свой блок: строка ниже на 220 → scrollTop +220
+  ev.length=0;vm.runInContext('showSel()',sb);const d=ev.join(' ');
+  ev.length=0;E.drawerBtn.disp='block';vm.runInContext('showSel()',sb);const f=ev.join(' ');
+  ok(a==='|0'&&b==='|0'&&c===220&&d==='view-open into:selBox:smooth:nearest'&&f==='view-open cls:controls:open:true to:controls:'+(40+700-100-50-8)+':smooth'
+    &&/revealRow\(\$\('parts'\)\.querySelector\(`tr\[data-p="\$\{pi\}"\]`\)\)/.test(UI)&&(UI.match(/scrollIntoView/g)||[]).length===2
+    &&/else\{ST\.sel=\+tr\.dataset\.p;ST\.selB=-1;renderAll\(\);focusPart\([^\n]*showSel\(\);return;\}/.test(UI),
+    T);}}
 // телефон / iPad (BACKLOG 5–8): поля ≥ 16 px, галочки и «?» под палец, выпадашки «Перейти» высокие, вкладки ровно
 {const CSS=fs.readFileSync(__dirname+'/../css/style.css','utf8'),T=/@media \(max-width:900px\),\(pointer:coarse\)\{([\s\S]*?)\n\}/.exec(CSS),t=T?T[1]:'',M6=/@media \(max-width:600px\)\{\s*\.tabbar\{display:grid;grid-template-columns:repeat\(6,1fr\)/.test(CSS);
   ok(/select,textarea\{font-size:16px!important\}/.test(t)&&/\.chk input[^{]*\{width:24px;height:24px/.test(t)&&/\.tip\{[^}]*width:32px;height:32px/.test(t)&&/#shGo,#cdGo\{min-height:44px/.test(t)&&M6&&!/\.tabbar\{flex-wrap:wrap/.test(CSS),
