@@ -109,12 +109,13 @@ function buildDoberman2(){
 FIGURES.doberman2={name:'Доберман 3',H:600,poly:true,build:buildDoberman2};
 
 /* ---------- Доберман 4 — модель Meshy, которую сделал Виталий (art/js/models.js, 5000 треугольников запаса) ----------
-   Гладкая: ползунок «Граней» упрощает до нужного числа, по умолчанию 200. */
-FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh('doberman4')};
+   Гладкая: ползунок «Граней» упрощает до нужного числа, по умолчанию 200.
+   Доберманам 4–6 нужен models.js (130 КБ) — его нет в index.html, подгружается, когда выбрана такая фигура (need, figureReady). */
+FIGURES.doberman4={name:'Доберман 4',H:600,faces:200,mesh:()=>modelMesh('doberman4'),need:'models'};
 // Доберман 5 — Meshy Smart Topology (T2.5, 500 полигонов) по оригинальному фото: 508 треугольников, ползунок упрощает дальше
-FIGURES.doberman5={name:'Доберман 5',H:600,faces:130,mesh:()=>modelMesh('doberman5')};
+FIGURES.doberman5={name:'Доберман 5',H:600,faces:130,mesh:()=>modelMesh('doberman5'),need:'models'};
 // Доберман 6 — агент Meshy: фото на белом фоне → Meshy 7.1 → ремеш в четырёхугольники (516 граней, 1028 треугольников)
-FIGURES.doberman6={name:'Доберман 6',H:600,faces:200,mesh:()=>modelMesh('doberman6')};
+FIGURES.doberman6={name:'Доберман 6',H:600,faces:200,mesh:()=>modelMesh('doberman6'),need:'models'};
 // Доберман 7 — плиты сняты с текстурной модели Meshy «Geometric Doberman» (art/tools/plates): плоские многоугольники, глаза — прорези
 FIGURES.doberman7={name:'Доберман 7',H:600,poly:true,build:()=>modelPoly('doberman7'),ref:'doberman7'};
 // Доберман 8 — рабочая копия «Доберман 7» для правки по кальке; правки Виталия (.json) сюда — art/tools/plates/fromjson.js doberman8 …
@@ -125,3 +126,13 @@ FIGURES.doberman9={name:'Доберман 9',H:600,poly:true,build:()=>modelPoly
 FIGURES.doberman10={name:'Доберман 10',H:600,poly:true,build:()=>modelPoly('doberman10'),ref:'doberman7',frame:[[-145.5,0,0],[145.5,600,395]]};
 // Доберман 11 — Доберман 10 со слитыми 31+30 и 31.1+30.1 (плоский шов): art/tools/plates/marks/round4.js → fromjson.js
 FIGURES.doberman11={name:'Доберман 11',H:600,poly:true,build:()=>modelPoly('doberman11'),ref:'doberman7',frame:[[-145.5,0,0],[145.5,600,395]]};
+
+/* ---------- ленивые файлы фигур: need:'models' — фигура строится только после js/models.js ----------
+   figureReady(id,cb,fail): файл уже есть — вернёт true, строить можно сразу (cb не зовётся); нет — добавит <script> один раз, вернёт false, cb — после onload.
+   Версия файла — та же, что у figures.js (?v= из его src), отдельно поднимать не нужно. */
+const LAZY={models:{ok:()=>typeof MODELS!=='undefined',wait:null}};
+const LAZY_V=(typeof document!=='undefined'&&document.currentScript&&/\?v=[^&#]*/.exec(document.currentScript.src)||[''])[0];
+function figureReady(id,cb,fail){const n=FIGURES[id]&&FIGURES[id].need,L=LAZY[n];if(!L||L.ok())return true;
+  if(!L.wait){L.wait=[];const s=document.createElement('script'),end=()=>{const w=L.wait;L.wait=null;w.forEach(([c,f])=>L.ok()?c():f&&f());};
+    s.src='js/'+n+'.js'+LAZY_V;s.onload=end;s.onerror=()=>{s.remove();end();};document.head.appendChild(s);}
+  L.wait.push([cb,fail]);return false;}
