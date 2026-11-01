@@ -259,3 +259,17 @@ svg.nestsv .np.on text{font-weight:700}
 table.ntbl td:first-child,table.ntbl th:first-child{width:1%}
 table.ntbl td:nth-child(3){vertical-align:middle;width:1%}
 table.ntbl tr.on td{background:var(--accent-soft)}
+/* колонка «Скачать»: не шире прежней кнопки «DXF» */
+table.ntbl th.dl{padding-left:6px;padding-right:6px;letter-spacing:0;font-size:10px}
+table.ntbl td.dl{padding-left:6px;padding-right:6px;width:1%;white-space:nowrap}
+.dxfbtn.dl{padding:4px 5px}
+/* заготовки с гильотины */
+td small.was{font-size:11px;color:var(--muted);white-space:nowrap}
+td small.kd{display:inline-block;margin:3px 0 1px 6px;padding:0 5px;font:600 11px var(--f-mono);border:1px solid var(--line);color:var(--muted)}
+td small.kd-zag{border-color:var(--accent);color:var(--accent)}
+td.nolz{color:var(--muted);font-size:13px;white-space:nowrap}
+.npiece{margin:0;font:600 13px/1.4 var(--f-mono)}
+.ngil{margin:4px 0 0;font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
+table.gtbl{min-width:520px}
+svg.nestsv rect.pc{fill:none;stroke:var(--ink);stroke-width:1.5px;stroke-dasharray:12 8;vector-effect:non-scaling-stroke}
+table.gtbl td:first-child,table.gtbl th:first-child{width:1%;white-space:nowrap}

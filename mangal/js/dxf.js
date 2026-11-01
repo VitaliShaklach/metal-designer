@@ -1,6 +1,7 @@
 /* ---------- файлы для лазера: DXF каждой листовой детали из той же геометрии, что 3D ----------
    Деталь: {loops:[[[x,y]…]…], circles:[[x,y,r]…], bends:[[[x,y],[x,y]]…]} в см; в файл — мм, начало в левом нижнем углу.
-   Контуры и отверстия — слой CUT, линии гиба — слой BEND (не резать), рамка в DXF всего листа — слой SHEET (не резать). */
+   Контуры и отверстия — слой CUT, линии гиба — слой BEND (не резать), рамка в DXF всего листа — слой SHEET (не резать),
+   прямоугольник заготовки в DXF «по заготовке» (_zag) — слой BLANK (не резать, для базирования). */
 const rect=(w,h)=>[[0,0],[w,0],[w,h],[0,h],[0,0]];
 // THREE.Shape → деталь: внешний контур + отверстия (окружности — CIRCLE)
 function shapeGeo(s){const g={loops:[s.getPoints().map(p=>[p.x,p.y])],circles:[],bends:[]};
@@ -61,14 +62,43 @@ function partMM(p){const G=p.geo(),xs=[],ys=[];G.loops.forEach(l=>l.forEach(([x,
   const loops=G.loops.map(l=>l.map(P)),circles=G.circles.map(([x,y,r])=>[...P([x,y]),f(r)]),bends=G.bends.map(b=>b.map(P));
   let cut=0;loops.forEach(l=>{for(let i=0;i<l.length-1;i++)cut+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);});circles.forEach(c=>cut+=2*Math.PI*c[2]);
   return {loops,circles,bends,w:f(Math.max(...xs)-mx),h:f(Math.max(...ys)-my),cut,pierce:loops.length+circles.length};}
-// m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf)
+/* ---------- заготовки с гильотины: металл режут в размер на гильотине, на лазер везут готовый прямоугольник ----------
+   gil  — «только гильотина»: наружный контур — прямоугольник по габариту, внутри ничего — лазер не нужен;
+   zag  — «по заготовке»: гильотина режет габарит, лазер — только отверстия, вырезы и пазы с кромки;
+   list — «из листа»: деталь далеко от прямоугольника (ушки, ручки) — лазер режет её целиком из куска листа, как раньше. */
+// zag — если площадь детали (наружный контур минус внутренние контуры) не меньше этой доли площади габарита.
+// Окружности не вычитаются: отверстия не меняют заготовку (колосники с сеткой Ø10/Ø20 — тоже по заготовке).
+// Ниже 85 % у кромки срезано много — проще резать деталь целиком из листа, чем гнать лишний прямоугольник через гильотину.
+const ZAG_MIN=.85,BLANK_EPS=.01;   // BLANK_EPS — допуск «отрезок лежит на стороне габарита», мм
+const loopArea=l=>{let a=0;for(let i=0;i<l.length-1;i++)a+=l[i][0]*l[i+1][1]-l[i+1][0]*l[i][1];return Math.abs(a)/2;};   // контур замкнут: последняя точка = первая
+// деталь по заготовке (мм): из наружного контура выкинуты отрезки на сторонах габарита — остаются открытые ломаные (пазы и вырезы с кромки);
+// внутренние контуры, окружности и гибы — как есть. blank — прямоугольник заготовки (слой BLANK).
+// pierce — с запасом: по одной на каждую открытую ломаную, хотя цех может заходить с кромки без прожига
+function blankMM(p,m=partMM(p)){const E=BLANK_EPS,w=m.w,h=m.h,O=m.loops[0]||[],ax=v=>Math.abs(v)<E,
+    on=(a,b)=>ax(a[0])&&ax(b[0])||ax(a[0]-w)&&ax(b[0]-w)||ax(a[1])&&ax(b[1])||ax(a[1]-h)&&ax(b[1]-h),seg=[];
+  for(let i=0;i<O.length-1;i++){const a=O[i],b=O[i+1];if(a[0]!==b[0]||a[1]!==b[1])seg.push([a,b,on(a,b)]);}
+  const k=seg.findIndex(s=>s[2]),open=[];
+  if(k<0){if(O.length)open.push(O);}   // контур касается габарита только точками — режем весь
+  else{let cur=null;for(let j=1;j<=seg.length;j++){const s=seg[(k+j)%seg.length];   // начинаем после отрезка на стороне — ломаная не рвётся на стыке начала и конца
+    if(s[2]){if(cur)open.push(cur);cur=null;}else{if(!cur)cur=[s[0]];cur.push(s[1]);}}}
+  const inner=m.loops.slice(1),loops=[...open,...inner],len=l=>{let c=0;for(let i=0;i<l.length-1;i++)c+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);return c;};
+  const cut=loops.reduce((a,l)=>a+len(l),0)+m.circles.reduce((a,c)=>a+2*Math.PI*c[2],0);
+  return {w,h,loops,circles:m.circles,bends:m.bends,blank:rect(w,h),open:open.length,cut,pierce:inner.length+m.circles.length+open.length};}
+// вид детали по partMM (мм): 'gil' | 'zag' | 'list'; контура нет (в Node у боковин) — 'list'
+function partKind(m){if(!m||!m.loops||!m.loops[0]||!m.loops[0].length||!(m.w>0&&m.h>0))return 'list';
+  const b=blankMM(null,m);if(!b.open&&m.loops.length===1&&!m.circles.length)return 'gil';
+  const a=loopArea(m.loops[0])-m.loops.slice(1).reduce((s,l)=>s+loopArea(l),0);
+  return a>=ZAG_MIN*m.w*m.h?'zag':'list';}
+// m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf); m.blank — прямоугольник заготовки (blankMM)
 function dxfText(m){const e=[],L=(a,b,lay)=>e.push('0','LINE','8',lay,'10',a[0],'20',a[1],'30',0,'11',b[0],'21',b[1],'31',0);
   if(m.sheet)for(let i=0;i<m.sheet.length-1;i++)L(m.sheet[i],m.sheet[i+1],'SHEET');
+  if(m.blank)for(let i=0;i<m.blank.length-1;i++)L(m.blank[i],m.blank[i+1],'BLANK');
   m.loops.forEach(l=>{for(let i=0;i<l.length-1;i++)if(l[i][0]!==l[i+1][0]||l[i][1]!==l[i+1][1])L(l[i],l[i+1],'CUT');});
   m.circles.forEach(([x,y,r])=>e.push('0','CIRCLE','8','CUT','10',x,'20',y,'30',0,'40',r));
   m.bends.forEach(([a,b])=>L(a,b,'BEND'));
   return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC','0','SECTION','2','ENTITIES',...e,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
 const dxfName=p=>`${p.file}_${p.mm}mm_x${p.q}.dxf`;
+const dxfNameZ=p=>`${p.file}_${p.mm}mm_x${p.q}_zag.dxf`;   // по заготовке: CUT — только то, что режет лазер, BLANK — заготовка
 
 // zip без сжатия (stored) — несколько DXF одним файлом
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();

@@ -58,9 +58,56 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
         E.filter(e=>e['8']!=='SHEET').forEach(e=>{const pts=e.k==='LINE'?[[+e['10'],+e['20']],[+e['11'],+e['21']]]:[[+e['10']-+e['40'],+e['20']-+e['40']],[+e['10']+ +e['40'],+e['20']+ +e['40']]];
           pts.forEach(([x,y])=>{if(!(x>=10-.02&&y>=10-.02&&x<=d.W-10+.02&&y<=d.H-10+.02))throw new Error(`DXF листа ${d.mm} мм: точка ${x},${y} вне листа`);});});
         cut.forEach(e=>[e['10']+','+e['20'],e['11']+','+e['21']].forEach(k=>deg[k]=(deg[k]||0)+1));
-        const odd=Object.keys(deg).filter(k=>deg[k]%2);if(odd.length)throw new Error(`DXF листа ${d.mm} мм: незамкнутый контур у ${odd[0]}`);});}
+        const odd=Object.keys(deg).filter(k=>deg[k]%2);if(odd.length)throw new Error(`DXF листа ${d.mm} мм: незамкнутый контур у ${odd[0]}`);});
+      // заготовки с гильотины (галочка): на листе под лазер только детали 'list'; рисунок, таблица «На гильотину», CSV, DXF куска листа; размеры — целые мм
+      vm.runInContext(`{const N=nestJob({gil:true}),N0=nestJob();
+        N.groups.forEach(G=>G.items.forEach(i=>{if(i.ty.kind!=='list')throw new Error('gil: на листе под лазер деталь '+i.ty.kind+' — '+i.ty.p.name);}));
+        if(N0.groups.reduce((a,G)=>a+G.items.length,0)!==N0.groups.reduce((a,G)=>a+G.types.reduce((b,t)=>b+t.q,0),0))throw new Error('без галочки на листе не все детали');
+        const res=N.groups.map(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);return v.value;});nestDraw(N,res);
+        N.groups.forEach((G,gi)=>{const R=res[gi],rows=gilRows(N,G,R),csv=gilCsv(N,G,R),lab=[];
+          if(R.sheets.length!==(G.items.length?R.sheets.length||1:0))throw new Error('gil: лист без деталей');
+          R.sheets.forEach((sh,si)=>{const [w,h]=nestPiece(N,sh);if(w%10||h%10||w>N.W||h>N.H)throw new Error('gil: кусок листа '+w+' × '+h);lab.push('Кусок листа под лазер '+w+' × '+h,nestFile(N,G,R,si));
+            const t=nestDxf(N,G,sh).split(/\\r?\\n/);for(let i=0;i<t.length-1;i+=2){if(t[i]==='10'&&+t[i+1]>w+.01||t[i]==='20'&&+t[i+1]>h+.01)throw new Error('gil: DXF куска — точка вне куска '+w+' × '+h);}});
+          rows.forEach(o=>{if(!Number.isInteger(o.w)||!Number.isInteger(o.h))throw new Error('gil: заготовка не в целых мм — '+o.name+' '+o.w+' × '+o.h);lab.push(fmt(o.w,0)+' × '+fmt(o.h,0));});
+          if(rows.filter(o=>o.kind!=='piece').length!==G.types.filter(t=>t.kind!=='list').length||rows.filter(o=>o.kind==='piece').length!==R.sheets.length)throw new Error('gil: строки «На гильотину»');
+          if(csv.charCodeAt(0)!==0xFEFF||csv.split('\\r\\n')[0]!=='\uFEFFдеталь;заготовка, мм;шт;вид'||csv.trim().split('\\r\\n').length!==rows.length+1)throw new Error('gil: CSV '+JSON.stringify(csv.slice(0,60)));
+          csv.trim().split('\\r\\n').slice(1).forEach(l=>{lab.push(l.split(';')[1]);if(l.split(';').length!==4)throw new Error('gil: CSV строка '+l);});
+          G.types.forEach(ty=>{const o=partOut(N,ty),o0=partOut(N0,ty);if(o0[0]!==dxfName(ty.p))throw new Error('без галочки не тот DXF детали');
+            if(ty.kind==='gil'?o:ty.kind==='zag'?!o||!/_zag\\.dxf$/.test(o[0])||!/\\nBLANK\\r/.test(o[1]):o[0]!==dxfName(ty.p))throw new Error('gil: DXF детали '+ty.kind+' '+(o&&o[0]));});
+          const bad=lab.find(t=>/[0-9],[0-9]/.test(t));if(bad)throw new Error('gil: дробные мм в подписи: '+bad);});
+        if(nestJob({gil:true}).key===N0.key&&N0.groups.some(G=>G.types.some(t=>t.kind!=='list')))throw new Error('gil: ключ раскладки не меняется от галочки');}`,ctx);}
   catch(e){errs.push(e.message+' '+(e.stack.split('\n')[1]||''));}
   console.log(mode,JSON.stringify(extra).slice(0,30),errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
+
+// виды деталей на настоящих контурах: THREE.Shape/Path — простые заглушки (как в tools/dxf_side.js), остальное THREE — пустышка.
+// gil — прямоугольник без отверстий (дно жаровни), zag — задняя боковина жаровни (рез по заготовке меньше; в _zag.dxf BLANK — 4 отрезка,
+// у CUT концы нечётной степени — на стороне заготовки: пазы выходят на кромку), list — перегородка жаровни
+class SPath{constructor(){this.pts=[];this.curves=[];this.holes=[];}moveTo(x,y){this.pts.push({x,y});}lineTo(x,y){const l=this.pts[this.pts.length-1];if(!l||l.x!==x||l.y!==y)this.pts.push({x,y});}
+  absarc(x,y,r){this.curves=[{isEllipseCurve:true,aX:x,aY:y,xRadius:r}];}getPoints(){return this.pts;}}
+for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true}]){
+  const U=mk(),errs=[],TH=new Proxy({Shape:SPath,Path:SPath},{get:(t,k)=>k in t?t[k]:U});let st='';
+  const flags=JSON.stringify(Object.assign({rain:true,mode},extra));
+  const ctx={THREE:TH,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&flags='+encodeURIComponent(flags)},
+    addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>0},navigator:U,URLSearchParams,console,Math,JSON,Set,Object,Array,Number,String,Symbol,setTimeout,clearTimeout};
+  vm.createContext(ctx);
+  const src=['params','parts','model','dims','cut','dxf','nest','ui'].map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n');
+  try{vm.runInContext(src,ctx,{filename:'all.js'});
+    st=vm.runInContext(`(()=>{const lp=laserParts(),K=pt=>{const p=lp.find(p=>p.pt===pt);return p&&partKind(partMM(p));},c={gil:0,zag:0,list:0};let cl=0,cz=0;
+      lp.forEach(p=>{const m=partMM(p),k=partKind(m);if(!(m.w>0))throw new Error('нет контура: '+p.name);c[k]++;if(p.mm===5){cl+=m.cut*p.q;if(k==='zag')cz+=blankMM(p,m).cut*p.q;else if(k==='list')cz+=m.cut*p.q;}});
+      if(gOn()){if(K('gBot')!=='gil')throw new Error('дно жаровни: '+K('gBot')+', ждали gil');
+        const p=lp.find(p=>p.pt==='side0'),m=partMM(p),b=blankMM(p,m);if(partKind(m)!=='zag')throw new Error('задняя боковина жаровни: '+partKind(m)+', ждали zag');
+        if(!(b.cut<m.cut))throw new Error('боковина: рез по заготовке '+b.cut+' не меньше, чем из листа '+m.cut);
+        const t=dxfText(b).split(/\\r?\\n/),E=[];for(let i=0;i<t.length-1;i+=2)if(t[i]==='0'&&t[i+1]==='LINE'){const e={};let j=i+2;while(j<t.length-1&&t[j]!=='0'){e[t[j]]=t[j+1];j+=2;}E.push(e);}
+        const bl=E.filter(e=>e['8']==='BLANK'),cu=E.filter(e=>e['8']==='CUT'),deg={};if(bl.length!==4)throw new Error('боковина _zag: BLANK '+bl.length+' отрезков');
+        cu.forEach(e=>[[e['10'],e['20']],[e['11'],e['21']]].forEach(q=>{const k=q.join(',');deg[k]=(deg[k]||0)+1;}));
+        const side=k=>{const [x,y]=k.split(',').map(Number),z=v=>Math.abs(v)<.02;return z(x)||z(x-b.w)||z(y)||z(y-b.h);},odd=Object.keys(deg).filter(k=>deg[k]%2);
+        if(!odd.length||odd.some(k=>!side(k)))throw new Error('боковина _zag: конец паза не на кромке — '+odd.find(k=>!side(k)));
+        if(odd.length!==2*b.open)throw new Error('боковина _zag: концов '+odd.length+', ломаных '+b.open);
+        if(S.div&&K('div')!=='list')throw new Error('перегородка жаровни: '+K('div')+', ждали list');}
+      const N=nestJob({gil:true});N.groups.forEach(G=>G.items.forEach(i=>{if(i.ty.kind!=='list')throw new Error('gil: на листе '+i.ty.kind);}));
+      return \`gil \${c.gil} / zag \${c.zag} / list \${c.list}; 5 мм: из листа \${(cl/1000).toFixed(2)} м → по заготовкам \${(cz/1000).toFixed(2)} м\`;})()`,ctx);}
+  catch(e){errs.push(e.message+' '+(e.stack.split('\n')[1]||''));}
+  console.log('виды',mode,JSON.stringify(extra).slice(0,30),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
 // раскладка на прямоугольниках: 5-мм детали «печь + мангал» — все на одном листе 1250 × 2500; зазор между деталями и край листа — точно (polyGap)
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
