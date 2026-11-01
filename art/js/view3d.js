@@ -2,9 +2,9 @@
 const stage=document.getElementById('stage');
 let renderer,scene,camera,controls,labels,root,ok=true,camAnim=null,need=3;
 function req3D(){need=Math.max(need,3);}
-try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));stage.appendChild(renderer.domElement);}catch(e){ok=false;}
+try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.domElement.setAttribute('role','img');renderer.domElement.setAttribute('aria-label','3D-модель фигуры');stage.appendChild(renderer.domElement);}catch(e){ok=false;}
 if(ok){scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(35,1,5,30000);camera.position.set(700,600,1400);
-  labels=new THREE.CSS2DRenderer();labels.domElement.style.cssText='position:absolute;inset:0;pointer-events:none';stage.appendChild(labels.domElement);
+  labels=new THREE.CSS2DRenderer();labels.domElement.style.cssText='position:absolute;inset:0;pointer-events:none';labels.domElement.setAttribute('aria-hidden','true');stage.appendChild(labels.domElement);
   controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,300,0);
   scene.add(new THREE.HemisphereLight(0xf2f4f5,0xb4aea6,.8));
   const d=new THREE.DirectionalLight(0xffffff,.85);d.position.set(900,1600,1800);scene.add(d);

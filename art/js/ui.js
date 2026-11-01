@@ -71,7 +71,10 @@ function mergeFlat(M3){const G=dissolve(M3,ST.diss,Math.max(ST.dims.W,ST.dims.H,
 
 function renderAll(fit){if(!CUR)return;if(pierceOn()&&!CUR.pierce)CUR.pierce=pierceOf(ST.base);const ed=ST.edit&&isPoly(),T=ST.base.T,tri=set=>{const o=new Set();if(T)T.forEach((pi,fi)=>{if(set.has(pi))o.add(fi);});return o;};
   build3D(CUR.M3,CUR.R,{sel:ST.sel,bent:CUR.bentKey&&CUR.bentKey.size?e=>e.p.length===2&&CUR.bentKey.has(bendKey(e.p[0],e.p[1])):null,grp:selBlank()>=0?new Set(CUR.BL[selBlank()].parts):null,small:ST.small?CUR.small:null,nums:ST.nums&&!ed,mat:ST.mat,verts:ed,sv:ST.sv,hi:ed&&ST.sp>=0?tri(new Set([ST.sp,ST.sp2])):null,warn:isPoly()?tri(CUR.bad):null,blue:ed&&CUR.selfx?tri(CUR.selfx):null,pierce:pierceOn()&&CUR.pierce?tri(CUR.pierce):null,mark:ed&&ST.seam?ST.seam:null,tex:traceTex(),diff:ed&&traceOn()?TRC.diff:null,backs:CUR.R.parts.filter(p=>p.back).map(p=>p.full.map(i=>V3.sub(CUR.M3.V[i],V3.mul(p.n,BACK_DEPTH))))});edUI();traceUI();if(fit)fitBox(meshBox(CUR.M3.V),fit==='instant');
-  stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';}
+  stats();sizeUI();facesUI();selUI();partsTable();sumTable();sheetsUI();$('ttl').textContent=ST.name||'Фигура';label3D();}
+// 3D-окно для читалок экрана: название, детали, габарит — меняется вместе с фигурой и названием
+function label3D(){if(!ok||!CUR)return;const n=CUR.R.parts.length,b=meshBox(CUR.M3.V).size,pc=CUR.BL&&CUR.BL.length?CUR.PC.length:0;
+  renderer.domElement.setAttribute('aria-label',`3D-модель «${ST.name||'Фигура'}»: ${n} ${plural(n,'деталь','детали','деталей')}${pc?`, ${pc} ${plural(pc,'позиция','позиции','позиций')} на резку`:''}, ${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])} мм (Ш × В × Г)`);}
 function stats(){const T=CUR.T,b=meshBox(CUR.M3.V).size;
   $('stats').innerHTML=[[`${Math.round(b[0])} × ${Math.round(b[1])} × ${Math.round(b[2])}`,'Ш × В × Г, мм'],CUR.BL&&CUR.BL.length?[`${T.n} → ${CUR.PC.length}`,`${plural(T.n,'деталь','детали','деталей')} → ${plural(CUR.PC.length,'позиция','позиции','позиций')} на резку (${CUR.BL.length} ${plural(CUR.BL.length,'гнутая','гнутые','гнутых')})`]:[`${T.n}`,plural(T.n,'деталь','детали','деталей')],[`≈ ${fmt(T.mass,1)} кг`,`${ST.t} мм, ${MATN[ST.mat]}`],[`${fmt(weldLen()/1000,1)} м`,'швов']]
     .map(([b,s])=>`<div class="stat"><b>${b}</b><span>${esc(s)}</span></div>`).join('');}
@@ -89,7 +92,8 @@ function facesUI(){$('fRng').disabled=$('dRng').disabled=isPoly();$('dRng').valu
 
 /* ---------- деталь: развёртка с длинами сторон и соседями ---------- */
 function partSVG(p,big){const P=p.pts;if(!P.length)return '';const pad=big?Math.max(p.L,p.W)*.16+8:2,w=p.L+2*pad,h=p.W+2*pad,fs=Math.max(p.L,p.W)*.07+3;
-  let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${w} ${h}" ${big?'':'width="64" height="40"'}><polygon points="${P.map(q=>q[0].toFixed(1)+','+(p.W-q[1]).toFixed(1)).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
+  const q=mainPart(CUR.R,p),[ra,tt]=svgAlt(`${big?'Развёртка':'Эскиз'} детали № ${p.no}: ${Math.round(q.L)} × ${Math.round(q.W)} мм${big?', длины сторон и номера соседей':''}`);   // числа — как в таблице (у «.1» — основной)
+  let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${w} ${h}" ${big?'':'width="64" height="40"'}${ra}>${tt}<polygon points="${P.map(q=>q[0].toFixed(1)+','+(p.W-q[1]).toFixed(1)).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
   if(big){const cx=p.pts.reduce((s,q)=>s+q[0],0)/P.length,cy=p.pts.reduce((s,q)=>s+q[1],0)/P.length;
     p.segs.forEach((g,i)=>{const a=P[i],b=P[(i+1)%P.length],mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,dx=mx-cx,dy=my-cy,l=Math.hypot(dx,dy)||1,ox=mx+dx/l*fs*1.1,oy=my+dy/l*fs*1.1;
       const nb=g.nb>=0?CUR.R.parts[g.nb].no:null;
@@ -105,7 +109,8 @@ const selBlank=()=>!CUR.BL||!CUR.BL.length?-1:ST.selB>=0&&CUR.BL[ST.selB]?ST.sel
 // эскиз заготовки: вид изнутри (со стороны гравировки), контур реза, линии сгиба V — красным, m — синим; крупный — с подписями и номерами деталей.
 // Классы свои (bk…): стили листов PDF (.no, .bv) действуют на всю страницу
 function blankSVG(b,big){const t=bendAlign(b.pts,true),T=q=>{const z=trPt(t,q);return [z[0],t.W-z[1]];},pad=big?Math.max(t.L,t.W)*.1+8:2,fs=Math.max(t.L,t.W)*.035+2.5,f=v=>v.toFixed(1);
-  let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${t.L+2*pad} ${t.W+2*pad}" ${big?'':'width="64" height="40"'}><polygon points="${b.pts.map(q=>T(q).map(f).join(',')).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
+  const nl=b.lines.length,[ra,tt]=svgAlt(`${big?'Развёртка':'Эскиз'} заготовки Г${b.no}: ${Math.round(b.L)} × ${Math.round(b.W)} мм, ${nl} ${plural(nl,'сгиб','сгиба','сгибов')} (V — красным, m — синим), вид изнутри`);
+  let s=`<svg class="${big?'flat':'mini'}" viewBox="${-pad} ${-pad} ${t.L+2*pad} ${t.W+2*pad}" ${big?'':'width="64" height="40"'}${ra}>${tt}<polygon points="${b.pts.map(q=>T(q).map(f).join(',')).join(' ')}" class="pf" vector-effect="non-scaling-stroke"/>`;
   b.lines.forEach(l=>l.segs.forEach(z=>{const a=T([z[0],z[1]]),c=T([z[2],z[3]]);s+=`<path class="bl ${l.kind==='V'?'bkv':'bkm'}" d="M${f(a[0])},${f(a[1])}L${f(c[0])},${f(c[1])}" vector-effect="non-scaling-stroke"/>`;}));
   if(!big)return s+'</svg>';
   // номера деталей, потом подписи сгибов — без наложений: подпись ищет место вдоль линии, по обе стороны, дальше от неё; внутри тесно — снаружи контура
@@ -202,7 +207,7 @@ $('figSel').addEventListener('change',e=>{if(e.target.value)loadFigure(e.target.
 $('bOpen').addEventListener('click',()=>$('fileIn').click());
 $('fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(f)openFile(f);e.target.value='';});
 $('bSave').addEventListener('click',save);
-$('mName').addEventListener('input',e=>{ST.name=e.target.value;$('ttl').textContent=ST.name||'Фигура';});
+$('mName').addEventListener('input',e=>{ST.name=e.target.value;$('ttl').textContent=ST.name||'Фигура';label3D();});
 ['H','W','D'].forEach(k=>$('d'+k).addEventListener('change',e=>{const v=Math.max(50,+e.target.value||0);
   if(ST.prop){const r=v/ST.dims[k];['H','W','D'].forEach(q=>ST.dims[q]=Math.round(ST.dims[q]*r));}ST.dims[k]=v;if(isPoly()){pushUndo();setPolyDims();}recalc(true);}));
 $('cProp').addEventListener('change',e=>{ST.prop=e.target.checked;});
@@ -255,7 +260,7 @@ const ZM={k:1};
 function zoomSet(k,cx,cy){const box=$('zoomBox'),s=box.querySelector('svg');if(!s)return;const r=box.getBoundingClientRect(),px=cx??r.width/2,py=cy??r.height/2,fx=(box.scrollLeft+px)/s.clientWidth,fy=(box.scrollTop+py)/s.clientHeight;
   ZM.k=Math.max(1,Math.min(12,k));s.style.width=(ZM.k*(r.width||innerWidth)-4)+'px';$('zoomK').textContent=Math.round(ZM.k*100)+'%';box.scrollLeft=fx*s.clientWidth-px;box.scrollTop=fy*s.clientHeight-py;}
 // fx, fy — куда кликнули (доля ширины и высоты листа): это место — в середине экрана
-function zoomOpen(svg,title,fx=.5,fy=.5){const z=$('zoom');$('zoomTtl').textContent=title||'';const c=svg.cloneNode(true);c.removeAttribute('width');c.removeAttribute('height');$('zoomBox').replaceChildren(c);z.hidden=false;document.body.classList.add('noscroll');ZM.k=1;zoomSet(1);
+function zoomOpen(svg,title,fx=.5,fy=.5){const z=$('zoom');$('zoomTtl').textContent=title||'';const c=svg.cloneNode(true),tl=c.querySelector('title');c.removeAttribute('width');c.removeAttribute('height');if(tl){tl.id+='z';c.setAttribute('aria-labelledby',tl.id);}$('zoomBox').replaceChildren(c);z.hidden=false;document.body.classList.add('noscroll');ZM.k=1;zoomSet(1);
   const box=$('zoomBox'),r=box.getBoundingClientRect();zoomSet(3,fx*c.clientWidth-box.scrollLeft,fy*c.clientHeight-box.scrollTop);box.scrollLeft=fx*c.clientWidth-r.width/2;box.scrollTop=fy*c.clientHeight-r.height/2;}
 function zoomClose(){$('zoom').hidden=true;$('zoomBox').replaceChildren();document.body.classList.remove('noscroll');}
 // снимок сгиба (карта, лист «Гибка») — крутить сгиб в 3D (bend3d.js); остальное — лист крупно
@@ -341,7 +346,7 @@ function traceUI(){$('traceRow').hidden=!ST.refId;$('cTrace').checked=ST.trace;c
   el.innerHTML=`Сверка с калькой: на шве эталона ${Math.round(d.on*100)}% длины наших швов, рядом (до ${TR_FAR} мм) — ${Math.round(d.near*100)}%. `+(d.red.length?`<b style="color:#d01f1f">Красные линии</b> — ${d.red.length} ${plural(d.red.length,'шов, которого','шва, которых','швов, которых')} у эталона нет: «Убрать шов». `:'')+(d.parts?`<b style="color:#c08a00">Жёлтые точки</b> — ${d.parts} ${plural(d.parts,'участок','участка','участков')} швов эталона, ${plural(d.parts,'которого','которых','которых')} нет у нас: «Провести шов».`:'')+(!d.red.length&&!d.parts?'Лишних и недостающих швов нет.':'');}
 function traceLoadFor(rid){if(TRC.id===rid&&TRC.t||TRC.loading)return;const done=()=>{TRC.loading=false;if(!(window.TRACE&&TRACE[rid])){msg('Калька не загрузилась');return;}
     TRC.t=traceLoad(TRACE[rid]);TRC.id=rid;TRC.b0=meshBox(modelPoly(rid).V);TRC.key='';msg('');renderAll();};
-  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.25.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
+  if(window.TRACE&&TRACE[rid]){done();return;}TRC.loading=true;const s=document.createElement('script');s.src='js/trace-'+rid+'.js?v=0.26.0';s.onload=done;s.onerror=()=>{TRC.loading=false;msg('Калька не загрузилась');};document.head.appendChild(s);msg('Загружаю кальку…');}
 $('cTrace').addEventListener('change',e=>{ST.trace=e.target.checked;if(ST.trace&&ST.refId)traceLoadFor(ST.refId);renderAll();});
 
 // клик по грани — выбрать деталь; в редакторе — точку или грань, точку можно тянуть

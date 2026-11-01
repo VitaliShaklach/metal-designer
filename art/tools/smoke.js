@@ -322,6 +322,13 @@ ok(run("TQ1.some(l=>l.includes('Сварка TIG')&&l.startsWith('5.'))&&TJ(TQ1)
   "техтребования: всегда есть пункт сварки под её вид (TIG — азот и зазор 0,5, полуавтомат — Ar+CO₂ и зазор 1), без гибки — нумерация с 1, строки по ширине столбца");
 const DT=t=>[...t.matchAll(/\r\nTEXT\r\n8\r\n([^\r]+)\r\n[\s\S]*?\r\n1\r\n([^\r]*)/g)].map(m=>({lay:m[1],t:m[2]}));
 run(`N0=CUR.N;CUR.N={W:3000,H:3000,gap:3,sheets:[{items:[NI[0]]}]};ST.weld='tig';`);const W1=DT(run('dxfNest()')),W2=DT(run('dxfParts()'));run(`ST.weld='mig';`);const W3=DT(run('dxfNest()')),W4=DT(run('dxfParts()'));run(`CUR.N=N0;ST.weld='tig';`);
+// №15: у каждого SVG — карт (buildCards) и чертежей (buildSheets, в т.ч. раскрой) — role="img" и <title> первым, на него aria-labelledby, текст не пустой и с цифрами; id не повторяются
+run(`sheetWL=()=>[2500,1250];N0=CUR.N;CL0=CUR.cutLen;T0=CUR.T;CUR.cutLen=1;CUR.T={n:RP.parts.length,mass:1,weld:1};CUR.N=nest(CUR.PC.map(o=>({id:o.id,no:o.no,pts:o.pts})),2500,1250,3,10,2.5,2,true);
+  SA=[...buildCards(),...buildSheets()].map(c=>{const m=c.svg.match(/^<svg [^>]*role="img" aria-labelledby="([^"]+)"[^>]*><title id="([^"]+)">([^<]*)<[^<]*title>/);return {m,t:c.title};});
+  SAid=SA.map(x=>x.m&&x.m[1]);CUR.N=N0;CUR.cutLen=CL0;CUR.T=T0;`);
+console.log('     подписи SVG Д9: '+run('SA.length')+' листов, например «'+run("SA.find(x=>x.m&&/Карта|карта/.test(x.m[3])).m[3]")+'»');
+ok(run('SA.length')>40&&run('SA.every(x=>x.m&&x.m[1]===x.m[2]&&x.m[3].trim().length>20&&/[0-9]/.test(x.m[3]))')&&run('new Set(SAid).size')===run('SA.length')&&run("['Общий вид','Порядок сборки','Спецификация','Раскрой листа','карта заготовки','карта детали'].every(w=>SA.some(x=>x.m&&x.m[3].includes(w)))"),
+  'читалки экрана: у каждой карты и чертежа (Д9: общий вид, сборка, спецификация, раскрой, карты) role="img" и <title> с текстом и цифрами, aria-labelledby на него, id не повторяются');
 const N2=run('DXF_N2'),hasN2=W=>W.filter(x=>x.t===N2);
 ok(hasN2(W1).length===1&&hasN2(W1)[0].lay==='SHEET'&&hasN2(W2).length===1&&hasN2(W2)[0].lay==='SHEET'&&!hasN2(W3).length&&!hasN2(W4).length&&/^[\x20-\x7e]+$/.test(N2),
   "DXF под TIG: надпись «резать азотом N2» латиницей на слое SHEET (не CUT/ENGRAVE) — в раскрое и в деталях; под полуавтомат — нет");
