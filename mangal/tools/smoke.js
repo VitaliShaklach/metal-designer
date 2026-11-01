@@ -166,7 +166,8 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
   catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
   console.log('виды',mode,JSON.stringify(extra).slice(0,30),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
-// звезда на передней боковине ({star:true}): у передней боковины на 1 внутренний контур больше; контур замкнут, без самопересечений, внутри боковины,
+// звезда на передней боковине ({star:true}): у передней боковины на 1 внутренний контур больше; лучи к концам шире, серединка не больше Ø25;
+// контур замкнут, без самопересечений, внутри боковины,
 // до пазов, краёв и отверстий ≥ 10 мм, между уголками в жаровне; концы лучей ≥ 5 мм, металл между лучами ≥ 4 мм; с гильотиной — линии лазера заготовки;
 // в режиме «печь» и без галочки — как было; подписи — целые мм
 for(const mode of ['both','grill','stove'])for(const extra of [{},{div:true,gAng:true,grillGrate:true}]){const errs=[];let st='';
@@ -186,9 +187,10 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{div:true,gAng
         if(GA_XS.some(x=>Math.min(...xs)<mm(x+GA_L)+10&&Math.max(...xs)>mm(x)-10))throw new Error('звезда за уголком в жаровне');
         if(Math.min(...ys)<=mm(CA_TOP+CG_T)-5)throw new Error('звезда ниже колосника');
         const R=starRays().map(r=>[...r.right,...r.tip.slice(1,-1),...r.left].map(p=>p.map(mm))),pd=(P,Q)=>Math.min(...P.map(p=>Q.slice(0,-1).reduce((d,q,i)=>Math.min(d,ptSegD(p,q,Q[i+1])),1e9)));
-        const tip=Math.min(...starRays().map(r=>mm(Math.hypot(r.tip[0][0]-r.tip[8][0],r.tip[0][1]-r.tip[8][1])))),met=Math.min(...R.map((P,i)=>{const Q=R[(i+1)%R.length];return Math.min(pd(P,Q),pd(Q,P));}));
-        const len=starRays().map(r=>Math.hypot(r.tip[4][0]-STAR_X,r.tip[4][1]-STAR_Y)/STAR_R);
-        if(R.length!==10||Math.min(...len)<.8-e||Math.max(...len)>1+e||new Set(len.map(v=>v.toFixed(2))).size<4)throw new Error('лучи: '+len.map(v=>v.toFixed(2)));
+        const tip=Math.min(...starRays().map(r=>mm(Math.hypot(r.tip[0][0]-r.tip[r.tip.length-1][0],r.tip[0][1]-r.tip[r.tip.length-1][1])))),met=Math.min(...R.map((P,i)=>{const Q=R[(i+1)%R.length];return Math.min(pd(P,Q),pd(Q,P));}));
+        const len=starRays().map(r=>Math.max(...r.tip.map(p=>Math.hypot(p[0]-STAR_X,p[1]-STAR_Y)))/STAR_R),root=starRays().map(r=>mm(Math.hypot(r.right[0][0]-r.left[1][0],r.right[0][1]-r.left[1][1])));
+        if(R.length!==STAR_N||STAR_N<8||Math.min(...len)<.8-e||Math.max(...len)>1+e||new Set(len.map(v=>v.toFixed(2))).size<4)throw new Error('лучи: '+len.map(v=>v.toFixed(2)));
+        if(Math.max(...root)>=tip||mm(2*STAR_RC)>25)throw new Error('лучи не шире к концам или серединка велика: у серединки '+Math.max(...root).toFixed(1)+', конец '+tip.toFixed(1)+', серединка Ø'+mm(2*STAR_RC));
         if(tip<5-e||met<4-e)throw new Error('конец луча '+tip.toFixed(2)+' мм, металл между лучами '+met.toFixed(2)+' мм');
         // гильотина: передняя боковина — заготовка, звезда — линии лазера (CUT) в _zag.dxf
         const ty=nestJob({gil:true,edge:10,sel:{}}).groups.flatMap(G=>G.types).find(t=>t.p.pt==='side1'),Lz=ty.b.loops[ty.b.loops.length-1];
@@ -199,7 +201,7 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{div:true,gAng
         if(txt.filter(t=>/звезда Ø70/.test(t)).length!==1||!txt.includes('250')||!txt.includes('140'))throw new Error('размеры звезды: '+txt.join(' | '));
         const row=cutRows().find(c=>c.pt&&[].concat(c.pt).includes('side1'));if(!/со звездой Ø70/.test(row.note))throw new Error('«Масса»: нет «со звездой Ø70»');txt.push(row.note.slice(row.note.indexOf('Передняя — со звездой')));   // остальное примечание — старое (край отверстия 12,5)
         const bad=txt.find(t=>/[0-9],[0-9]/.test(t));if(bad)throw new Error('дробные мм: '+bad.slice(0,80));
-        return 'Ø'+Math.round(2*rmax)+' ('+bw.toFixed(0)+' × '+bh.toFixed(0)+'), конец луча ≥ '+tip.toFixed(1)+' мм, металл ≥ '+met.toFixed(1)+' мм, до пазов '+dO.toFixed(1)+' мм';})()`,on);
+        return 'Ø'+Math.round(2*rmax)+' ('+bw.toFixed(0)+' × '+bh.toFixed(0)+'), '+STAR_N+' лучей, серединка Ø'+Math.round(mm(2*STAR_RC))+', луч '+Math.max(...root).toFixed(1)+' → '+tip.toFixed(1)+' мм, металл ≥ '+met.toFixed(1)+' мм, до пазов '+dO.toFixed(1)+' мм';})()`,on);
       const noCut=vm.runInContext(`!cutRows().find(c=>[].concat(c.pt||[]).includes('side1')).note.includes('звезд')&&!starOn()`,off);if(!noCut)throw new Error('без галочки звезда в «Массе»');}}
   catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
   console.log('звезда',mode,JSON.stringify(extra),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
