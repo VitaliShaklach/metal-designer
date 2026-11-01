@@ -378,7 +378,10 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
   ok(TP.cBend.includes(`У Добермана 11 вместо ${n} деталей — ${pc} позиций на резку (${bl} заготовок со сгибами и ${ns} отдельных деталей), сварки на ${bm} м меньше`)&&TP.cTpl.includes(`у Добермана 11 их ${tp}`)&&!/Доберман\S* ([1-9]|10)\b/.test(TP.cBend+TP.cTpl),
     "подсказки «Гнуть» и «Уголки»: пример на Добермане 11, числа — как считает программа");
   ok(/плазма — 7 мм/.test(TP.sNGap)&&/руками/.test(TP.sNGap),"подсказка «Между деталями на листе»: плазма 7 мм, свой зазор не сбивается");}
-ok(UI.includes('wl=FIGURES[ST.fig]?.noBack?0:addBacking(R,M3)'),'фигура с noBack: открытые края — не прорези, подложек глаз нет');
+ok(UI.includes('wl=FIGURES[ST.fig]?.noBack?0:addBacking(R,M3,FIGURES[ST.fig]?.backIf)'),'фигура с noBack: открытые края — не прорези, подложек глаз нет');
+// v0.23.0 backIf: фигура сама выбирает дыры под подложку — центр дыры в долях габарита (0…1)
+run(`BK=k=>{const M={V:D10.V,F:D10.F,T:D10.T,S:D10.S},R=buildParts(M,1.5,1.5),n0=R.parts.length;addBacking(R,M,k);return R.parts.slice(n0).filter(p=>p.back).map(p=>p.c[1]);};BKA=BK();BKN=BK(()=>false);BKH=BK(c=>c[0]>.5);`);
+ok(run("BKA.length")>0&&run("BKN.length")===0&&run("BKH.length")===run("BKA.length")/2&&run("BKH.every(y=>BKA.includes(y))"),'backIf: подложки только у выбранных фигурой дыр (Д10: все '+run("BKA.length")+', правая половина '+run("BKH.length")+', ни одной 0)');
 // ревью 28.10 №2, 4, 19, 20 — Доберманы 7–11 как на странице (высота 600, подложки глаз, гибка с повтором, номера пар, у «.1» — числа основной)
 run(`PG=id=>{ST={t:2,gap:0.5,useT:true,minW:15,bend:true,tpl:true,engrave:true,perf:true,cut:'laser',perfL:2,perfStep:20,perfEdge:10};let M=figureMesh(id,12);
     {const z=meshBox(M.V).size,H=FIGURES[id].H;M=polyBase(fitMesh({V:M.V,F:[]},{H,W:Math.round(z[0]*H/z[1]),D:Math.round(z[2]*H/z[1])}).V,M.P,M.S);}M={V:M.V,F:M.F,T:M.T,S:M.S};

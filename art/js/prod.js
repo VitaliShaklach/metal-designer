@@ -77,10 +77,11 @@ function partNbs(R,pi){const C=R._nb||(R._nb=[]);if(C[pi])return C[pi];const p=R
   let L=[...m].map(([nb,len])=>({nb,len,dih:seamDih(R,pi,nb)}));const q=mainPart(R,p);
   if(q!==p){const M=partNbs(R,q.id).map(x=>({nb:twinIx(R,x.nb),len:x.len,dih:x.dih})),k=A=>A.map(x=>x.nb).sort((a,b)=>a-b).join();if(k(M)===k(L))L=M.slice();}
   return C[pi]=L.sort((x,y)=>R.parts[x.nb].no-R.parts[y.nb].no);}
-function addBacking(R,M3){const {V,F}=M3;if(!V.length)return 0;const ctr=V3.mul(V.reduce((s,p)=>V3.add(s,p),[0,0,0]),1/V.length);let wl=0;
+// keep — фигура сама выбирает дыры под подложку: keep([x,y,z]) — центр дыры в долях габарита модели (0…1); без keep — у всех
+function addBacking(R,M3,keep){const {V,F}=M3;if(!V.length)return 0;const ctr=V3.mul(V.reduce((s,p)=>V3.add(s,p),[0,0,0]),1/V.length),bx=meshBox(V);let wl=0;
   openLoops(V,F).forEach(Q=>{if(Q.every(i=>Math.abs(V[i][2])<1))return;   // край у стены — не прорезь
     let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});n=V3.norm(n);
-    const c=V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);if(V3.dot(n,V3.sub(c,ctr))<0)n=V3.mul(n,-1);
+    const c=V3.mul(Q.reduce((s,i)=>V3.add(s,V[i]),[0,0,0]),1/Q.length);if(keep&&!keep(c.map((x,k)=>(x-bx.min[k])/(bx.size[k]||1))))return;if(V3.dot(n,V3.sub(c,ctr))<0)n=V3.mul(n,-1);
     let u=V3.sub(V[Q[0]],c);u=V3.norm(V3.sub(u,V3.mul(n,V3.dot(u,n))));const w=V3.cross(n,u);
     const G=growConvex(convexHull(Q.map(i=>{const d=V3.sub(V[i],c);return [V3.dot(d,u),V3.dot(d,w)];})),BACK_LAP);
     // как у flatten: узкая сторона — по Y, от нуля
