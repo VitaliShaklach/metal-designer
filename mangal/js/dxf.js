@@ -1,6 +1,6 @@
 /* ---------- файлы для лазера: DXF каждой листовой детали из той же геометрии, что 3D ----------
    Деталь: {loops:[[[x,y]…]…], circles:[[x,y,r]…], bends:[[[x,y],[x,y]]…]} в см; в файл — мм, начало в левом нижнем углу.
-   Контуры и отверстия — слой CUT, линии гиба — слой BEND (не резать). */
+   Контуры и отверстия — слой CUT, линии гиба — слой BEND (не резать), рамка в DXF всего листа — слой SHEET (не резать). */
 const rect=(w,h)=>[[0,0],[w,0],[w,h],[0,h],[0,0]];
 // THREE.Shape → деталь: внешний контур + отверстия (окружности — CIRCLE)
 function shapeGeo(s){const g={loops:[s.getPoints().map(p=>[p.x,p.y])],circles:[],bends:[]};
@@ -49,7 +49,7 @@ function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
     if(S.draft)add('stove_shiber','Шибер поддувала',3,1,'shib',()=>geoR(SH_L,SH_W),'край отогнуть вниз на 25 мм — ручка');
     if(S.grate&&S.grType==='plate')add('stove_grate','Колосник печи',15,1,'grate',stoveGrateGeo);}
   if(S.legs){add('leg_mount_plate','Площадка под ножку (на дно)',5,LL.length,'legs',()=>geoR(8,8));
-    const nW=LL.filter(l=>l[3]).length;if(nW)add('wheel_pad','Площадка под колесо',6,nW,'pads',()=>geoR(PADX,PADZ),'4 отверстия под колесо — сверлить по факту');}
+    const nW=LL.filter(l=>l[3]).length;if(nW)add('wheel_pad','Площадка под колесо',5,nW,'pads',()=>geoR(PADX,PADZ),'4 отверстия под колесо — сверлить по факту');}
   return r;}
 
 // деталь → мм, сдвиг в (0,0), длина реза и врезки
@@ -58,7 +58,9 @@ function partMM(p){const G=p.geo(),xs=[],ys=[];G.loops.forEach(l=>l.forEach(([x,
   const loops=G.loops.map(l=>l.map(P)),circles=G.circles.map(([x,y,r])=>[...P([x,y]),f(r)]),bends=G.bends.map(b=>b.map(P));
   let cut=0;loops.forEach(l=>{for(let i=0;i<l.length-1;i++)cut+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);});circles.forEach(c=>cut+=2*Math.PI*c[2]);
   return {loops,circles,bends,w:f(Math.max(...xs)-mx),h:f(Math.max(...ys)-my),cut,pierce:loops.length+circles.length};}
+// m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf)
 function dxfText(m){const e=[],L=(a,b,lay)=>e.push('0','LINE','8',lay,'10',a[0],'20',a[1],'30',0,'11',b[0],'21',b[1],'31',0);
+  if(m.sheet)for(let i=0;i<m.sheet.length-1;i++)L(m.sheet[i],m.sheet[i+1],'SHEET');
   m.loops.forEach(l=>{for(let i=0;i<l.length-1;i++)if(l[i][0]!==l[i+1][0]||l[i][1]!==l[i+1][1])L(l[i],l[i+1],'CUT');});
   m.circles.forEach(([x,y,r])=>e.push('0','CIRCLE','8','CUT','10',x,'20',y,'30',0,'40',r));
   m.bends.forEach(([a,b])=>L(a,b,'BEND'));
@@ -82,11 +84,9 @@ const dlP=(window.claude&&window.claude.use)?window.claude.use('downloads').catc
 async function saveOut(name,data){const dl=await dlP,msg=document.getElementById('dxfMsg');
   if(dl){try{await dl.save({filename:name,data});msg.textContent='Сохранено: '+name;}catch(e){msg.textContent=e&&e.code==='declined'?'Сохранение отменено':'Не удалось сохранить: '+(e&&e.message||e);}return;}
   const a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);msg.textContent='Скачано: '+name;}
-async function savePart(p){const m=partMM(p),dl=await dlP;
-  if(dl)saveOut(dxfName(p).replace(/\.dxf$/,'.zip'),zipFiles([[dxfName(p),dxfText(m)]]));else saveOut(dxfName(p),dxfText(m));}
-function saveAll(){const ps=laserParts().filter(p=>inSel(PDF_ELEM(p.pt),p.pt));
-  const mode=({both:'mangal_s_pechyu',grill:'mangal',stove:'pech'})[S.mode];
-  saveOut(`${mode}_dxf_${ps.length}_detaley.zip`,zipFiles(ps.map(p=>[dxfName(p),dxfText(partMM(p))])));}
+async function saveDxf(name,text){const dl=await dlP;if(dl)saveOut(name.replace(/\.dxf$/,'.zip'),zipFiles([[name,text]]));else saveOut(name,text);}
+const savePart=p=>saveDxf(dxfName(p),dxfText(partMM(p)));
+const MODE_FILE=()=>({both:'mangal_s_pechyu',grill:'mangal',stove:'pech'})[S.mode];   // начало имён ZIP
 const PDF_ELEM=pt=>{for(const e of PARTS)if(e.d.some(d=>d[0]===pt))return e.id;return null;};
 
 // эскиз детали — из той же геометрии, что уходит в DXF
@@ -95,13 +95,3 @@ function dxfSketch(m){const k=Math.min(230/m.w,64/m.h),w=Math.max(8,m.w*k),h=Mat
   m.circles.forEach(([x,y,r])=>g+=`<circle cx="${x}" cy="${H-y}" r="${r}"/>`);
   m.bends.forEach(([a,b])=>g+=`<line class="bd" x1="${a[0]}" y1="${H-a[1]}" x2="${b[0]}" y2="${H-b[1]}"/>`);
   return `<svg class="dxfsk" width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="-2 -2 ${m.w+4} ${m.h+4}" aria-hidden="true">${g}</svg>`;}
-// таблица под раскроем
-function drawDxf(){const tb=document.getElementById('dxfTbl');if(!tb)return;
-  const ps=laserParts().filter(p=>inSel(PDF_ELEM(p.pt),p.pt));let tc=0,tp=0;
-  let h='<thead><tr><th>Деталь</th><th>Эскиз</th><th class="r">Лист</th><th class="r">Кол-во</th><th>Габарит, мм</th><th class="r">Рез, м</th><th class="r">Врезок</th><th></th></tr></thead><tbody>';
-  ps.forEach((p,i)=>{const m=partMM(p);tc+=m.cut*p.q;tp+=m.pierce*p.q;
-    h+=`<tr><td>${p.name}${p.note?`<small>${p.note}</small>`:''}<small class="fn">${dxfName(p)}</small></td><td>${dxfSketch(m)}</td><td class="n r">${p.mm} мм</td><td class="n r">${p.q}</td><td class="n">${fmt(m.w,1)} × ${fmt(m.h,1)}</td><td class="n r">${fmt(m.cut/1000,2)}</td><td class="n r">${m.pierce}</td><td class="r"><button class="dxfbtn" data-i="${i}">DXF</button></td></tr>`;});
-  h+=`<tr class="tot"><td colspan="5">Всего ${ps.length} деталей${S.sel.el?' (выбранное)':''}, с учётом количества</td><td class="n r">${fmt(tc/1000,2)}</td><td class="n r">${tp}</td><td></td></tr></tbody>`;
-  tb.innerHTML=h;tb.querySelectorAll('.dxfbtn').forEach(b=>b.addEventListener('click',()=>savePart(ps[+b.dataset.i])));
-  if(typeof nestUI==='function')nestUI();}   // раскрой листа — от тех же галочек (многие зовут только build3D)
-document.getElementById('dxfAll')&&document.getElementById('dxfAll').addEventListener('click',saveAll);

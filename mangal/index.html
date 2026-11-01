@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=1.1.2">
+<link rel="stylesheet" href="css/style.css?v=1.2.0">
 </head>
 <body>
 <div class="wrap">
@@ -156,7 +156,7 @@
     <div class="tabbar" role="tablist">
       <button role="tab" data-tab="dims" aria-selected="true">Размеры</button>
       <button role="tab" data-tab="cut" aria-selected="false">Раскрой</button>
-      <button role="tab" data-tab="dxf" aria-selected="false">Лазер · DXF</button>
+      <button role="tab" data-tab="mass" aria-selected="false">Масса</button>
       <button role="tab" data-tab="buy" aria-selected="false">Что купить</button>
       <button role="tab" data-tab="notes" aria-selected="false">Заметки</button>
     </div>
@@ -168,17 +168,14 @@
     </div>
 
     <div class="tabpane" id="tab-cut" role="tabpanel" hidden>
-      <div class="dimbar nestbar"><label>Между деталями, мм <input id="nGap" type="number" value="5" min="1" step="0.5" inputmode="decimal"></label><label>Лист <select id="nSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option></select></label><label id="nCgrBox"><input type="checkbox" id="nCgr" checked> Колосник мангала на листе</label><span class="dxfmsg" id="nestMsg"></span></div>
+      <div class="dimbar nestbar"><label>Между деталями, мм <input id="nGap" type="number" value="5" min="1" step="0.5" inputmode="decimal"></label><label>Лист <select id="nSheet"><option value="1000x2000">1000 × 2000</option><option value="1250x2500" selected>1250 × 2500</option><option value="1500x3000">1500 × 3000</option></select></label><label id="nCgrBox"><input type="checkbox" id="nCgr" checked> Колосник мангала на листе</label><button id="dxfAll">Скачать всё (ZIP)</button><span class="dxfmsg" id="nestMsg"></span><span class="dxfmsg" id="dxfMsg"></span></div>
+      <p class="tabnote">Листовые детали для лазера, по толщинам. «DXF листа» — весь лист одним файлом, детали стоят как на рисунке; «DXF» в строке — одна деталь. Контур и отверстия — слой CUT, гибы — BEND, рамка листа — SHEET (не резать). Покупное и прокат — во вкладке «Масса»</p>
       <div class="nestbox" id="nestBox"></div>
-      <h3>Масса</h3>
-      <p class="tabnote">Размеры заготовок — в мм. Лист 5 мм ≈ 39,3 кг/м². Стенки стоят на дне, торцы — между боковинами</p>
-      <div class="tbl"><table id="cut"></table></div>
     </div>
 
-    <div class="tabpane" id="tab-dxf" role="tabpanel" hidden>
-      <p class="tabnote">Каждая листовая деталь — отдельный файл: контур и отверстия в мм (слой CUT), линии гиба — слой BEND. По текущему режиму и галочкам</p>
-      <div class="dimbar"><button id="dxfAll">Скачать все (ZIP)</button><span class="dxfmsg" id="dxfMsg"></span></div>
-      <div class="tbl"><table id="dxfTbl"></table></div>
+    <div class="tabpane" id="tab-mass" role="tabpanel" hidden>
+      <p class="tabnote">Размеры заготовок — в мм. Лист 5 мм ≈ 39,3 кг/м². Стенки стоят на дне, торцы — между боковинами</p>
+      <div class="tbl"><table id="cut"></table></div>
     </div>
 
     <div class="tabpane" id="tab-buy" role="tabpanel" hidden>
@@ -215,7 +212,7 @@
   </section>
 
   <footer>
-    <span class="ver">v1.1.2</span>
+    <span class="ver">v1.2.0</span>
     <span>email: <a href="mailto:vashaklach@gmail.com">vashaklach@gmail.com</a></span>
   </footer>
 </div>
@@ -223,13 +220,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-<script src="js/params.js?v=1.1.2"></script>
-<script src="js/parts.js?v=1.1.2"></script>
-<script src="js/model.js?v=1.1.2"></script>
-<script src="js/dims.js?v=1.1.2"></script>
-<script src="js/cut.js?v=1.1.2"></script>
-<script src="js/dxf.js?v=1.1.2"></script>
-<script src="js/nest.js?v=1.1.2"></script>
-<script src="js/ui.js?v=1.1.2"></script>
+<script src="js/params.js?v=1.2.0"></script>
+<script src="js/parts.js?v=1.2.0"></script>
+<script src="js/model.js?v=1.2.0"></script>
+<script src="js/dims.js?v=1.2.0"></script>
+<script src="js/cut.js?v=1.2.0"></script>
+<script src="js/dxf.js?v=1.2.0"></script>
+<script src="js/nest.js?v=1.2.0"></script>
+<script src="js/ui.js?v=1.2.0"></script>
 </body>
 </html>

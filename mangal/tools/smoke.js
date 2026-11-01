@@ -19,16 +19,31 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
       // колосник мангала: на листе 5 мм, когда он есть на модели; галочка «на листе» снята — нет; у половины 18 × 19 отверстий Ø10
       vm.runInContext(`{const has=N=>N.groups.some(G=>G.types.some(t=>NEST_CGR(t.p))),a=nestJob(),b=nestJob({cgr:false}),want=gOn()&&S.cgr;
         if(has(a)!==want||a.hasCgr!==want)throw new Error('колосник мангала: на листе '+has(a)+', ждали '+want);if(has(b))throw new Error('колосник мангала остался при снятой галочке');
-        if(want){const ty=a.groups.flatMap(G=>G.types).filter(t=>NEST_CGR(t.p));if(ty.length!==2||ty.some(t=>t.p.mm!==5||t.m.circles.length!==342||t.m.circles.some(c=>c[2]!==5)))throw new Error('колосник мангала: не те половины/отверстия');}}`,ctx);}
+        if(want){const ty=a.groups.flatMap(G=>G.types).filter(t=>NEST_CGR(t.p));if(ty.length!==2||ty.some(t=>t.p.mm!==5||t.m.circles.length!==342||t.m.circles.some(c=>c[2]!==5)))throw new Error('колосник мангала: не те половины/отверстия');}}`,ctx);
+      // площадка под колесо — 5 мм, на основном листе; листа 6 мм нет
+      vm.runInContext(`{const N=nestJob(),ps=laserParts().filter(p=>p.pt==='pads');if(ps.some(p=>p.mm!==5))throw new Error('площадка под колесо не 5 мм');if(N.groups.some(G=>G.mm===6))throw new Error('остался лист 6 мм');
+        if(S.legs&&ps.length&&!N.groups.some(G=>G.mm===5&&G.types.some(t=>t.p.pt==='pads')))throw new Error('площадки под колесо нет на листе 5 мм');}`,ctx);
+      // DXF всего листа: рамка — 4 отрезка SHEET, все точки CUT/BEND внутри рамки с краем 10 мм, контуры замкнуты (каждый конец CUT — у чётного числа отрезков), окружностей — сколько у деталей
+      const dx=vm.runInContext(`(()=>{const N=nestJob(),out=[];N.groups.forEach(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);
+        v.value.sheets.forEach(sh=>out.push({mm:G.mm,W:N.W,H:N.H,txt:nestDxf(N,G,sh),circ:sh.items.reduce((a,it)=>a+G.items[it.id].ty.m.circles.length,0)}));});return out;})()`,ctx);
+      if(!dx.length)throw new Error('DXF листа: нет листов');
+      dx.forEach(d=>{const t=d.txt.split(/\r?\n/),E=[];for(let i=0;i<t.length-1;i+=2)if(t[i]==='0'&&(t[i+1]==='LINE'||t[i+1]==='CIRCLE')){const e={k:t[i+1]};let j=i+2;while(j<t.length-1&&t[j]!=='0'){e[t[j]]=t[j+1];j+=2;}E.push(e);}
+        const sheet=E.filter(e=>e['8']==='SHEET'),cut=E.filter(e=>e['8']==='CUT'&&e.k==='LINE'),circ=E.filter(e=>e.k==='CIRCLE'),deg={};
+        if(sheet.length!==4)throw new Error(`DXF листа ${d.mm} мм: рамка ${sheet.length} отрезков`);
+        if(circ.length!==d.circ)throw new Error(`DXF листа ${d.mm} мм: окружностей ${circ.length}, ждали ${d.circ}`);
+        E.filter(e=>e['8']!=='SHEET').forEach(e=>{const pts=e.k==='LINE'?[[+e['10'],+e['20']],[+e['11'],+e['21']]]:[[+e['10']-+e['40'],+e['20']-+e['40']],[+e['10']+ +e['40'],+e['20']+ +e['40']]];
+          pts.forEach(([x,y])=>{if(!(x>=10-.02&&y>=10-.02&&x<=d.W-10+.02&&y<=d.H-10+.02))throw new Error(`DXF листа ${d.mm} мм: точка ${x},${y} вне листа`);});});
+        cut.forEach(e=>[e['10']+','+e['20'],e['11']+','+e['21']].forEach(k=>deg[k]=(deg[k]||0)+1));
+        const odd=Object.keys(deg).filter(k=>deg[k]%2);if(odd.length)throw new Error(`DXF листа ${d.mm} мм: незамкнутый контур у ${odd[0]}`);});}
   catch(e){errs.push(e.message+' '+(e.stack.split('\n')[1]||''));}
   console.log(mode,JSON.stringify(extra).slice(0,30),errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
 // раскладка на прямоугольниках: 5-мм детали «печь + мангал» — все на одном листе 1250 × 2500; зазор между деталями и край листа — точно (polyGap)
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
-  const R=(w,h)=>[[0,0],[w,0],[w,h],[0,h]],set=[[800,195,2],[800,420,1],[410,195,1],[600,495,2],[600,440,1],[430,495,1],[150,430,1],[430,145,1],[300,160,1],[80,80,4]];
+  const R=(w,h)=>[[0,0],[w,0],[w,h],[0,h]],set=[[800,195,2],[800,420,1],[410,195,1],[600,495,2],[600,440,1],[430,495,1],[150,430,1],[430,145,1],[300,160,1],[80,80,4],[150,150,4]];   // [150,150,4] — площадки под колесо (с v1.2 — 5 мм)
   const mkItems=S=>{const I=[];S.forEach(([w,h,q],k)=>{for(let j=0;j<q;j++)I.push({id:I.length,no:k+1,pts:R(w,h)});});return I;};
   // и с колосником мангала (2 половины 382 × 390 — тоже лист 5 мм)
-  for(const [gap,items,one] of [[5,mkItems(set),1],[20,mkItems(set),0],[5,mkItems([...set,[382,390,2]]),1]]){const errs=[];let N;
+  for(const [gap,items,one,cg] of [[5,mkItems(set),1,0],[20,mkItems(set),0,0],[5,mkItems([...set,[382,390,2]]),1,1]]){const errs=[];let N;
     try{const g=ctx.nestGen(items,2500,1250,gap,10,5);let v;do{v=g.next();}while(!v.done);N=v.value;}catch(e){errs.push(e.message);}
     if(N){const all=N.sheets.flatMap(s=>s.items);
       if(N.too.length)errs.push('не поместилось '+N.too.length);if(all.length!==items.length)errs.push('на листах '+all.length+' из '+items.length);
@@ -36,5 +51,5 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
       N.sheets.forEach(s=>{const A=s.items;
         A.forEach(o=>{const xs=o.pts.map(p=>p[0]),ys=o.pts.map(p=>p[1]);if(Math.min(...xs)<10-1e-6||Math.min(...ys)<10-1e-6||Math.max(...xs)>2490+1e-6||Math.max(...ys)>1240+1e-6)errs.push('деталь '+o.no+' ближе 10 мм к краю');});
         for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++){const d=ctx.polyGap(A[i].pts,A[j].pts);if(d<gap-1e-6)errs.push(`зазор ${A[i].no}–${A[j].no} ${d.toFixed(2)} < ${gap}`);}});}
-    console.log(`раскладка, зазор ${gap}${items.length>15?', с колосником мангала':''}:`,N?`${N.sheets.length} лист, ${N.sheets.reduce((a,s)=>a+s.items.length,0)} деталей, занято ${Math.round(N.used*100)} %`:'',errs.length?'FAIL '+errs.slice(0,5).join(' | '):'ok');fails+=errs.length;}}
+    console.log(`раскладка, зазор ${gap}${cg?', с колосником мангала':''}:`,N?`${N.sheets.length} лист, ${N.sheets.reduce((a,s)=>a+s.items.length,0)} деталей, занято ${Math.round(N.used*100)} %`:'',errs.length?'FAIL '+errs.slice(0,5).join(' | '):'ok');fails+=errs.length;}}
 process.exit(fails?1:0);

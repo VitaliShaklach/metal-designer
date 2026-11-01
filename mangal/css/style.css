@@ -238,11 +238,15 @@ svg.cutsk .fl{fill:var(--accent);fill-opacity:.25}
 .nestbox{display:flex;flex-direction:column;gap:16px;min-width:0}
 .nestbox.busy svg{opacity:.45}
 .nsheet{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
-.nsheet figcaption{font:12px/1.4 var(--f-mono);color:var(--muted)}
-.nsheet.main figcaption{font-size:13px;color:var(--ink)}
-.nsmall{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.nsheet figcaption{font:13px/1.4 var(--f-mono);color:var(--muted)}
+.nblock{display:flex;flex-direction:column;gap:10px;min-width:0}
+.nblock+.nblock{border-top:1px solid var(--line);padding-top:18px;margin-top:8px}
+.nblock h3{margin:0;font:600 20px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
+.nbtns{display:flex;flex-wrap:wrap;gap:8px}
+.nbtns .dxfbtn{padding:7px 12px}
 svg.nestsv{display:block;width:100%;max-width:100%;height:auto;background:var(--panel);border:1px solid var(--line)}
-.nsheet.main svg.nestsv{max-width:1240px}
+.nblock.main svg.nestsv{max-width:1240px}
+.nblock:not(.main) svg.nestsv{max-width:760px}   /* 3 и 15 мм — 1–3 детали, лист почти пустой */
 svg.nestsv *{vector-effect:non-scaling-stroke}
 svg.nestsv .sh{fill:var(--bg);stroke:var(--ink);stroke-width:1.2px}
 svg.nestsv .dim{fill:var(--muted);font-family:var(--f-mono)}
@@ -252,7 +256,6 @@ svg.nestsv .np text{fill:var(--ink);font-family:var(--f-mono);font-weight:500;pa
 svg.nestsv .np.on path{fill-opacity:.42;stroke-width:2.2px}
 svg.nestsv .np.on text{font-weight:700}
 .nwarn{margin:0;color:var(--accent);font-size:13px;font-weight:600}
-table.nestleg{min-width:0}
-table.nestleg td:first-child,table.nestleg th:first-child{width:1%}
-table.nestleg tr.on td{background:var(--accent-soft)}
-.tabpane>h3{margin:14px 0 0;font:600 20px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
+table.ntbl td:first-child,table.ntbl th:first-child{width:1%}
+table.ntbl td:nth-child(3){vertical-align:middle;width:1%}
+table.ntbl tr.on td{background:var(--accent-soft)}

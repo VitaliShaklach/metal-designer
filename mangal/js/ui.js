@@ -123,7 +123,7 @@ function fitSel(){if(!ok)return;
   // деталь — в верхней части картинки: смотрим чуть ниже её центра
   const up=new THREE.Vector3().setFromMatrixColumn(camera.matrix,1),tg=c.clone().sub(up.multiplyScalar(r>12&&S.sel.el?d*Math.tan(vf)*.45:0));   // мелкие детали — точно в центре, чтобы вращать вокруг них
   flyTo(tg.clone().add(dir.multiplyScalar(d)),tg);}
-function setHint(){document.getElementById('pickHint').textContent=S.sel.el?`Показано: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}. Размеры и раскрой — только для него · двойной клик по пустому месту — всё`:'Выберите элемент или кликните деталь на модели — в размерах и раскрое останется только она';}
+function setHint(){document.getElementById('pickHint').textContent=S.sel.el?`Показано: ${S.sel.part?partName(S.sel.part):elOf(S.sel.el).name}. Размеры и масса — только для него, на раскрое — подсвечен · двойной клик по пустому месту — всё`:'Выберите элемент или кликните деталь на модели — в размерах и массе останется только она, на раскрое — подсветится';}
 function applySel(){fillParts();setHint();
   build3D();dimList();drawCut();fitSel();}
 selEl.addEventListener('change',()=>{S.sel={el:selEl.value||null,part:null};applySel();});
@@ -197,14 +197,14 @@ document.getElementById('dFold').addEventListener('click',()=>{const all=[...doc
 // после каждой перерисовки списка — подпись кнопки
 new MutationObserver(foldBtn).observe(document.getElementById('dimList'),{childList:true});foldBtn();
 
-/* ---------- вкладки под 3D: Размеры | Раскрой | Лазер | Что купить | Заметки ---------- */
+/* ---------- вкладки под 3D: Размеры | Раскрой (листы и DXF) | Масса | Что купить | Заметки ---------- */
 const TABS=[...document.querySelectorAll('.tabbar button')];
-function showTab(k){if(!TABS.some(b=>b.dataset.tab===k))k='dims';
+function showTab(k){if(k==='dxf')k='cut';if(!TABS.some(b=>b.dataset.tab===k))k='dims';   // «Лазер · DXF» (до v1.2) теперь в «Раскрое» — старые ссылки и память
   TABS.forEach(b=>{const on=b.dataset.tab===k;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;document.getElementById('tab-'+b.dataset.tab).hidden=!on;});
   store('md-tab',k);if(k==='cut')nestUI(true);}   // раскрой листа — сразу при открытии вкладки
 TABS.forEach((b,i)=>{b.addEventListener('click',()=>showTab(b.dataset.tab));
   b.addEventListener('keydown',e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;const n=TABS[(i+d+TABS.length)%TABS.length];n.focus();showTab(n.dataset.tab);});});
-showTab((location.hash.match(/^#(dims|cut|dxf|buy|notes)$/)||[])[1]||store('md-tab')||'dims');
+showTab((location.hash.match(/^#(dims|cut|mass|dxf|buy|notes)$/)||[])[1]||store('md-tab')||'dims');
 
 /* ---------- клик по детали на модели — выбрать её; под курсором — имя детали ---------- */
 const PART_OF={cgrAngB:'cgrAng',cgrAngF:'cgrAng',rings:'plate',coal:null};   // теги 3D, у которых в списке другая деталь
@@ -279,7 +279,7 @@ function notesUI(){const g=gOn(),k=sOn(),both=S.mode==='both',el=document.getEle
     g&&`<li><b>Поддув</b> — ${holes().length} отверстий Ø15 мм в каждой боковине; задвижки снаружи регулируют жар.</li>`,
     k&&`<li><b>Печь под казан шириной ${us(WK)}</b> — под покупную плиту 450 × 450 мм с кольцами. Ширину уточните по купленной плите: внутренний размер между рёбрами минус 2–3 мм — плита садится на стенки как крышка.</li>`,
     k&&`<li><b>Топка</b> с ${S.mode==='stove'?'торца':'открытого левого торца'}: дверца на петлях, колосник на уголках, снизу поддувало с шибером, труба 60×60 мм сзади.</li>`,
-    `<li><b>Ножки</b> — труба Ø40, откручиваются (шпилька М16 в гайку под дном). Внизу площадка 150 × 150 × 6 мм под поворотные колёса Ø100, два колеса — с тормозом ${both?'под печью':g?'у ручки':'у ручки печи'}.</li>`,
+    `<li><b>Ножки</b> — труба Ø40, откручиваются (шпилька М16 в гайку под дном). Внизу площадка 150 × 150 × 5 мм под поворотные колёса Ø100, два колеса — с тормозом ${both?'под печью':g?'у ручки':'у ручки печи'}.</li>`,
     S.rain&&`<li><b>Крыша от дождя</b> — стойки из арматуры Ø16 в трубках по углам, лист крепится болтами М8 с барашками — снимается без ключа.</li>`];
   const att=[
     `Колёса (обод пластиковый) от жара защищены: над каждым — стальная площадка, ножка остывает по длине. Опасны только угли, выпавшие на землю рядом с колесом.`,
