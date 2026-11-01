@@ -415,4 +415,17 @@ ok(run('PB.n')>500&&run('PB.min')>=run('perfBridge()')-1e-6&&run('perfBridge()')
 // №20: в контуре заготовки нет повтора точки — соседние точки не ближе 0,05 мм, и после округления DXF до 0,01 тоже разные
 run(`ZS={n:0,bad:[]};FIGS.forEach(id=>{const C=PG(id);C.BL.forEach(b=>{const P=b.pts;ZS.n++;P.forEach((q,i)=>{const z=P[(i+1)%P.length];if(Math.hypot(z[0]-q[0],z[1]-q[1])<=.05||dn(z[0])===dn(q[0])&&dn(z[1])===dn(q[1]))ZS.bad.push(NM(id)+' Г'+b.no);});});});`);
 ok(run('ZS.n')>200&&run('ZS.bad.length')===0,'контур заготовки Д7–Д11 без нулевых отрезков (было: Д10 Г20, Г23, Г23.1, Г25; Д11 Г22, Г24): точки не ближе 0,05 мм, в DXF не совпадают');
+// №16: models.js (130 КБ) — не в index.html, подгружается только для Доберманов 4–6; страница без него, как в браузере
+{const html=fs.readFileSync(__dirname+'/../index.html','utf8');ok(!/src="js\/models\.js/.test(html)&&/src="js\/figures\.js/.test(html),'models.js не грузится при открытии страницы (нет в index.html)');
+  ok(run(`Object.entries(FIGURES).every(([k,f])=>!!(f.mesh&&/modelMesh/.test(String(f.mesh)))===(f.need==='models'))`)&&run(`Object.keys(FIGURES).filter(k=>FIGURES[k].need).join()`)==='doberman4,doberman5,doberman6','ленивый models.js: need есть ровно у фигур с modelMesh — Доберманы 4, 5, 6');
+  const S=[],L={console,TextDecoder,Math,document:{currentScript:{src:'http://x/art/js/figures.js?v=9.9.9'},head:{appendChild:e=>S.push(e)},createElement:t=>({tag:t,remove(){}})}};vm.createContext(L);
+  vm.runInContext(['mesh','edit','models-poly','figures'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),L);
+  const got=[];const r11=vm.runInContext('figureReady',L)('doberman11',()=>got.push(11));const r4=vm.runInContext('figureReady',L)('doberman4',()=>got.push(4));vm.runInContext('figureReady',L)('doberman5',()=>got.push(5));
+  ok(r11===true&&got.join()===''&&r4===false&&S.length===1&&S[0].tag==='script'&&S[0].src==='js/models.js?v=9.9.9','ленивый models.js: Д11 строится сразу (figureReady → true); Д4 и Д5 ждут — в страницу добавлен один <script src="js/models.js?v=как у figures.js">');
+  vm.runInContext(fs.readFileSync(P+'models.js','utf8'),L);S[0].onload();const got2=[];const again=vm.runInContext('figureReady',L)('doberman6',()=>got2.push(6));
+  ok(got.join()==='4,5'&&again===true&&got2.join()===''&&S.length===1&&vm.runInContext(`figureMesh('doberman4').F.length`,L)>4000,'ленивый models.js: после onload строятся Д4 и Д5, Д6 — сразу, второй раз файл не грузится');
+  const S2=[],L2={console,TextDecoder,Math,document:{currentScript:null,head:{appendChild:e=>S2.push(e)},createElement:t=>({tag:t,remove(){this.gone=1;}})}};vm.createContext(L2);
+  vm.runInContext(['mesh','edit','models-poly','figures'].map(f=>fs.readFileSync(P+f+'.js','utf8')).join('\n;\n'),L2);const fr=vm.runInContext('figureReady',L2),e=[];
+  fr('doberman4',()=>e.push('ok'),()=>e.push('fail'));S2[0].onerror();fr('doberman4',()=>e.push('ok2'),()=>e.push('fail2'));
+  ok(e.join()==='fail'&&S2[0].gone&&S2.length===2,'ленивый models.js: не загрузился — сообщение, при повторном выборе грузится заново');}
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);
