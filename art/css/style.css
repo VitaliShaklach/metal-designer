@@ -200,8 +200,7 @@ footer a{color:var(--accent)}
   .controls .drawerhead+.grp{padding-top:4px}
   .controls .grp{padding-top:4px}
   .controls .gt{min-height:44px}   /* заголовок раздела — под палец */
-  .tabbar{flex-wrap:wrap;overflow-x:visible}   /* все вкладки на виду, в два ряда */
-  .tabbar button{flex:1 1 auto;font-size:15px;padding:10px 12px}
+  .tabbar button{flex:1 0 auto;font-size:15px;padding:10px 12px}   /* вкладки — один ровный ряд (не влезли — листается вбок) */
   .pick select{min-width:0;width:100%}
   .pick label,.pick .lbl{flex:1 1 100%}
   .pick .modeseg{min-width:0}
@@ -403,7 +402,7 @@ body.og #stage{position:fixed!important;inset:0;width:100vw!important;height:100
 .sheet{margin:0}
 .sheet figcaption{font-size:13px;color:var(--muted);margin-bottom:6px}
 .sheet svg{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.08)}
-#shGo{max-width:100%;font:inherit;font-size:13px;padding:5px 6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#shGo,#cdGo{max-width:100%;font:inherit;font-size:13px;padding:5px 6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
 #printBox{display:none}
 @media print{
   @page{size:A3 landscape;margin:0}
@@ -428,3 +427,31 @@ button .tip{margin-left:6px}
 #parts td.nbs small{display:inline}
 svg .engr{fill:none;stroke:#c33;stroke-width:1;vector-effect:non-scaling-stroke}
 svg.mini .engr{stroke-width:.6}
+
+/* ---------- под палец: телефон, iPad (BACKLOG 5–8). Компьютер с мышью не трогаем ---------- */
+@media (max-width:900px),(pointer:coarse){
+  /* 5: шрифт полей и выпадашек не меньше 16 px — иначе iPhone зумит страницу при нажатии */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),select,textarea{font-size:16px!important}
+  .inp,.row2 select,.controls select,.pick select,.pick .inp{min-height:40px}
+  .controls .grp>.row2{align-self:stretch}   /* пары полей — во всю ширину панели, колонки ровные */
+  input[type=range]{height:32px}
+  /* 6: галочка 24 px, вся строка с подписью — зона нажатия */
+  .chk input,.controls .chk input{width:24px;height:24px;margin-top:0}
+  .chk{align-items:center}
+  .controls .grp>.chk{min-height:40px}
+  /* «?»: зона нажатия 32 × 32, кружок 20 px; отрицательные поля — строка не раздувается */
+  .tip{position:relative;width:32px;height:32px;margin:-8px -6px -8px -1px;border:0;font-size:12px;vertical-align:middle}
+  .tip::before{content:'';position:absolute;inset:6px;border:1px solid var(--line);border-radius:50%}
+  .tip:hover::before{border-color:var(--accent)}
+  /* 7: «Перейти к листу / карте» и кнопки скачивания — нормальной высоты */
+  #shGo,#cdGo{min-height:44px;padding:8px 10px;flex:1 1 220px}
+  .dimbar button{min-height:44px}
+  .vbar button{min-height:36px}
+  .lnk{padding:8px 0;margin:-8px 0}   /* ссылка «все детали» над таблицей: зона нажатия выше, строка та же */
+}
+/* 8: телефон — вкладки ровной сеткой: три сверху, две снизу, оба ряда во всю ширину */
+@media (max-width:600px){
+  .tabbar{display:grid;grid-template-columns:repeat(6,1fr);overflow:visible}
+  .tabbar button{grid-column:span 2;font-size:14px;padding:10px 4px;white-space:normal}
+  .tabbar button:nth-child(n+4){grid-column:span 3}
+}
