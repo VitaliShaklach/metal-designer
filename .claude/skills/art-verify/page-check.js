@@ -132,14 +132,14 @@ function dxfCheck(name,t,nest,nos){const E=dxfParse(t),f={name,kb:Math.round(t.l
     P.forEach((p,i)=>{const q=P[(i+1)%P.length];if(Math.hypot(p[0]-q[0],p[1]-q[1])<1e-3)bad(id+': точка '+(i+1)+' повторяется (нулевой отрезок)');});
     if(selfX(P))bad(id+': контур пересекает сам себя');});
   // метки (ENGRAVE, BEND_*, PERF) идут перед CUT своей детали — по этому порядку и привязываем; лежит внутри другой детали — порядок сбит
-  const own={},over={},perf=[];let order=0;
+  const own={},over={},perf=[],PB=(()=>{try{return perfBridge();}catch(e){return 3;}})();let order=0;   // перемычка до кромки: max(3 мм, 2t), как в sheets.js
   E.forEach((e,i)=>{if(e.type!=='LINE'||e.lay==='SHEET')return;const best=C.find(c=>c.i>i);if(!best){order++;return;}const mid=[(e.a[0]+e.b[0])/2,(e.a[1]+e.b[1])/2];
     if(out(mid,best.e.P)>0.5&&C.some(c=>c!==best&&inPoly(mid,c.e.P)))order++;own[e.lay]=(own[e.lay]||0)+1;
     const d=Math.max(out(e.a,best.e.P),out(e.b,best.e.P));if(d>0.05){over[e.lay]=over[e.lay]||{n:0,max:0};const o=over[e.lay];o.n++;if(d>o.max){o.max=d;const k=C.indexOf(best);o.at=nos&&nos.length===C.length?nos[k]:'CUT №'+(k+1);}}
-    if(e.lay==='PERF'){const m=Math.min(dEdge(e.a,best.e.P),dEdge(e.b,best.e.P));if(m<3)perf.push(r1(m));}});
+    if(e.lay==='PERF'){const m=Math.min(dEdge(e.a,best.e.P),dEdge(e.b,best.e.P));if(m<PB-1e-3)perf.push(r1(m));}});
   f.marks=own;if(order)bad(order+' меток стоят не перед CUT своей детали');
   Object.entries(over).forEach(([l,o])=>bad(`${l}: ${o.n} линий заходят за контур, до ${r1(o.max)} мм (больше всего — ${o.at})`));
-  if(perf.length)bad(`PERF: ${perf.length} прорезей ближе 3 мм к кромке, от ${Math.min(...perf)} мм`);
+  if(perf.length)bad(`PERF: ${perf.length} прорезей ближе ${PB} мм к кромке, от ${Math.min(...perf)} мм`);
   const N2=(()=>{try{return DXF_N2;}catch(e){return null;}})(),tig=(()=>{try{return weldOf()==='tig';}catch(e){return false;}})();
   const n2=E.filter(e=>e.type==='TEXT'&&N2&&e.text===N2);
   if(tig&&(!n2.length||n2.some(e=>e.lay!=='SHEET')||!/_N2_/.test(name)))bad('TIG: нет надписи N2 на слое SHEET или «_N2» в имени');if(!tig&&(n2.length||/_N2_/.test(name)))bad('не TIG, а N2 есть');

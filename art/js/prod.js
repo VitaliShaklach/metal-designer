@@ -63,6 +63,20 @@ function pairNumbers(R,V){const tw=partTwins(R,V),seen=new Set();let n=0;
   [...R.parts].sort((a,b)=>a.no-b.no).forEach(p=>{if(seen.has(p.id))return;seen.add(p.id);n++;const q=tw[p.id];
     if(q>=0&&q!==p.id&&!seen.has(q)){seen.add(q);const Q=R.parts[q],L=p.c[0]<=Q.c[0]?p:Q,Rt=L===p?Q:p;L.no=n;Rt.no=n+.1;L.twin=Rt.id;Rt.twin=L.id;}else p.no=n;});
   return tw;}
+/* зеркальная пара — одни и те же числа. Модель симметрична до десятых мм, и у X и X.1 расходится последняя цифра (V166 / V167, 186 × 80 / 81, 95° / 96°);
+   сварщику — «гнуть одинаково»: в таблицах, картах, чертежах и подписях DXF у пары числа основной детали (без «.1»). Контур реза, линии и раскрой у каждой свои */
+const twinIx=(R,i)=>R.parts[i].twin??i,mainPart=(R,p)=>p.twin!=null&&p.no%1?R.parts[p.twin]:p;
+// угол шва a–b для подписи: у зеркального шва — один на двоих, берём шов с меньшими номерами (3.1–8.1 — как у 3–8). Грани плоские — угол по шву один
+function seamDih(R,a,b){if(!R._sd){R._sd=new Map();R.edges.forEach(e=>{if(e.p.length===2&&!R._sd.has(bendKey(e.p[0],e.p[1])))R._sd.set(bendKey(e.p[0],e.p[1]),e.dih);});}
+  const own=R._sd.get(bendKey(a,b)),a2=twinIx(R,a),b2=twinIx(R,b),mr=R._sd.get(bendKey(a2,b2));if(mr===undefined)return own;
+  const no=i=>R.parts[i].no,s=no(a)+no(b),s2=no(a2)+no(b2);return s2<s-1e-6||Math.abs(s2-s)<1e-6&&Math.min(no(a2),no(b2))<Math.min(no(a),no(b))-1e-6?mr:own;}
+// соседи детали по швам → [{nb, len, dih}] по номеру соседа. По рёбрам, а не по сторонам p.segs: прямой участок вдоль двух соседей там одна сторона, и второй сосед пропадал (23 / 23.1 у Д10).
+// У X.1 — список X, соседи — их пары (если соседи у пары и правда те же): длины и углы одни
+function partNbs(R,pi){const C=R._nb||(R._nb=[]);if(C[pi])return C[pi];const p=R.parts[pi],m=new Map();
+  R.edges.forEach(e=>{if(e.p.length!==2||e.p[0]!==pi&&e.p[1]!==pi)return;const nb=e.p[0]===pi?e.p[1]:e.p[0];m.set(nb,(m.get(nb)||0)+e.len);});
+  let L=[...m].map(([nb,len])=>({nb,len,dih:seamDih(R,pi,nb)}));const q=mainPart(R,p);
+  if(q!==p){const M=partNbs(R,q.id).map(x=>({nb:twinIx(R,x.nb),len:x.len,dih:x.dih})),k=A=>A.map(x=>x.nb).sort((a,b)=>a-b).join();if(k(M)===k(L))L=M.slice();}
+  return C[pi]=L.sort((x,y)=>R.parts[x.nb].no-R.parts[y.nb].no);}
 function addBacking(R,M3){const {V,F}=M3;if(!V.length)return 0;const ctr=V3.mul(V.reduce((s,p)=>V3.add(s,p),[0,0,0]),1/V.length);let wl=0;
   openLoops(V,F).forEach(Q=>{if(Q.every(i=>Math.abs(V[i][2])<1))return;   // край у стены — не прорезь
     let n=[0,0,0];Q.forEach((i,j)=>{const a=V[i],b=V[Q[(j+1)%Q.length]];n[0]+=(a[1]-b[1])*(a[2]+b[2]);n[1]+=(a[2]-b[2])*(a[0]+b[0]);n[2]+=(a[0]-b[0])*(a[1]+b[1]);});n=V3.norm(n);
@@ -197,7 +211,8 @@ function tplShape(a,t,minW){const r=a*Math.PI/180,c=Math.max(4,2*t),w=Math.max(2
   if(w/Math.tan(r/2)>TPL_L-8)return [C1,P1,P2,C2,N];
   return [C1,P1,[TPL_L,w],at(bi,w/Math.sin(r/2)),add(P2,at(n2,w)),P2,C2,N];}
 // углы швов фигуры (bent(p, q) — стык гнётся, уголок не нужен) и углы сгибов bends → [{a, pts, seams, out, bends}] по возрастанию; seams — сколько швов с этим углом, out — из них вогнутых (уголок снаружи), bends — сгибов
-function weldTemplates(R,t,minW,bent,bends=[]){const M=new Map();R.parts.forEach((p,pi)=>(p.segs||[]).forEach(g=>{if(g.nb<0||g.nb<pi||g.dih==null||bent&&bent(pi,g.nb))return;const d=g.dih,a=Math.round(d>180.5?360-d:d);if(a>=TPL_MAX||a<TPL_MIN)return;
+// шов — пара деталей (partNbs: все соседи, угол — как у зеркального), один раз
+function weldTemplates(R,t,minW,bent,bends=[]){const M=new Map();R.parts.forEach((p,pi)=>partNbs(R,pi).forEach(g=>{if(g.nb<pi||g.dih==null||bent&&bent(pi,g.nb))return;const d=g.dih,a=Math.round(d>180.5?360-d:d);if(a>=TPL_MAX||a<TPL_MIN)return;
     const o=M.get(a)||{a,seams:0,out:0,bends:0};o.seams++;if(d>180.5)o.out++;M.set(a,o);}));
   bends.forEach(d=>{const a=Math.round(d);if(a>=TPL_MAX||a<TPL_MIN)return;const o=M.get(a)||{a,seams:0,out:0,bends:0};o.bends++;M.set(a,o);});
   return [...M.values()].sort((x,y)=>x.a-y.a).map(o=>({...o,pts:tplShape(o.a,t,minW)}));}

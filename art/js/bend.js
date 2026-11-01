@@ -100,7 +100,9 @@ function bendBlank(b,R,V,P,o){const J=P.J,F2=P.F2,bent=new Set(b.bends),EB=new M
   const X=(a,c)=>{const den=a.d[0]*c.d[1]-a.d[1]*c.d[0];if(Math.abs(den)<1e-9)return null;const w=[c.p[0]-a.p[0],c.p[1]-a.p[1]],k=(w[0]*c.d[1]-w[1]*c.d[0])/den;return [a.p[0]+a.d[0]*k,a.p[1]+a.d[1]*k];};
   S.forEach((z,i)=>{if(!z.con)return;const n=S.length,pr=X(L0[(i+n-1)%n],L0[i])||z.p,nx2=X(L0[(i+1)%n],L0[i])||z.p;if((nx2[0]-pr[0])*z.u[0]+(nx2[1]-pr[1])*z.u[1]<0)L0[i].d=[-z.u[0],-z.u[1]];});
   const raw=L0.map(l=>l.p),ccw=area2(raw)>0?1:-1,L=L0.map((l,i)=>({p:[l.p[0]-l.d[1]*ccw*S[i].s,l.p[1]+l.d[0]*ccw*S[i].s],d:l.d,s:S[i].s}));
-  const r=meetLines(L,ccw,-1e-6,true),pts=r.pts.filter((q,i,A)=>Math.hypot(q[0]-A[(i+A.length-1)%A.length][0],q[1]-A[(i+A.length-1)%A.length][1])>1e-4);
+  // соседние стороны сходятся почти в одной точке (ближе 0,05 мм) — одна точка: в DXF (округление до 0,01) иначе нулевой отрезок (Д10: Г20, Г23, Г23.1, Г25)
+  const r=meetLines(L,ccw,-1e-6,true),PT=.05,near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<=PT,pts=[];r.pts.forEach(q=>{if(!pts.length||!near(q,pts[pts.length-1]))pts.push(q);});
+  while(pts.length>1&&near(pts[0],pts[pts.length-1]))pts.pop();
   let bad=r.bad||pts.length<3;for(let i=0;i<pts.length&&!bad;i++)for(let k=i+2;k<pts.length;k++){if(i===0&&k===pts.length-1)continue;if(segX(pts[i],pts[(i+1)%pts.length],pts[k],pts[(k+1)%pts.length])){bad=true;break;}}
   // участки деталей (для номеров) и линии сгиба, обрезанные по контуру
   const regions=b.parts.map(pi=>({pi,pts:R.parts[pi].full.map(v=>at(pi,v))}));
@@ -120,6 +122,14 @@ function bendAlign(P,f){const Q=f?P.map(p=>[-p[0],p[1]]):P,h=convexHull(Q);let b
 function blankNumbers(BL,R){let n=0;const done=new Set(),of=new Map();BL.forEach((b,i)=>b.parts.forEach(pi=>of.set(pi,i)));
   BL.forEach((b,i)=>{if(done.has(i))return;done.add(i);n++;const tw=b.parts.map(pi=>R.parts[pi].twin),k=tw.every(x=>x!=null)?of.get(tw[0]):undefined;
     if(k!==undefined&&k!==i&&!done.has(k)&&BL[k].parts.length===b.parts.length&&tw.every(x=>of.get(x)===k)){done.add(k);const c=Math.min(...b.parts.map(pi=>R.parts[pi].no))%1?[k,i]:[i,k];BL[c[0]].no=n;BL[c[1]].no=n+.1;}else b.no=n;});}
+/* зеркальная заготовка — числа основной (Г3.1 — как у Г3): угол сгиба — по углу шва пары (seamDih), порядок гибки, габарит, площадь, рез.
+   Геометрия у пары расходится в десятых мм, и последняя цифра скакала (V166 / V167, 186 × 80 / 81); контур и линии сгиба у каждой свои. Вызывать после blankNumbers */
+function blankTwins(BL,R,J){BL.forEach(b=>{b.cut=perim(b.pts);b.lines.forEach(l=>{const d=seamDih(R,l.p,l.q);if(d!=null)l.ang=Math.round(l.kind==='V'?d:360-d);});});
+  const byNo=new Map(BL.map(b=>[b.no,b]));
+  BL.forEach(b=>{if(!(b.no%1))return;const m=byNo.get(Math.floor(b.no));if(!m)return;Object.assign(b,{L:m.L,W:m.W,area:m.area,cut:m.cut});
+    // порядок гибки — как у основной: сгиб пары — зеркальный стык (mate)
+    const k=new Map(m.lines.map(l=>[l.id,l.k])),ks=b.lines.map(l=>k.get(J[l.id].mate));
+    if(m.lines.length!==b.lines.length||ks.some(x=>x==null)||new Set(ks).size!==ks.length)return;b.lines.forEach((l,i)=>l.k=ks[i]);b.lines.sort((x,y)=>x.k-y.k);b.order=b.lines.map(l=>l.id);});}
 const bendTxt=l=>l.kind+l.ang+' ('+l.k+')';   // «V144 (2)»: вид, угол между гранями, номер в порядке гибки
 /* ---------- уголок в угол сгиба — на готовом элементе (снимки «проверка уголком») ----------
    Плоскость уголка — поперёк линии сгиба, вершина — на линии, кромки — по граням p и q. Клин между гранями (меньше 180°) у V — изнутри фигуры (сторона гравировки), у m — снаружи.
