@@ -3,7 +3,7 @@ const fs=require('fs'),vm=require('vm'),path=require('path');
 const P=path.join(__dirname,'..');
 const dimIds=[...fs.readFileSync(P+'/js/dims.js','utf8').matchAll(/^\s*\['([A-Za-z]\w*)',/gm)].map(m=>m[1]);
 const mk=()=>{const U=new Proxy(function(){},{get:(t,k)=>{if(k===Symbol.toPrimitive)return()=>0;if(k===Symbol.iterator)return function*(){};if(k==='then')return undefined;return U;},apply:()=>U,construct:()=>U,set:()=>true});return U;};
-let fails=0;
+let fails=0,airMM=null,hookMM=null;   // габариты развёртки задвижки и скобы из partMM — для раскладки на прямоугольниках
 for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true}]){
   const U=mk(),errs=[];
   const flags=JSON.stringify(Object.assign({rain:true,mode},extra));
@@ -23,6 +23,30 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
       // площадка под колесо — 5 мм, на основном листе; листа 6 мм нет
       vm.runInContext(`{const N=nestJob(),ps=laserParts().filter(p=>p.pt==='pads');if(ps.some(p=>p.mm!==5))throw new Error('площадка под колесо не 5 мм');if(N.groups.some(G=>G.mm===6))throw new Error('остался лист 6 мм');
         if(S.legs&&ps.length&&!N.groups.some(G=>G.mm===5&&G.types.some(t=>t.p.pt==='pads')))throw new Error('площадки под колесо нет на листе 5 мм');}`,ctx);
+      // задвижки поддува и скобы задвижек — лист 5 мм, на листе 5 мм, когда есть на модели; скоб 4, контур 12 × 30; в режиме «мангал» листа 3 мм нет
+      const ah=vm.runInContext(`(()=>{const N=nestJob(),lp=laserParts(),on5=pt=>N.groups.some(G=>G.mm===5&&G.types.some(t=>t.p.pt===pt)),r={};
+        [['air',gOn()&&S.airSl,2],['hook',gOn()&&S.hook,4]].forEach(([pt,want,q])=>{const ps=lp.filter(p=>p.pt===pt);
+          if(ps.length!==(want?1:0))throw new Error(pt+': деталей '+ps.length+', ждали '+(want?1:0));if(!want)return;const p=ps[0],m=partMM(p);
+          if(p.mm!==5)throw new Error(pt+': толщина '+p.mm+', ждали 5');if(p.q!==q)throw new Error(pt+': '+p.q+' шт, ждали '+q);
+          if(!on5(pt))throw new Error(pt+': нет на листе 5 мм');if(N.groups.some(G=>G.mm!==5&&G.types.some(t=>t.p.pt===pt)))throw new Error(pt+': лежит не на листе 5 мм');r[pt]=[m.w,m.h];});
+        if(r.hook){const m=partMM(lp.find(p=>p.pt==='hook')),P=m.loops[0];
+          if(m.w!==12||m.h!==30)throw new Error('скоба: габарит '+m.w+' × '+m.h+', ждали 12 × 30');
+          if(m.loops.length!==1||m.circles.length||m.bends.length)throw new Error('скоба: лишние контуры, отверстия или гибы');
+          if(JSON.stringify(P)!==JSON.stringify([[0,0],[12,0],[12,30],[7,30],[7,8],[0,8],[0,0]]))throw new Error('скоба: контур '+JSON.stringify(P));
+          if(Math.abs(Math.abs(area2(P.slice(0,-1)))-206)>1e-6)throw new Error('скоба: площадь не 206 мм²');}
+        if(r.air){const m=partMM(lp.find(p=>p.pt==='air'));if(m.w!==Math.round((AIR_L+2*AIR_TH)*10)||m.h!==30||m.bends.some(b=>Math.abs(b[0][0]-30)>1e-6&&Math.abs(b[0][0]-(m.w-30))>1e-6))throw new Error('задвижка: развёртка '+m.w+' × '+m.h+', гибы '+JSON.stringify(m.bends));}
+        // скоба держит задвижку: полка — на уровне низа задвижки, вырез шире планки, ухо выше середины задвижки
+        if(AH_Y0+AH_HEEL!==HOLE_Y-AIR_H/2||AH_GAP<=AIR_T||AH_Y0+AH_H<=HOLE_Y)throw new Error('скоба не держит задвижку');
+        if(S.mode==='grill'&&N.groups.some(G=>G.mm===3))throw new Error('мангал: остался лист 3 мм');
+        // целые мм: габариты листовых деталей, строки задвижки и скобы в «Массе», подписи их размеров
+        lp.forEach(p=>{const m=partMM(p);if(!Number.isFinite(m.w))return;   // боковины — из THREE.Shape, в Node контура нет
+          if(!Number.isInteger(m.w)||!Number.isInteger(m.h))throw new Error('не целые мм: '+p.name+' '+m.w+' × '+m.h);});
+        const txt=[];cutRows().filter(c=>c.pt==='air'||c.pt==='hook').forEach(c=>txt.push(c.n,c.s,c.note));lp.filter(p=>p.pt==='air'||p.pt==='hook').forEach(p=>txt.push(p.name,p.note));
+        const d0=dim3,l0=lab;dim3=(a,b,o,t)=>txt.push(String(t));lab=t=>txt.push(String(t));
+        try{dimRows().filter(d=>d.id&&/^(air|hk)/.test(d.id)).forEach(d=>{txt.push(d.name,String(d.val));d.fn();});}finally{dim3=d0;lab=l0;}
+        const bad=txt.find(t=>/[0-9],[0-9]/.test(t));if(bad)throw new Error('дробные мм в подписи: '+bad.slice(0,80));
+        return r;})()`,ctx);
+      if(ah.air)airMM=ah.air;if(ah.hook)hookMM=ah.hook;
       // DXF всего листа: рамка — 4 отрезка SHEET, все точки CUT/BEND внутри рамки с краем 10 мм, контуры замкнуты (каждый конец CUT — у чётного числа отрезков), окружностей — сколько у деталей
       const dx=vm.runInContext(`(()=>{const N=nestJob(),out=[];N.groups.forEach(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);
         v.value.sheets.forEach(sh=>out.push({mm:G.mm,W:N.W,H:N.H,txt:nestDxf(N,G,sh),circ:sh.items.reduce((a,it)=>a+G.items[it.id].ty.m.circles.length,0)}));});return out;})()`,ctx);
@@ -40,7 +64,8 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
 
 // раскладка на прямоугольниках: 5-мм детали «печь + мангал» — все на одном листе 1250 × 2500; зазор между деталями и край листа — точно (polyGap)
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
-  const R=(w,h)=>[[0,0],[w,0],[w,h],[0,h]],set=[[800,195,2],[800,420,1],[410,195,1],[600,495,2],[600,440,1],[430,495,1],[150,430,1],[430,145,1],[300,160,1],[80,80,4],[150,150,4]];   // [150,150,4] — площадки под колесо (с v1.2 — 5 мм)
+  if(!airMM||!hookMM){console.log('раскладка: нет размеров задвижки/скобы из partMM FAIL');fails++;}
+  const R=(w,h)=>[[0,0],[w,0],[w,h],[0,h]],set=[[800,195,2],[800,420,1],[410,195,1],[600,495,2],[600,440,1],[430,495,1],[150,430,1],[430,145,1],[300,160,1],[80,80,4],[150,150,4],[...(airMM||[800,30]),2],[...(hookMM||[12,30]),4]];   // [150,150,4] — площадки под колесо (с v1.2 — 5 мм); задвижки поддува и их скобы (с v1.3 — 5 мм), размеры — из partMM
   const mkItems=S=>{const I=[];S.forEach(([w,h,q],k)=>{for(let j=0;j<q;j++)I.push({id:I.length,no:k+1,pts:R(w,h)});});return I;};
   // и с колосником мангала (2 половины 382 × 390 — тоже лист 5 мм)
   for(const [gap,items,one,cg] of [[5,mkItems(set),1,0],[20,mkItems(set),0,0],[5,mkItems([...set,[382,390,2]]),1,1]]){const errs=[];let N;

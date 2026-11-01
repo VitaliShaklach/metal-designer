@@ -122,13 +122,12 @@ function buildParts(tag){
     s.moveTo(AIR_X0+dx,y0);s.lineTo(AIR_X0+dx+AIR_L,y0);s.lineTo(AIR_X0+dx+AIR_L,y0+AIR_H);s.lineTo(AIR_X0+dx,y0+AIR_H);s.lineTo(AIR_X0+dx,y0);
     holes().filter(x=>x-HOLE/2>AIR_X0+.2&&x+HOLE/2<AIR_X0+AIR_L-.2).forEach(x=>{const p=new THREE.Path();p.absarc(x+dx,B+HOLE_Y,HOLE/2,0,Math.PI*2,true);s.holes.push(p);});   // только отверстия, которые помещаются в планку
     const m=ext(s,M.prop,AIR_T);m.position.z=z;group.add(m);
-    [AIR_X0+dx,AIR_X0+dx+AIR_L-.3].forEach(xe=>box(.3,AIR_H,AIR_TH,xe,y0,sd<0?z-AIR_TH:z+AIR_T,M.prop));   // ручки — концы полосы загнуты наружу
+    [AIR_X0+dx,AIR_X0+dx+AIR_L-AIR_T].forEach(xe=>box(AIR_T,AIR_H,AIR_TH,xe,y0,sd<0?z-AIR_TH:z+AIR_T,M.prop));   // ручки — концы полосы загнуты наружу
   });
-  tag('hook');   // скобы задвижек: полоса Г-образно — лапка к стенке под планкой, полка под планкой, загиб вверх перед планкой
-  if(S.hook)[-1,1].forEach(sd=>{const yb=B+HOLE_Y-AIR_H/2;AIR_HOOK.forEach(xh=>{const x0=xh-BR_W/2,zw=sd<0?-BR_T:W,zs=sd<0?-(BR_IN+BR_T):W,zf=sd<0?-(BR_IN+BR_T):W+BR_IN;
-      box(BR_W,BR_LEG,BR_T,x0,yb-BR_T-BR_LEG,zw,M.steel);   // лапка — приварить к стенке
-      box(BR_W,BR_T,BR_IN+BR_T,x0,yb-BR_T,zs,M.steel);      // полка — на ней стоит планка
-      box(BR_W,BR_UP,BR_T,x0,yb,zf,M.steel);});});          // загиб вверх перед планкой
+  tag('hook');   // скобы задвижек: плоский профиль из листа 5 мм ребром к боковине (ahProfile: X — от стенки наружу, Y — от низа жаровни), толщина — вдоль стенки
+  if(S.hook)[-1,1].forEach(sd=>AIR_HOOK.forEach(xh=>{const s=new THREE.Shape(),P=ahProfile().map(([X,Y])=>[sd*X,B+Y]);
+    s.moveTo(...P[0]);P.slice(1).forEach(p=>s.lineTo(...p));s.lineTo(...P[0]);
+    const m=ext(s,M.steel,AH_T);m.rotation.y=-Math.PI/2;m.position.set(xh+AH_T/2,0,sd<0?0:W);group.add(m);}));   // как перегородка: контур в плоскости z–y, выдавлен по x (xh ± 2,5 мм); position.z — стенка (для наезда камеры на одну скобу)
   tag('div');
   if(S.div){const x0=divX()-DIV_T/2,yb=divY0(),z0=0,z1=W,zi=DIV_IN,s=new THREE.Shape();   // перегородка: тело между боковинами, «ушки» в прорезях сверху
     s.moveTo(zi,yb);s.lineTo(z1-zi,yb);s.lineTo(z1-zi,T-DIV_SD);s.lineTo(z1+DIV_EAR,T-DIV_SD);s.lineTo(z1+DIV_EAR,T);s.lineTo(z0,T);s.lineTo(z0,T-DIV_SD);s.lineTo(zi,T-DIV_SD);s.lineTo(zi,yb);

@@ -77,19 +77,21 @@ function dimDefs(){
   ['logoN','Логотип: как резать','лазер, перемычки',()=>{const st=logoSite();S.logo&&st&&lab(`вырез 16 × 10 клеток по ${fmt(LOGO_U*10)} мм · глаза держатся на перемычках ${LOGO_BR*10} мм к верху выреза · резать лазером`,new V(st.x-2,st.top-8,W/2),'n3');}],
   ['#Задвижки поддува','air'],
   ['airL','Задвижка: длина',AIR_L,()=>{if(!S.airSl)return;const x=AIR_X0+airOff(),z=W+AIR_GAP+AIR_T;dim3([x,B+HOLE_Y+AIR_H/2,z],[x+AIR_L,B+HOLE_Y+AIR_H/2,z],[0,3,1],`задвижка ${u(AIR_L)}`);}],
-  ['airH','Задвижка: высота и толщина','30 × 3 мм',()=>{if(!S.airSl)return;const x=AIR_X0+airOff()+AIR_L,z=W+AIR_GAP+AIR_T;dim3([x,B+HOLE_Y-AIR_H/2,z],[x,B+HOLE_Y+AIR_H/2,z],[3,0,1],'30 мм');}],
+  ['airH','Задвижка: высота и толщина',`${u(AIR_H)} × ${us(AIR_T)}`,()=>{if(!S.airSl)return;const x=AIR_X0+airOff()+AIR_L,z=W+AIR_GAP+AIR_T;dim3([x,B+HOLE_Y-AIR_H/2,z],[x,B+HOLE_Y+AIR_H/2,z],[3,0,1],us(AIR_H));}],
   ['airS','Задвижка: ход до «закрыто»',`${fmt(Math.ceil(S.pitch*5))} мм`,()=>{if(!S.airSl)return;const x=holes()[5],y=B+HOLE_Y-AIR_H/2-.8,z=W+AIR_GAP+AIR_T;dim3([x,y,z],[x+Math.ceil(S.pitch*5)/10,y,z],[0,-2,1],`ход ${fmt(Math.ceil(S.pitch*5))} мм`);}],
-  ['airT','Задвижка: загнутые концы (ручки)',`${AIR_TH*10} мм`,()=>{if(!S.airSl)return;const x=AIR_X0+airOff()+AIR_L,z=W+AIR_GAP+AIR_T,y=B+HOLE_Y+AIR_H/2;dim3([x,y,z],[x,y,z+AIR_TH],[1,2,0],`загиб ${u(AIR_TH)}`);}],
-  ['airN','Задвижка: описание',`Ø15 · шаг ${S.pitch*10}`,()=>S.airSl&&lab(`задвижка — полоса 3 мм с ${holes().length} отв. Ø15 шаг ${S.pitch*10}, как в стенке · 2 шт, снаружи обеих боковин, ходит в 2 скобах · открыто / наполовину / закрыто — сдвиг на ${fmt(Math.ceil(S.pitch*5))} мм`,new V(40,B-4,W+3),'n3')],
+  ['airT','Задвижка: загнутые концы (ручки)',us(AIR_TH),()=>{if(!S.airSl)return;const x=AIR_X0+airOff()+AIR_L,z=W+AIR_GAP+AIR_T,y=B+HOLE_Y+AIR_H/2;dim3([x,y,z],[x,y,z+AIR_TH],[1,2,0],`загиб ${u(AIR_TH)}`);}],
+  ['airN','Задвижка: описание',`Ø15 · шаг ${S.pitch*10}`,()=>S.airSl&&lab(`задвижка — полоса ${us(AIR_T)} с ${holes().length} отв. Ø15 шаг ${S.pitch*10}, как в стенке · 2 шт, снаружи обеих боковин, ходит в 2 скобах · открыто / наполовину / закрыто — сдвиг на ${fmt(Math.ceil(S.pitch*5))} мм`,new V(40,B-4,W+3),'n3')],
   ['#Скобы задвижек','hook'],
-  ['hkX','Скобы: от левого края (центр)',AIR_HOOK.map(v=>u(v)).join(' и '),()=>{if(!S.hook)return;const y=B+HOLE_Y-AIR_H/2-BR_T-BR_LEG-.3,z=W+.7;AIR_HOOK.forEach((x,i)=>dim3([0,y,z],[x,y,z],[0,-3-i*3,1],`${u(x)}`));}],
-  ['hkW','Скоба: ширина полосы',`${BR_W*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1],z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2+BR_UP;dim3([x-BR_W/2,y,z],[x+BR_W/2,y,z],[0,2,1],`${BR_W*10} мм`);}],
-  ['hkT','Скоба: толщина металла',`${fmt(BR_T*10)} мм`,()=>{if(!S.hook)return;   // толщина уха: под скобой, выносные вниз от его граней (зазор — сверху, не пересекаются)
-    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y,W+BR_IN],[x,y,W+BR_IN+BR_T],[0,-(BR_LEG+1.2),0],`толщина ${fmt(BR_T*10)} мм`);}],
-  ['hkH','Скоба: загиб вверх',`${BR_UP*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]+BR_W/2,z=W+BR_IN+BR_T,y=B+HOLE_Y-AIR_H/2;dim3([x,y,z],[x,y+BR_UP,z],[2,0,1],`загиб ${BR_UP*10} мм`);}],
-  ['hkG',`Скоба: зазор от стенки до уха — под планку 3 мм + ${Math.round((BR_IN-AIR_T)*10)} мм запас`,`${Math.round(BR_IN*10)} мм`,()=>{if(!S.hook)return;   
-    const x=AIR_HOOK[1]+BR_W/2,y=B+HOLE_Y-AIR_H/2;dim3([x,y,W],[x,y,W+BR_IN],[0,BR_UP+1.2,0],`зазор ${Math.round(BR_IN*10)} мм (планка 3 + запас ${Math.round((BR_IN-AIR_T)*10)})`);}],   // над скобой: выносные вверх по щели — от стенки и от внутренней грани уха, размерная — над ухом
-  ['hkL','Скоба: лапка к стенке',`${BR_LEG*10} мм`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]-BR_W/2,y=B+HOLE_Y-AIR_H/2-BR_T;dim3([x,y-BR_LEG,W],[x,y,W],[-2,0,1],`лапка ${BR_LEG*10} мм`);}],
+  ['hkX','Скобы: от левого края (центр)',AIR_HOOK.map(v=>u(v)).join(' и '),()=>{if(!S.hook)return;const y=B+AH_Y0-.3,z=W+AH_W/2;AIR_HOOK.forEach((x,i)=>dim3([0,y,z],[x,y,z],[0,-3-i*3,1],`${u(x)}`));}],
+  // размеры скобы — на правой скобе передней боковины (на неё наезжает камера): профиль ahProfile — z = W + X, y = B + Y, толщина по x (xh ± AH_T/2)
+  ['hkW','Скоба: ширина (от боковины наружу)',us(AH_W),()=>{if(!S.hook)return;const x=AIR_HOOK[1]+AH_T/2,y=B+AH_Y0;dim3([x,y,W],[x,y,W+AH_W],[0,-2,0],`ширина ${u(AH_W)}`);}],   // под скобой, по низу пятки
+  ['hkT','Скоба: толщина листа',us(AH_T),()=>{if(!S.hook)return;   // толщина уха: над скобой, по верху уха вдоль стенки
+    const y=B+AH_Y0+AH_H,z=W+AH_W;dim3([AIR_HOOK[1]-AH_T/2,y,z],[AIR_HOOK[1]+AH_T/2,y,z],[0,1.5,1.5],`толщина ${us(AH_T)}`);}],
+  ['hkH',`Скоба: стойка ${us(AH_H)} (${u(AH_H-AH_HEEL)} над полкой)`,`${u(AH_HEEL)} + ${us(AH_H-AH_HEEL)}`,()=>{if(!S.hook)return;const x=AIR_HOOK[1]+AH_T/2,z=W+AH_W,y0=B+AH_Y0;   // по наружной кромке уха, выносные — вдоль задвижки (вправо): вся стойка и часть над полкой
+    dim3([x,y0,z],[x,y0+AH_H,z],[3,0,0],`стойка ${u(AH_H)}`);dim3([x,y0+AH_HEEL,z],[x,y0+AH_H,z],[1.5,0,0],`${u(AH_H-AH_HEEL)} над полкой`);}],
+  ['hkG',`Скоба: зазор от стенки до уха — под планку ${us(AIR_T)} + ${us(AH_GAP-AIR_T)} запас`,us(AH_GAP),()=>{if(!S.hook)return;   // над скобой: выносные вверх — от стенки и от внутренней грани уха, размерная — выше толщины
+    const x=AIR_HOOK[1]-AH_T/2,y=B+AH_Y0+AH_H;dim3([x,y,W],[x,y,W+AH_GAP],[0,4,0],`зазор ${u(AH_GAP)} (планка ${u(AIR_T)} + запас ${u(AH_GAP-AIR_T)})`);}],
+  ['hkL','Скоба: пятка под задвижкой (шов к боковине)',us(AH_HEEL),()=>{if(!S.hook)return;const x=AIR_HOOK[1]-AH_T/2,y=B+AH_Y0;dim3([x,y,W],[x,y+AH_HEEL,W],[-2,0,1],`пятка ${u(AH_HEEL)}`);}],
   ['#Перегородка жаровни','div'],
   ['divP','Перегородка: прорези от торца (со стороны ручки)',DIV_POS.map(v=>u(v)).join(' / '),()=>{const y=T+1,z=W;DIV_POS.forEach((p,i)=>dim3([L1-p,y,z],[L1,y,z],[0,2+i*3,2],`${u(p)}`));}],
   ['divS','Перегородка: прорезь в боковине',`${DIV_SW*10} × ${DIV_SD*10} мм`,()=>{const x=L1-DIV_POS[2];dim3([x-DIV_SW/2,T,W],[x+DIV_SW/2,T,W],[0,2,2],`${DIV_SW*10} мм`);dim3([x+DIV_SW/2,T-DIV_SD,W],[x+DIV_SW/2,T,W],[2,0,2],`${DIV_SD*10} мм`);}],

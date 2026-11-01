@@ -19,6 +19,8 @@ function dividerGeo(){const yb=divY0(),zi=DIV_IN,z1=W,y2=T-DIV_SD;
 // задвижка поддува: развёртка с отгибами по концам (линии гиба — слой BEND)
 function airGeo(){const L=AIR_L+2*AIR_TH,x0=AIR_X0-AIR_TH;
   return {loops:[rect(L,AIR_H)],circles:holes().filter(x=>x-HOLE/2>AIR_X0+.2&&x+HOLE/2<AIR_X0+AIR_L-.2).map(x=>[x-x0,AIR_H/2,HOLE/2]),bends:[[[AIR_TH,0],[AIR_TH,AIR_H]],[[AIR_TH+AIR_L,0],[AIR_TH+AIR_L,AIR_H]]]};}
+// скоба задвижки: плоский профиль 12 × 30 из листа 5 мм (без гибки) — тот же контур, что в 3D
+const airHookGeo=()=>{const P=ahProfile();return {loops:[[...P,P[0]]],circles:[],bends:[]};};
 // колосник печи: лист 15 мм с отверстиями Ø20
 function stoveGrateGeo(){const z0=W/2-GP_W/2;return {loops:[rect(GR_LEN,GP_W)],circles:gpX().flatMap(x=>gpZ().map(z=>[x-GR_X0,z-z0,GP_D/2])),bends:[]};}
 const geoR=(w,h)=>({loops:[rect(w,h)],circles:[],bends:[]});
@@ -37,7 +39,8 @@ function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
     if(S.div)add('grill_divider','Перегородка жаровни',5,1,'div',dividerGeo,'тело, ушки и ручка — одна деталь');
     if(S.cgr){const nh=`${cgGrid(CG_L).length*cgGrid(CG_W).length} отв. Ø${CG_D*10} шагом ${CG_P*10}`;   // половины одинаковые; две строки — чтобы выбирались на модели по отдельности
       add('grill_grate_1','Колосник мангала 1 (левая половина)',5,1,'cgr1',grillGrateGeo,nh);add('grill_grate_2','Колосник мангала 2 (правая, у ручки)',5,1,'cgr2',grillGrateGeo,nh);}
-    if(S.airSl)add('grill_air_slider','Задвижка поддува',3,2,'air',airGeo,'отгибы по концам 20 мм — слой BEND');}
+    if(S.airSl)add('grill_air_slider','Задвижка поддува',Math.round(AIR_T*10),2,'air',airGeo,`отгибы по концам ${us(AIR_TH)} — слой BEND`);
+    if(S.hook)add('grill_air_hook','Скоба задвижки',Math.round(AH_T*10),4,'hook',airHookGeo,`плоская, ставится ребром, приварить к боковине по ребру ${us(AH_HEEL)}`);}
   if(k){add('stove_side_back','Боковина печи задняя',5,1,'sK0',()=>shapeGeo(stoveWallShape(true)),S.chim?'с отверстием трубы 60 × 60':'');
     add('stove_side_front','Боковина печи передняя',5,1,'sK1',()=>shapeGeo(stoveWallShape(false)));
     add('stove_bottom','Дно печи',5,1,'sBot',()=>S.draft?shapeGeo(holedPlate(-L2,0,ZK0,ZK1)):geoR(L2,WK),S.draft?`${DR_X.length*DR_Z.length} отв. Ø20`:'');
