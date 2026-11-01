@@ -1,6 +1,6 @@
 :root{
   --bg:#EDEFEC; --panel:#F8F9F7; --ink:#1B2124; --muted:#5B666B; --line:#C6CCCA; --soft:#E2E6E3;
-  --accent:#C0501C; --accent-soft:#F3DED2; --stage:#DCE1DE; --hatch:#9AA4A6; --fire:#D9D2CB; --log:#C9A477;
+  --accent:#C0501C; --accent-soft:#F3DED2; --gilf:#C9CDD0; --lasf:#F6C9A4; --stage:#DCE1DE; --hatch:#9AA4A6; --fire:#D9D2CB; --log:#C9A477;
   --f-display:"Oswald","Arial Narrow",sans-serif;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -9,13 +9,13 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --bg:#121517; --panel:#1A1F22; --ink:#E2E6E4; --muted:#8F9A9D; --line:#30393C; --soft:#222a2d;
-    --accent:#EE7A45; --accent-soft:#3A2519; --stage:#0E1113; --hatch:#56626A; --fire:#2b2521; --log:#7a5a3a;
+    --accent:#EE7A45; --accent-soft:#3A2519; --gilf:#4A5156; --lasf:#7A4526; --stage:#0E1113; --hatch:#56626A; --fire:#2b2521; --log:#7a5a3a;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#121517; --panel:#1A1F22; --ink:#E2E6E4; --muted:#8F9A9D; --line:#30393C; --soft:#222a2d;
-  --accent:#EE7A45; --accent-soft:#3A2519; --stage:#0E1113; --hatch:#56626A; --fire:#2b2521; --log:#7a5a3a;
+  --accent:#EE7A45; --accent-soft:#3A2519; --gilf:#4A5156; --lasf:#7A4526; --stage:#0E1113; --hatch:#56626A; --fire:#2b2521; --log:#7a5a3a;
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;padding-inline:16px;padding-block:28px 64px}
@@ -141,6 +141,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 svg.dxfsk{display:block;fill:none;stroke:var(--accent);stroke-width:1.2px;vector-effect:non-scaling-stroke}
 svg.dxfsk *{vector-effect:non-scaling-stroke}
 svg.dxfsk .bd{stroke:#2a7;stroke-dasharray:3 2}
+svg.dxfsk .bl{stroke:var(--muted);stroke-width:.8px;stroke-dasharray:3 2}   /* заготовка с гильотины — тонким пунктиром, лазер — сплошные */
 td small.fn{font-family:var(--f-mono);font-size:11px}
 /* режим снимка */
 body.shot{padding:0!important;background:#fff}
@@ -269,8 +270,28 @@ td small.was{font-size:11px;color:var(--muted);white-space:nowrap}
 td small.kd{display:inline-block;margin:3px 0 1px 6px;padding:0 5px;font:600 11px var(--f-mono);border:1px solid var(--line);color:var(--muted)}
 td small.kd-zag{border-color:var(--accent);color:var(--accent)}
 td.nolz{color:var(--muted);font-size:13px;white-space:nowrap}
-.npiece{margin:0;font:600 13px/1.4 var(--f-mono)}
 .ngil{margin:4px 0 0;font:600 15px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
 table.gtbl{min-width:520px}
-svg.nestsv rect.pc{fill:none;stroke:var(--ink);stroke-width:1.5px;stroke-dasharray:12 8;vector-effect:non-scaling-stroke}
 table.gtbl td:first-child,table.gtbl th:first-child{width:1%;white-space:nowrap}
+/* схема гильотины: серый — готовая деталь, светло-оранжевый — дальше на лазер (заготовка и кусок листа под лазер) */
+.nestbar [hidden]{display:none}
+svg.gilsv .gp rect{stroke:var(--ink);stroke-width:1px}
+svg.gilsv .gp.gil rect{fill:var(--gilf)}
+svg.gilsv .gp.las rect{fill:var(--lasf)}
+svg.gilsv .gp.on rect{stroke:var(--accent);stroke-width:2.6px}
+svg.gilsv .gp text{fill:var(--ink);font-family:var(--f-mono);font-weight:600}
+svg.gilsv .gp text.sz{font-weight:400}
+svg.gilsv .gp.on text{font-weight:700}
+.glegend{margin:0;display:flex;flex-direction:column;gap:2px;font:13px/1.4 var(--f-mono);color:var(--muted)}
+.glegend span{display:flex;gap:6px;align-items:flex-start}
+.glegend .lg{flex:none;display:inline-block;width:12px;height:12px;margin-top:3px;border:1px solid var(--ink);font-size:0;vertical-align:-1px}
+.glegend .lg.gil{background:var(--gilf)}
+.glegend .lg.las{background:var(--lasf)}
+.nblock:not(.main) svg.nestsv.gilsv{max-width:760px}
+.nsheet.nlaser svg.nestsv{max-width:760px}
+.gsel{display:inline-flex;margin:3px 0 1px 6px;border:1px solid var(--line);vertical-align:middle}
+.gsel button{font:600 11px var(--f-mono);padding:2px 6px;border:0;background:var(--panel);color:var(--muted);cursor:pointer}
+.gsel button+button{border-left:1px solid var(--line)}
+.gsel button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.gsel button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (max-width:900px){.gsel button{padding:5px 8px;font-size:12px}}

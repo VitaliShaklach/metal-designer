@@ -63,14 +63,12 @@ function partMM(p){const G=p.geo(),xs=[],ys=[];G.loops.forEach(l=>l.forEach(([x,
   let cut=0;loops.forEach(l=>{for(let i=0;i<l.length-1;i++)cut+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);});circles.forEach(c=>cut+=2*Math.PI*c[2]);
   return {loops,circles,bends,w:f(Math.max(...xs)-mx),h:f(Math.max(...ys)-my),cut,pierce:loops.length+circles.length};}
 /* ---------- заготовки с гильотины: металл режут в размер на гильотине, на лазер везут готовый прямоугольник ----------
-   gil  — «только гильотина»: наружный контур — прямоугольник по габариту, внутри ничего — лазер не нужен;
-   zag  — «по заготовке»: гильотина режет габарит, лазер — только отверстия, вырезы и пазы с кромки;
-   list — «из листа»: деталь далеко от прямоугольника (ушки, ручки) — лазер режет её целиком из куска листа, как раньше. */
-// zag — если площадь детали (наружный контур минус внутренние контуры) не меньше этой доли площади габарита.
-// Окружности не вычитаются: отверстия не меняют заготовку (колосники с сеткой Ø10/Ø20 — тоже по заготовке).
-// Ниже 85 % у кромки срезано много — проще резать деталь целиком из листа, чем гнать лишний прямоугольник через гильотину.
-const ZAG_MIN=.85,BLANK_EPS=.01;   // BLANK_EPS — допуск «отрезок лежит на стороне габарита», мм
-const loopArea=l=>{let a=0;for(let i=0;i<l.length-1;i++)a+=l[i][0]*l[i+1][1]-l[i+1][0]*l[i][1];return Math.abs(a)/2;};   // контур замкнут: последняя точка = первая
+   Чем резать деталь, решает переключатель «гильотина | лазер» в строке таблицы (nestJob, GIL_MIN_W — умолчание):
+   gil  — «гильотина», готовая деталь: наружный контур — прямоугольник по габариту, внутри ничего — лазер не нужен;
+   zag  — «гильотина», заготовка под лазер: гильотина режет габарит, лазер — всё, что не лежит на сторонах габарита
+          (отверстия, вырезы, пазы с кромки; у перегородки жаровни с ушками и ручкой — почти весь контур);
+   list — «лазер»: лазер режет деталь целиком из куска листа под лазер. */
+const BLANK_EPS=.01;   // допуск «отрезок лежит на стороне габарита», мм
 // деталь по заготовке (мм): из наружного контура выкинуты отрезки на сторонах габарита — остаются открытые ломаные (пазы и вырезы с кромки);
 // внутренние контуры, окружности и гибы — как есть. blank — прямоугольник заготовки (слой BLANK).
 // pierce — с запасом: по одной на каждую открытую ломаную, хотя цех может заходить с кромки без прожига
@@ -84,18 +82,18 @@ function blankMM(p,m=partMM(p)){const E=BLANK_EPS,w=m.w,h=m.h,O=m.loops[0]||[],a
   const inner=m.loops.slice(1),loops=[...open,...inner],len=l=>{let c=0;for(let i=0;i<l.length-1;i++)c+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);return c;};
   const cut=loops.reduce((a,l)=>a+len(l),0)+m.circles.reduce((a,c)=>a+2*Math.PI*c[2],0);
   return {w,h,loops,circles:m.circles,bends:m.bends,blank:rect(w,h),open:open.length,cut,pierce:inner.length+m.circles.length+open.length};}
-// вид детали по partMM (мм): 'gil' | 'zag' | 'list'; контура нет (в Node у боковин) — 'list'
-function partKind(m){if(!m||!m.loops||!m.loops[0]||!m.loops[0].length||!(m.w>0&&m.h>0))return 'list';
-  const b=blankMM(null,m);if(!b.open&&m.loops.length===1&&!m.circles.length)return 'gil';
-  const a=loopArea(m.loops[0])-m.loops.slice(1).reduce((s,l)=>s+loopArea(l),0);
-  return a>=ZAG_MIN*m.w*m.h?'zag':'list';}
-// m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf); m.blank — прямоугольник заготовки (blankMM)
+// вид детали по partMM (мм) и переключателю sel ('gil' — гильотина, 'laser' — лазер): 'gil' | 'zag' | 'list'; контура нет (в Node у боковин) — 'list'
+function partKind(m,sel='gil'){if(sel==='laser'||!m||!m.loops||!m.loops[0]||!m.loops[0].length||!(m.w>0&&m.h>0))return 'list';
+  return !blankMM(null,m).open&&m.loops.length===1&&!m.circles.length?'gil':'zag';}
+// m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf, gilDxf); m.blank — прямоугольник заготовки (blankMM);
+// m.blanks — заготовки на схеме гильотины (gilDxf), слой BLANK; m.texts — [x, y, высота, строка] — надписи R12 TEXT по центру, слой TEXT
 function dxfText(m){const e=[],L=(a,b,lay)=>e.push('0','LINE','8',lay,'10',a[0],'20',a[1],'30',0,'11',b[0],'21',b[1],'31',0);
   if(m.sheet)for(let i=0;i<m.sheet.length-1;i++)L(m.sheet[i],m.sheet[i+1],'SHEET');
-  if(m.blank)for(let i=0;i<m.blank.length-1;i++)L(m.blank[i],m.blank[i+1],'BLANK');
-  m.loops.forEach(l=>{for(let i=0;i<l.length-1;i++)if(l[i][0]!==l[i+1][0]||l[i][1]!==l[i+1][1])L(l[i],l[i+1],'CUT');});
-  m.circles.forEach(([x,y,r])=>e.push('0','CIRCLE','8','CUT','10',x,'20',y,'30',0,'40',r));
-  m.bends.forEach(([a,b])=>L(a,b,'BEND'));
+  [m.blank,...(m.blanks||[])].forEach(b=>{if(b)for(let i=0;i<b.length-1;i++)L(b[i],b[i+1],'BLANK');});
+  (m.texts||[]).forEach(([x,y,h,s])=>e.push('0','TEXT','8','TEXT','10',x,'20',y,'30',0,'40',h,'1',s,'72',1,'11',x,'21',y,'31',0,'73',2));
+  (m.loops||[]).forEach(l=>{for(let i=0;i<l.length-1;i++)if(l[i][0]!==l[i+1][0]||l[i][1]!==l[i+1][1])L(l[i],l[i+1],'CUT');});
+  (m.circles||[]).forEach(([x,y,r])=>e.push('0','CIRCLE','8','CUT','10',x,'20',y,'30',0,'40',r));
+  (m.bends||[]).forEach(([a,b])=>L(a,b,'BEND'));
   return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC','0','SECTION','2','ENTITIES',...e,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
 const dxfName=p=>`${p.file}_${p.mm}mm_x${p.q}.dxf`;
 const dxfNameZ=p=>`${p.file}_${p.mm}mm_x${p.q}_zag.dxf`;   // по заготовке: CUT — только то, что режет лазер, BLANK — заготовка
@@ -122,9 +120,13 @@ const savePart=p=>saveDxf(dxfName(p),dxfText(partMM(p)));
 const MODE_FILE=()=>({both:'mangal_s_pechyu',grill:'mangal',stove:'pech'})[S.mode];   // начало имён ZIP
 const PDF_ELEM=pt=>{for(const e of PARTS)if(e.d.some(d=>d[0]===pt))return e.id;return null;};
 
-// эскиз детали — из той же геометрии, что уходит в DXF
-function dxfSketch(m){const k=Math.min(230/m.w,64/m.h),w=Math.max(8,m.w*k),h=Math.max(8,m.h*k),H=m.h;
-  let g='';m.loops.forEach(l=>g+=`<polyline points="${l.map(([x,y])=>`${x},${H-y}`).join(' ')}"/>`);
-  m.circles.forEach(([x,y,r])=>g+=`<circle cx="${x}" cy="${H-y}" r="${r}"/>`);
-  m.bends.forEach(([a,b])=>g+=`<line class="bd" x1="${a[0]}" y1="${H-a[1]}" x2="${b[0]}" y2="${H-b[1]}"/>`);
+// эскиз детали — из той же геометрии, что уходит в DXF. kind (режим гильотины): 'gil' — просто прямоугольник,
+// 'zag' — контур заготовки тонким пунктиром, линии лазера (b — blankMM: пазы, вырезы, отверстия) сплошные; иначе — полный контур
+function dxfSketch(m,kind,b){const k=Math.min(230/m.w,64/m.h),w=Math.max(8,m.w*k),h=Math.max(8,m.h*k),H=m.h,pl=(l,c)=>`<polyline${c?` class="${c}"`:''} points="${l.map(([x,y])=>`${x},${H-y}`).join(' ')}"/>`;
+  let g='';
+  if(kind==='gil')g=pl(rect(m.w,m.h));
+  else{const d=kind==='zag'&&b?b:m;if(d!==m)g+=pl(rect(m.w,m.h),'bl');
+    d.loops.forEach(l=>g+=pl(l));
+    d.circles.forEach(([x,y,r])=>g+=`<circle cx="${x}" cy="${H-y}" r="${r}"/>`);
+    d.bends.forEach(([a,c])=>g+=`<line class="bd" x1="${a[0]}" y1="${H-a[1]}" x2="${c[0]}" y2="${H-c[1]}"/>`);}
   return `<svg class="dxfsk" width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="-2 -2 ${m.w+4} ${m.h+4}" aria-hidden="true">${g}</svg>`;}
