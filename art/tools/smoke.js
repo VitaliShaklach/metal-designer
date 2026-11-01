@@ -393,6 +393,10 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
     &&/revealRow\(\$\('parts'\)\.querySelector\(`tr\[data-p="\$\{pi\}"\]`\)\)/.test(UI)&&(UI.match(/scrollIntoView/g)||[]).length===2
     &&/else\{ST\.sel=\+tr\.dataset\.p;ST\.selB=-1;renderAll\(\);focusPart\([^\n]*showSel\(\);return;\}/.test(UI),
     T);}}
+// подпись сгиба не через выступ кромки: углы и середина рамки внутри, а узкая прорезь от края проходит между ними (было: подпись за контуром до 2,5 мм)
+{const P=[[0,0],[40,0],[40,20],[25.5,20],[25.5,4],[22.5,4],[22.5,20],[0,20]],g=run(`bendLabel('V90 (1)',[5,10,35,10],${JSON.stringify(P)},4)`);
+  const crosses=g&&g.some(s=>P.some((a,i)=>run(`segX(${JSON.stringify([s[0],s[1]])},${JSON.stringify([s[2],s[3]])},${JSON.stringify(a)},${JSON.stringify(P[(i+1)%P.length])})`))),inside=g&&g.every(s=>run(`inPoly([${s[0]},${s[1]}],${JSON.stringify(P)})&&inPoly([${s[2]},${s[3]}],${JSON.stringify(P)})`));
+  ok(!!g&&!crosses&&inside,'подпись сгиба не пересекает узкую прорезь от кромки (рамка целиком внутри контура)');}
 // телефон / iPad (BACKLOG 5–8): поля ≥ 16 px, галочки и «?» под палец, выпадашки «Перейти» высокие, вкладки ровно
 {const CSS=fs.readFileSync(__dirname+'/../css/style.css','utf8'),T=/@media \(max-width:900px\),\(pointer:coarse\)\{([\s\S]*?)\n\}/.exec(CSS),t=T?T[1]:'',M6=/@media \(max-width:600px\)\{\s*\.tabbar\{display:grid;grid-template-columns:repeat\(6,1fr\)/.test(CSS);
   ok(/select,textarea\{font-size:16px!important\}/.test(t)&&/\.chk input[^{]*\{width:24px;height:24px/.test(t)&&/\.tip\{[^}]*width:32px;height:32px/.test(t)&&/#shGo,#cdGo\{min-height:44px/.test(t)&&M6&&!/\.tabbar\{flex-wrap:wrap/.test(CSS),

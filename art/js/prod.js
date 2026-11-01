@@ -202,6 +202,8 @@ const segBox=(S,pad=0)=>{const xs=S.flatMap(z=>[z[0],z[2]]),ys=S.flatMap(z=>[z[1
 function bendLabel(t,z,P,h=4,busy=[]){const uw=t.length*1.5-.5,d=polyDist(P);let ang=Math.atan2(z[3]-z[1],z[2]-z[0]);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;const c=Math.cos(ang),s=Math.sin(ang);
   for(let hh=h;hh>=2.5-1e-9;hh-=.5)for(const off of [1.2,4,8])for(const f of [.5,.35,.65,.2,.8])for(const sd of [1,-1]){const w=uw*hh/2,k=sd*(hh/2+off),cx=z[0]+(z[2]-z[0])*f-s*k,cy=z[1]+(z[3]-z[1])*f+c*k,box=[[-w/2,-hh/2],[w/2,-hh/2],[w/2,hh/2],[-w/2,hh/2],[0,0]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
     if(!box.every(q=>inPoly(q,P)&&d(q)>.8))continue;const R=[[-w/2-.5,-hh/2-.5],[w/2+.5,-hh/2-.5],[w/2+.5,hh/2+.5],[-w/2-.5,hh/2+.5]].map(([x,y])=>[cx+c*x-s*y,cy+s*x+c*y]);
+    // углы и середина внутри — мало: острый выступ кромки проходит сквозь длинную рамку между ними (было: подпись сгиба за контуром реза до 2,5 мм)
+    if(P.some((a,i)=>{const b=P[(i+1)%P.length];return R.some((r,j)=>segX(a,b,r,R[(j+1)%4]));}))continue;
     if(busy.some(b=>quadHit(R,b)))continue;const g=textSegs(t,cx,cy,hh,ang);g.box=R;return g;}
   return null;}
 // точка куска в координатах листа: зеркало по x (f), поворот, сдвиг — как положил раскрой
