@@ -33,7 +33,7 @@ function grillGrateGeo(){return {loops:[rect(CG_L,CG_W)],circles:cgGrid(CG_L).fl
 function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
   const add=(file,name,mm,q,pt,geo,note='')=>r.push({file,name,mm,q,pt,geo,note});
   if(g){add('grill_side_back','Боковина жаровни задняя',5,1,'side0',()=>shapeGeo(grillWallShape(true)),'с вырезом под ручку решётки');
-    add('grill_side_front','Боковина жаровни передняя',5,1,'side1',()=>shapeGeo(grillWallShape(false)));
+    add('grill_side_front','Боковина жаровни передняя',5,1,'side1',()=>shapeGeo(grillWallShape(false)),starOn()?`со звездой Ø${Math.round(2*STAR_R*10)}`:'');
     add('grill_bottom','Дно жаровни',5,1,'gBot',()=>geoR(L1,W));
     add('grill_end_right','Торец жаровни правый',5,1,'gEnd',()=>geoR(W-2*t,H1-t));
     if(S.mode==='grill')add('grill_end_left','Торец жаровни левый',5,1,'gEnd0',()=>logoWallGeo(t,W-2*t,B+t,H1-t),S.logo?'с логотипом':'');

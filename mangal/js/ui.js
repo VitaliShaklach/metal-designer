@@ -75,6 +75,7 @@ document.querySelectorAll('#airSeg button').forEach(bt=>bt.addEventListener('cli
 document.getElementById('cDiv').addEventListener('change',e=>{S.div=e.target.checked;build3D();notesUI();});
 document.querySelectorAll('#divSeg button').forEach(bt=>bt.addEventListener('click',()=>{S.divPos=+bt.dataset.v;document.querySelectorAll('#divSeg button').forEach(x=>x.setAttribute('aria-pressed',x===bt));build3D();}));
 document.getElementById('cLogo').addEventListener('change',e=>{S.logo=e.target.checked;build3D();drawCut();});
+document.getElementById('cStar').addEventListener('change',e=>{S.star=e.target.checked;build3D();dimList();drawCut();notesUI();});
 document.getElementById('cMan').addEventListener('change',e=>{S.man=e.target.checked;build3D();});
 [['cCgr','cgr'],['cCgrPlate1','cgrPlate1'],['cCgrPlate2','cgrPlate2'],['cCgrAng','cgrAng']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{S[k]=e.target.checked;render();}));
 document.getElementById('cDeep').addEventListener('change',e=>{S.deep=e.target.checked;build3D();});
@@ -147,7 +148,7 @@ document.getElementById('copyView').addEventListener('click',async()=>{if(!ok)re
   msg.textContent=done?'Ссылка скопирована — откроет этот же вид':'Выделено — нажмите Ctrl+C';
   clearTimeout(box._t);box._t=setTimeout(()=>box.hidden=true,12000);});
 /* ---------- галочки, кнопки и ползунки — по состоянию S (после ссылки с видом) ---------- */
-const CHK={cMan:'man',cLogo:'logo',cAirSl:'airSl',cHook:'hook',cDiv:'div',cCgr:'cgr',cCgrPlate1:'cgrPlate1',cCgrPlate2:'cgrPlate2',cCgrAng:'cgrAng',cDeep:'deep',cGAng:'gAng',cGrillGrate:'grillGrate',cGrates2:'grates2',cSkew:'skew',cSkewD:'skewD',
+const CHK={cMan:'man',cLogo:'logo',cStar:'star',cAirSl:'airSl',cHook:'hook',cDiv:'div',cCgr:'cgr',cCgrPlate1:'cgrPlate1',cCgrPlate2:'cgrPlate2',cCgrAng:'cgrAng',cDeep:'deep',cGAng:'gAng',cGrillGrate:'grillGrate',cGrates2:'grates2',cSkew:'skew',cSkewD:'skewD',
   cPlate:'plate',cLift:'lift',cKazan:'kazan',cFb:'fb',cObe:'obe',cDamper:'damper',cChim:'chim',cChimX:'chimX',cTie:'tie',cLintel:'lintel',cDoor:'door',cDoorOpen:'doorOpen',cGrate:'grate',cAngles:'angles',cDraft:'draft',cWood:'wood',
   cLegs:'legs',cLegTw:'legTw',cWheels:'wheels',cRain:'rain',cSheet:'sheet',cBolt:'bolt',cWsh1:'wsh1',cWsh2:'wsh2',cNut:'nut'};
 function syncInputs(){
@@ -279,6 +280,7 @@ function notesUI(){const g=gOn(),k=sOn(),both=S.mode==='both',el=document.getEle
   const how=[
     g&&`<li><b>Жаровня ${u(L1)} × ${u(W)} × ${us(H1)}</b> под шампуры — лист 5 мм: боковины стоят на дне, торцы — между боковинами.${both?` Приваривается встык к перегородке печи по центру, ступенька ${(WK-W)/2*10} мм с каждой стороны.`:''}</li>`,
     g&&S.cgr&&`<li><b>Колосниковая решётка</b> — 2 половины из перфолиста 5–10 мм на уголках 30×30×4 над отверстиями поддува: воздух идёт под угли, зола проваливается на дно. От решётки до верха бортов ${us(13)}.</li>`,
+    g&&starOn()&&`<li><b>Звезда</b> Ø${u(2*STAR_R)} ${UN()} — сквозной вырез в передней боковине: сквозь него светятся угли. Стоит выше углей (низ звезды в ${u(STAR_Y-STAR_R)} ${UN()} от низа боковины, колосник — в ${u(CA_TOP+CG_T)} ${UN()} от низа жаровни), до пазов сверху — ${us(H1-t-SLOT_D-STAR_Y-STAR_R)}.</li>`,
     g&&`<li><b>Поддув</b> — ${holes().length} отверстий Ø15 мм в каждой боковине; задвижки снаружи регулируют жар.</li>`,
     k&&`<li><b>Печь под казан шириной ${us(WK)}</b> — под покупную плиту 450 × 450 мм с кольцами. Ширину уточните по купленной плите: внутренний размер между рёбрами минус 2–3 мм — плита садится на стенки как крышка.</li>`,
     k&&`<li><b>Топка</b> с ${S.mode==='stove'?'торца':'открытого левого торца'}: дверца на петлях, колосник на уголках, снизу поддувало с шибером, труба 60×60 мм сзади.</li>`,

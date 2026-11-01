@@ -5,7 +5,7 @@ const dimIds=[...fs.readFileSync(P+'/js/dims.js','utf8').matchAll(/^\s*\['([A-Za
 const mk=()=>{const U=new Proxy(function(){},{get:(t,k)=>{if(k===Symbol.toPrimitive)return()=>0;if(k===Symbol.iterator)return function*(){};if(k==='then')return undefined;return U;},apply:()=>U,construct:()=>U,set:()=>true});return U;};
 let fails=0,airMM=null,hookMM=null;   // габариты развёртки задвижки и скобы из partMM — для раскладки на прямоугольниках
 // {rain:false} — без крыши от дождя (галочка снята): ни крыши, ни трубок, ни строк крыши в размерах, «Массе», «Что купить», «Заметках»
-for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true},{rain:false,man:true}]){
+for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true,star:true},{rain:false,man:true}]){
   const U=mk(),errs=[];
   const flags=JSON.stringify(Object.assign({rain:true,mode},extra));
   const ctx={THREE:U,__U:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&dims='+dimIds.join(',')+'&flags='+encodeURIComponent(flags)},
@@ -165,6 +165,44 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
       return \`gil \${c.gil} / zag \${c.zag} / list \${c.list}; 5 мм: из листа \${(cl/1000).toFixed(2)} м → по заготовкам \${(cz/1000).toFixed(2)} м; схема: \${(${gilRep})(a)}; без подрезки: \${(${gilRep})(z)}; переключено: \${(${gilRep})(sw)}\`;})()`,ctx);}
   catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
   console.log('виды',mode,JSON.stringify(extra).slice(0,30),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
+
+// звезда на передней боковине ({star:true}): у передней боковины на 1 внутренний контур больше; контур замкнут, без самопересечений, внутри боковины,
+// до пазов, краёв и отверстий ≥ 10 мм, между уголками в жаровне; концы лучей ≥ 5 мм, металл между лучами ≥ 4 мм; с гильотиной — линии лазера заготовки;
+// в режиме «печь» и без галочки — как было; подписи — целые мм
+for(const mode of ['both','grill','stove'])for(const extra of [{},{div:true,gAng:true,grillGrate:true}]){const errs=[];let st='';
+  try{const on=mkReal(Object.assign({rain:true,mode,star:true},extra)),off=mkReal(Object.assign({rain:true,mode,star:false},extra));
+    const F=c=>vm.runInContext(`(()=>{const p=laserParts().find(p=>p.pt==='side1');return p?{m:partMM(p),note:p.note}:null;})()`,c),A=F(on),Z=F(off);
+    if(mode==='stove'){if(A||vm.runInContext('starOn()',on))throw new Error('печь: звезда есть');}
+    else{if(A.m.loops.length!==Z.m.loops.length+1)throw new Error('внутренних контуров '+(A.m.loops.length-1)+', без звезды '+(Z.m.loops.length-1));
+      if(JSON.stringify(A.m.loops.slice(0,-1))!==JSON.stringify(Z.m.loops)||JSON.stringify(A.m.circles)!==JSON.stringify(Z.m.circles))throw new Error('звезда поменяла остальной контур');
+      if(Z.note||A.note!=='со звездой Ø70')throw new Error('примечание детали: '+JSON.stringify([A.note,Z.note]));
+      st=vm.runInContext(`(()=>{const m=partMM(laserParts().find(p=>p.pt==='side1')),L=m.loops[m.loops.length-1],O=m.loops[0],e=1e-6,n=L.length-1,mm=v=>v*10;
+        if(L[0][0]!==L[n][0]||L[0][1]!==L[n][1])throw new Error('контур звезды не замкнут');
+        for(let i=0;i<n;i++)for(let j=i+2;j<n;j++){if(i===0&&j===n-1)continue;if(segX(L[i],L[i+1],L[j],L[j+1]))throw new Error('контур звезды пересекает сам себя');}
+        const dO=Math.min(...L.map(p=>polyDist(O)(p))),dC=Math.min(...m.circles.flatMap(([x,y,r])=>L.map(p=>Math.hypot(p[0]-x,p[1]-y)-r)));
+        if(!L.every(p=>inPoly(p,O))||dO<10-e||dC<10-e)throw new Error('звезда: до края/пазов '+dO.toFixed(1)+' мм, до отверстий '+dC.toFixed(1));
+        const xs=L.map(p=>p[0]),ys=L.map(p=>p[1]),bw=Math.max(...xs)-Math.min(...xs),bh=Math.max(...ys)-Math.min(...ys);
+        const rmax=Math.max(...L.map(p=>Math.hypot(p[0]-mm(STAR_X),p[1]-mm(STAR_Y))));if(Math.abs(2*rmax-70)>.5||mm(STAR_X)!==250||mm(STAR_Y)!==140||Math.abs(Math.min(...ys)-105)>.5||Math.abs(Math.max(...ys)-175)>.5)throw new Error('звезда: габарит '+bw.toFixed(1)+' × '+bh.toFixed(1)+', Y '+Math.min(...ys).toFixed(1)+'–'+Math.max(...ys).toFixed(1));
+        if(GA_XS.some(x=>Math.min(...xs)<mm(x+GA_L)+10&&Math.max(...xs)>mm(x)-10))throw new Error('звезда за уголком в жаровне');
+        if(Math.min(...ys)<=mm(CA_TOP+CG_T)-5)throw new Error('звезда ниже колосника');
+        const R=starRays().map(r=>[...r.right,...r.tip.slice(1,-1),...r.left].map(p=>p.map(mm))),pd=(P,Q)=>Math.min(...P.map(p=>Q.slice(0,-1).reduce((d,q,i)=>Math.min(d,ptSegD(p,q,Q[i+1])),1e9)));
+        const tip=Math.min(...starRays().map(r=>mm(Math.hypot(r.tip[0][0]-r.tip[8][0],r.tip[0][1]-r.tip[8][1])))),met=Math.min(...R.map((P,i)=>{const Q=R[(i+1)%R.length];return Math.min(pd(P,Q),pd(Q,P));}));
+        const len=starRays().map(r=>Math.hypot(r.tip[4][0]-STAR_X,r.tip[4][1]-STAR_Y)/STAR_R);
+        if(R.length!==10||Math.min(...len)<.8-e||Math.max(...len)>1+e||new Set(len.map(v=>v.toFixed(2))).size<4)throw new Error('лучи: '+len.map(v=>v.toFixed(2)));
+        if(tip<5-e||met<4-e)throw new Error('конец луча '+tip.toFixed(2)+' мм, металл между лучами '+met.toFixed(2)+' мм');
+        // гильотина: передняя боковина — заготовка, звезда — линии лазера (CUT) в _zag.dxf
+        const ty=nestJob({gil:true,edge:10,sel:{}}).groups.flatMap(G=>G.types).find(t=>t.p.pt==='side1'),Lz=ty.b.loops[ty.b.loops.length-1];
+        if(ty.kind!=='zag'||JSON.stringify(Lz)!==JSON.stringify(L)||!dxfText(ty.b).includes('\\r\\nCUT\\r\\n10\\r\\n'+L[0][0]+'\\r\\n20\\r\\n'+L[0][1]+'\\r\\n'))throw new Error('гильотина: звезды нет в линиях лазера заготовки');
+        // подписи: размеры звезды, «Масса», «Заметки» — целые мм
+        const txt=[],d0=dim3,l0=lab;dim3=(a,b,o,t)=>txt.push(String(t));lab=t=>txt.push(String(t));
+        try{dimRows().filter(d=>d.id&&/^star/.test(d.id)).forEach(d=>{txt.push(d.name,typeof d.val==='number'?u(d.val):String(d.val));d.fn();});}finally{dim3=d0;lab=l0;}
+        if(txt.filter(t=>/звезда Ø70/.test(t)).length!==1||!txt.includes('250')||!txt.includes('140'))throw new Error('размеры звезды: '+txt.join(' | '));
+        const row=cutRows().find(c=>c.pt&&[].concat(c.pt).includes('side1'));if(!/со звездой Ø70/.test(row.note))throw new Error('«Масса»: нет «со звездой Ø70»');txt.push(row.note.slice(row.note.indexOf('Передняя — со звездой')));   // остальное примечание — старое (край отверстия 12,5)
+        const bad=txt.find(t=>/[0-9],[0-9]/.test(t));if(bad)throw new Error('дробные мм: '+bad.slice(0,80));
+        return 'Ø'+Math.round(2*rmax)+' ('+bw.toFixed(0)+' × '+bh.toFixed(0)+'), конец луча ≥ '+tip.toFixed(1)+' мм, металл ≥ '+met.toFixed(1)+' мм, до пазов '+dO.toFixed(1)+' мм';})()`,on);
+      const noCut=vm.runInContext(`!cutRows().find(c=>[].concat(c.pt||[]).includes('side1')).note.includes('звезд')&&!starOn()`,off);if(!noCut)throw new Error('без галочки звезда в «Массе»');}}
+  catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
+  console.log('звезда',mode,JSON.stringify(extra),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
 // раскладка на прямоугольниках: 5-мм детали «печь + мангал» — все на одном листе 1250 × 2500; зазор между деталями и край листа — точно (polyGap)
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});

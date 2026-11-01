@@ -42,6 +42,7 @@ function grillWallShape(back){
     else{const r=DEEP_W/2,q=DEEP_SW/2,y=h-DEEP_D;s.lineTo(x+r,h);s.lineTo(x+r,y);s.lineTo(x+q,y);s.lineTo(x+q,y-DEEP_SD);s.lineTo(x-q,y-DEEP_SD);s.lineTo(x-q,y);s.lineTo(x-r,y);s.lineTo(x-r,h);}});
   s.lineTo(0,h);s.lineTo(0,0);
   holes().forEach(x=>{const p=new THREE.Path();p.absarc(x,HOLE_Y-t,HOLE/2,0,Math.PI*2,true);s.holes.push(p);});
+  if(!back&&starOn()){const p=new THREE.Path();starLoop().forEach(([x,y],i)=>i?p.lineTo(x,y):p.moveTo(x,y));s.holes.push(p);}   // звезда — сквозной вырез в передней боковине
   return s;}
 function grillWall(z,back){const me=ext(grillWallShape(back),M.steel);me.position.set(0,B+t,z);group.add(me);}
 // боковина печи: 60 × 49,5; в задней — отверстие под трубу
@@ -102,6 +103,8 @@ function buildParts(tag){
   tag('gBot');box(L1,t,W,0,B,0,M.steel);
   tag('side0');grillWall(0,true);
   tag('side1');grillWall(W-t,false);
+  tag('star');if(starOn()){const me=new THREE.Mesh(new THREE.CircleGeometry(STAR_R+.3,48),new THREE.MeshBasicMaterial({color:0xff7a1e}));   // угли за звездой: светящийся диск изнутри жаровни,
+    me.position.set(STAR_X,B+t+STAR_Y,W-t-.2);group.add(me);}   // лицом наружу (одна сторона) — виден только сквозь вырез, изнутри жаровни его нет
   tag('gEnd');box(t,H1-t,W-2*t,L1-t,B+t,t,M.steel);
   tag('gEnd0');if(S.mode==='grill'){if(S.logo)logoWall(tag,t,W-2*t,B+t,H1-t,t);else box(t,H1-t,W-2*t,0,B+t,t,M.steel);}   // левый торец — у отдельного мангала (вместе его роль играет перегородка печи)
   tag('gGrate');
