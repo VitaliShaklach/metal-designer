@@ -106,9 +106,9 @@ function nestSvg(N,G,sh,isOn,big){const W=N.W,H=N.H,fk=big?1:2,fs=Math.round(H*.
   return `<svg class="nestsv" viewBox="${-pd} ${-pd} ${W+pd+10} ${H+pd+10}" role="img" aria-label="Лист ${G.mm} мм, ${H} × ${W}, деталей ${sh.items.length}">${g}</svg>`;}
 // вкладка: большой лист 5 мм, маленькие 3 / 6 / 15 мм, легенда «№ — деталь — габарит — шт»; выбранное на модели подсвечено
 function nestDraw(N,res){const box=document.getElementById('nestBox');if(!box)return;box.classList.remove('busy');
-  const isOn=ty=>!!S.sel.el&&inSel(PDF_ELEM(ty.p.pt),ty.p.pt);let big='',small='';
+  const isOn=ty=>!!S.sel.el&&inSel(PDF_ELEM(ty.p.pt),ty.p.pt),wide=!(box.clientWidth>0&&box.clientWidth<600);let big='',small='';   // узкий экран (телефон): у основного листа шрифт как у маленьких — иначе номера ~4 px
   N.groups.forEach((G,gi)=>{const R=res[gi];if(!R)return;const main=G.mm===5;let h='';
-    R.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet${main?' main':''}"><figcaption>Лист ${G.mm} мм${R.sheets.length>1?` (${si+1} из ${R.sheets.length})`:''} · ${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм</figcaption>${nestSvg(N,G,sh,isOn,main)}</figure>`;});
+    R.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet${main?' main':''}"><figcaption>Лист ${G.mm} мм${R.sheets.length>1?` (${si+1} из ${R.sheets.length})`:''} · ${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм</figcaption>${nestSvg(N,G,sh,isOn,main&&wide)}</figure>`;});
     if(R.too.length){const c={};R.too.forEach(o=>c[o.no]=(c[o.no]||0)+1);
       h+=`<p class="nwarn">Лист ${G.mm} мм — не поместилось: ${Object.keys(c).map(no=>{const ty=G.types.find(t=>t.no===+no);return `${no} ${ty.p.name}${c[no]>1?` × ${c[no]}`:''}`;}).join(', ')}</p>`;}
     if(main)big+=h;else small+=h;});
