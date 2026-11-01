@@ -16,4 +16,4 @@
 2. Запись в `CHANGELOG.md`: `## Искусство vX — дата` / `## Каркасы vX — …` / `## vX — …` (мангал).
 3. Хук `.githooks/pre-commit` сам проверит п.1–2 и smoke задетых разделов. Включить один раз на клон: `git config core.hooksPath .githooks`. `--no-verify` — только со слова Виталия.
 4. Правки в `art/` — пройти скил `art-verify` (картинки, превью, телефон/iPad).
-5. Новое изделие в «Искусство» — скил `art-add-figure`. Бэклог — `art/BACKLOG.md`.
+5. Новое изделие в «Искусство» — скил `art-add-figure`. Бэклоги — `art/BACKLOG.md`, `mangal/BACKLOG.md`.
