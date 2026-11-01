@@ -273,14 +273,18 @@ ok(run("EG.close")===0&&run("EG.miss")===0&&run("EG.tiny")===0&&run("EG.labs")==
   "гравировка заготовок: Д9 — каждая подпись сгиба выгравирована и не ближе 1 мм к номерам деталей и другим подписям, номер мельчит не меньше 5 мм; на карте — та же гравировка, подписи сгибов бледно");
 // перфорация линий сгиба: прорези 2 мм на каждой линии, центры крайних — 10 мм от концов, шаг не больше 20, все внутри заготовки; в метраже — отдельно от реза и врезок;
 // в DXF — слой PERF, у каждой детали контур CUT после её меток; без галочки и при плазме прорезей нет
-run(`ST.perf=true;ST.cut='laser';ST.perfL=2;ST.perfStep=20;ST.perfEdge=10;PF={segs:0,holes:0,bad:0,stray:0,out:0};PI=[];
+run(`ST.perf=true;ST.cut='laser';ST.perfL=2;ST.perfStep=20;ST.perfEdge=10;PF={segs:0,holes:0,bad:0,stray:0,out:0,moved:0};PI=[];
   CUR.BL.forEach((B,i)=>{const t=bendAlign(B.pts,true),P=B.pts.map(q=>trPt(t,q)),o={id:'b'+i,no:'Г'+B.no,pts:P,tr:t},m=itemMarks(o);PI.push(o);let got=0;
     m.P.forEach(h=>{if(!inPoly([(h[0]+h[2])/2,(h[1]+h[3])/2],P))PF.out++;});
     B.lines.forEach(l=>l.segs.forEach(z=>{const a=trPt(t,[z[0],z[1]]),b=trPt(t,[z[2],z[3]]),L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L,pr=p=>(p[0]-a[0])*ux+(p[1]-a[1])*uy;PF.segs++;
       const C=m.P.filter(h=>[[h[0],h[1]],[h[2],h[3]]].every(p=>Math.abs((p[0]-a[0])*uy-(p[1]-a[1])*ux)<1e-6&&pr(p)>-1e-6&&pr(p)<L+1e-6)).map(h=>{if(Math.abs(Math.hypot(h[2]-h[0],h[3]-h[1])-2)>.01)PF.bad++;return pr([(h[0]+h[2])/2,(h[1]+h[3])/2]);}).sort((x,y)=>x-y);
       got+=C.length;PF.holes+=C.length;
-      if(L<6){if(C.length)PF.bad++;return;}if(L<=20){if(C.length!==1||Math.abs(C[0]-L/2)>.01)PF.bad++;return;}
-      if(Math.abs(C[0]-10)>.01||Math.abs(C[C.length-1]-(L-10))>.01||C.some((c,k)=>k&&c-C[k-1]>20+1e-6))PF.bad++;}));
+      // место по правилу: крайние центры 10 мм от концов, шаг не больше 20 (короткая — одна посередине); перемычки до кромки хватает — прорезь ровно там,
+      // не хватает (линия подходит к кромке под острым углом) — там её нет, а рядом (до 10 мм к середине) — не больше одной; у каждой перемычка ≥ perfBridge
+      if(L<6){if(C.length)PF.bad++;return;}const E=L<=20?[L/2]:(n=>Array.from({length:n},(_,i)=>10+(L-20)*i/(n-1)))(Math.ceil((L-20)/20-1e-9)+1),HG=c=>perfGap([a[0]+ux*(c-1),a[1]+uy*(c-1),a[0]+ux*(c+1),a[1]+uy*(c+1)],P);
+      if(C.some(c=>HG(c)<perfBridge()-1e-6)||C.length>E.length)PF.bad++;
+      E.forEach(e=>{const at=C.some(c=>Math.abs(c-e)<.01);if(HG(e)>=perfBridge()-1e-6){if(!at)PF.bad++;return;}PF.moved++;const dir=e<L/2?1:-1;if(at||C.filter(c=>(c-e)*dir>.01&&(c-e)*dir<=10.01).length>1)PF.bad++;});
+      if(C.some(c=>!E.some(e=>Math.abs(c-e)<.01||(c-e)*(e<L/2?1:-1)>0&&Math.abs(c-e)<=10.01)))PF.bad++;}));
     if(got!==m.P.length)PF.stray++;});
   PS0=cutStats(PI);ST.perf=false;PS1=cutStats(PI);ST.perf=true;ST.cut='plasma';PS2=cutStats(PI);ST.cut='laser';
   NI=PI.map((o,i)=>{const xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]);return Object.assign({},o,{x:i*3000-Math.min(...xs),y:-Math.min(...ys)});});
@@ -291,9 +295,9 @@ run(`ST.perf=true;ST.cut='laser';ST.perfL=2;ST.perfStep=20;ST.perfEdge=10;PF={se
   EN1=DXP(dxfNest());DO={bad:0,perf:0};CI=[];EN1.forEach((en,j)=>{if(en.lay==='SHEET')return;const k=Math.floor((en.x+1)/3000);(CI[k]=CI[k]||{m:[],c:[]})[en.lay==='CUT'?'c':'m'].push(j);if(en.lay==='PERF')DO.perf++;});
   CI.forEach((g,k)=>{if(!g||g.c.length!==1||g.m.some(j=>j>g.c[0]||(k&&CI[k-1]&&j<CI[k-1].c[0])))DO.bad++;});
   ST.perf=false;EN2=DXP(dxfNest());ST.perf=true;ST.cut='plasma';EN3=DXP(dxfNest());ST.cut='laser';ST.perf=false;CUR.N=N0;`);
-console.log('     перфорация Д9: линий сгиба '+run('PF.segs')+', прорезей '+run('PF.holes')+' ('+run("perfTxt(PS0)")+'), DXF: PERF '+run('DO.perf'));
+console.log('     перфорация Д9: линий сгиба '+run('PF.segs')+', прорезей '+run('PF.holes')+' ('+run("perfTxt(PS0)")+'), сдвинуто от кромки '+run('PF.moved')+', DXF: PERF '+run('DO.perf'));
 ok(run("PF.holes")>0&&run("PF.bad+PF.stray+PF.out")===0&&run("PS0.perf===PF.holes&&PS0.perfPierce===PF.holes&&Math.abs(PS0.perfLen-2*PF.holes)<.1&&PS0.pierce===PS1.pierce&&Math.abs(PS0.cut-PS1.cut)<1e-6&&PS1.perf===0&&PS2.perf===0"),
-  "перфорация: Д9 — на каждой линии сгиба прорези 2 мм, крайние центры 10 мм от концов, шаг не больше 20, все внутри заготовки; рез и врезки контуров не меняются, перфорация считается отдельно; без галочки и при плазме — нет");
+  "перфорация: Д9 — на каждой линии сгиба прорези 2 мм, крайние центры 10 мм от концов (у острого угла с кромкой — дальше, перемычка ≥ max(3, 2t)), шаг не больше 20, все внутри заготовки; рез и врезки контуров не меняются, перфорация считается отдельно; без галочки и при плазме — нет");
 ok(run("DO.perf")===run("PF.holes")&&run("DO.bad")===0&&run("CI.filter(Boolean).length")===run("NI.length")&&run("!EN2.some(e=>e.lay==='PERF')&&!EN3.some(e=>e.lay==='PERF')")&&run("EN2.some(e=>e.lay==='BEND_V')"),
   "перфорация в DXF: слой PERF, у каждой заготовки гравировка, сгибы и прорези раньше её контура CUT; без галочки и при плазме слоя PERF нет");
 // v0.17.0 сварка: TIG — зазор 0,5; полуавтомат — 1, лист до 1,5 мм — 0,5; свой зазор при смене толщины не сбивается; меньше зазор — деталь больше (кромка у шва ближе на четверть разницы)
@@ -354,7 +358,7 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
 {const tc={};vm.createContext(tc);const src=fs.readFileSync(P+'tips.js','utf8');vm.runInContext(src.slice(0,src.indexOf('\n(()=>'))+'\nthis.TIPS=TIPS;',tc);const TP=tc.TIPS;
   // Д11 как на странице: растянут до высоты 600, подложки глаз, гибка с повтором без «плохих» заготовок, уголки под швы и сгибы
   run(`ST={t:2,gap:0.5,useT:true,minW:15,bend:true,tpl:true};M11=figureMesh('doberman11',12);{const z=meshBox(M11.V).size,H=FIGURES.doberman11.H;M11=polyBase(fitMesh({V:M11.V,F:[]},{H,W:Math.round(z[0]*H/z[1]),D:Math.round(z[2]*H/z[1])}).V,M11.P,M11.S);}M11={V:M11.V,F:M11.F,T:M11.T,S:M11.S};R11=buildParts(M11,1.5,1.5);addBacking(R11,M11);pairNumbers(R11,M11.V);
-    (()=>{const ban=new Set();for(let k=0;k<4;k++){P11=bendPlan(R11,M11.V,{sheet:[1250,2500],ban});const BL=P11.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,R11,M11.V,P11,{t:2,gap:0.5,useT:true})));BL11=BL.filter(b=>!b.bad);if(BL11.length===BL.length)break;BL.filter(b=>b.bad).forEach(b=>b.bends.forEach(id=>ban.add(id)));}})();
+    (()=>{const ban=new Set();for(let k=0;k<4;k++){P11=bendPlan(R11,M11.V,{sheet:[1250,2500],ban});const BL=P11.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,R11,M11.V,P11,{t:2,gap:0.5,useT:true})));BL11=BL.filter(b=>!b.bad);if(BL11.length===BL.length)break;BL.filter(b=>b.bad).forEach(b=>b.bends.forEach(id=>ban.add(id)));}blankNumbers(BL11,R11);blankTwins(BL11,R11,P11.J);})();
     BJ11=BL11.flatMap(b=>b.bends.map(id=>P11.J[id]));BK11=new Set(BJ11.map(j=>bendKey(j.p,j.q)));N11=R11.parts.length;BN11=BL11.reduce((a,b)=>a+b.parts.length,0);
     TPL11=weldTemplates(R11,2,15,(p,q)=>BK11.has(bendKey(p,q)),BL11.flatMap(b=>b.lines.map(l=>l.ang)));BLEN11=BJ11.reduce((a,j)=>a+j.len,0);`);
   const n=run('N11'),bl=run('BL11.length'),ns=n-run('BN11'),pc=bl+ns,tp=run('TPL11.length'),bm=(run('BLEN11')/1000).toFixed(1).replace('.',',');
@@ -363,4 +367,40 @@ ok(run("nestGap('laser')===5&&nestGap('plasma')===7&&ngapAfterCut(5,false,'plasm
   ok(TP.cBend.includes(`У Добермана 11 вместо ${n} деталей — ${pc} позиций на резку (${bl} заготовок со сгибами и ${ns} отдельных деталей), сварки на ${bm} м меньше`)&&TP.cTpl.includes(`у Добермана 11 их ${tp}`)&&!/Доберман\S* ([1-9]|10)\b/.test(TP.cBend+TP.cTpl),
     "подсказки «Гнуть» и «Уголки»: пример на Добермане 11, числа — как считает программа");
   ok(/плазма — 7 мм/.test(TP.sNGap)&&/руками/.test(TP.sNGap),"подсказка «Между деталями на листе»: плазма 7 мм, свой зазор не сбивается");}
+// ревью 28.10 №2, 4, 19, 20 — Доберманы 7–11 как на странице (высота 600, подложки глаз, гибка с повтором, номера пар, у «.1» — числа основной)
+run(`PG=id=>{ST={t:2,gap:0.5,useT:true,minW:15,bend:true,tpl:true,engrave:true,perf:true,cut:'laser',perfL:2,perfStep:20,perfEdge:10};let M=figureMesh(id,12);
+    {const z=meshBox(M.V).size,H=FIGURES[id].H;M=polyBase(fitMesh({V:M.V,F:[]},{H,W:Math.round(z[0]*H/z[1]),D:Math.round(z[2]*H/z[1])}).V,M.P,M.S);}M={V:M.V,F:M.F,T:M.T,S:M.S};
+    const R=buildParts(M,1.5,1.5);addBacking(R,M);pairNumbers(R,M.V);let P,BL;const ban=new Set();
+    for(let k=0;k<4;k++){P=bendPlan(R,M.V,{sheet:[1250,2500],ban});const B=P.blanks.filter(b=>b.parts.length>1).map(b=>Object.assign(b,bendBlank(b,R,M.V,P,{t:2,gap:0.5,useT:true})));BL=B.filter(b=>!b.bad);if(BL.length===B.length)break;B.filter(b=>b.bad).forEach(b=>b.bends.forEach(id=>ban.add(id)));}
+    blankNumbers(BL,R);blankTwins(BL,R,P.J);CUR={R,M3:M,BL,BP:P};return CUR;};
+  FIGS=['doberman7','doberman8','doberman9','doberman10','doberman11'];NM=id=>'Д'+id.slice(8);NO=x=>String(x).replace(/[.]1$/,'');`);
+// №2: у X и X.1 одни числа — угол и порядок сгибов, габарит, площадь, рез у заготовок; размеры, площадь, рез и углы швов у деталей (раньше: Г1 V166 / V167, Г3 186 × 80 / 81, шов 95° / 96°)
+run(`MP={blanks:0,parts:0,bad:[],raw:0};FIGS.forEach(id=>{const C=PG(id),R=C.R,no=i=>R.parts[i].no;
+  C.BL.filter(b=>b.no%1).forEach(b=>{const m=C.BL.find(x=>x.no===Math.floor(b.no));if(!m)return;MP.blanks++;const w=NM(id)+' Г'+m.no+'/Г'+b.no;
+    const ln=B=>B.lines.map(l=>l.k+l.kind+l.ang+' '+[no(l.p),no(l.q)].map(NO).sort().join('-')).join(' ');if(ln(b)!==ln(m))MP.bad.push(w+' сгибы «'+ln(m)+'» ≠ «'+ln(b)+'»');
+    if([b.L,b.W,b.area,b.cut].map(Math.round).join()!==[m.L,m.W,m.area,m.cut].map(Math.round).join())MP.bad.push(w+' габарит/площадь/рез');
+    if(Math.round(bendDims(b.pts)[0])!==Math.round(bendDims(m.pts)[0])||Math.round(perim(b.pts))!==Math.round(perim(m.pts)))MP.raw++;});
+  R.parts.filter(p=>p.twin!=null&&p.no%1).forEach(p=>{const q=mainPart(R,p),w=NM(id)+' '+q.no+'/'+p.no,nb=i=>partNbs(R,i).map(g=>NO(no(g.nb))+' '+angT(g.dih)).join(', ');MP.parts++;
+    if(q===p||q.no!==Math.floor(p.no))MP.bad.push(w+' основная');if(nb(p.id)!==nb(q.id)&&partNbs(R,p.id).map(g=>NO(no(g.nb))).sort().join()===partNbs(R,q.id).map(g=>NO(no(g.nb))).sort().join())MP.bad.push(w+' соседи «'+nb(q.id)+'» ≠ «'+nb(p.id)+'»');});});`);
+console.log('     зеркальные пары Д7–Д11: заготовок '+run('MP.blanks')+' (по своей геометрии разошлись бы габарит или рез у '+run('MP.raw')+'), деталей '+run('MP.parts')+'; расхождений ['+run('MP.bad.slice(0,4)')+']');
+ok(run('MP.blanks')>40&&run('MP.parts')>150&&run('MP.raw')>0&&run('MP.bad.length')===0,'зеркальные пары Д7–Д11: у Г3.1 углы, порядок сгибов, габарит, площадь и рез — как у Г3; у детали X.1 размеры и соседи с углами — как у X');
+// №2: подписи сгибов в DXF у пары одни; Д11 — те, что нашлись на ревью
+run(`C=PG('doberman11');DXL=b=>{const t=bendAlign(b.pts,true),o={id:'b'+C.BL.indexOf(b),no:'Г'+b.no,pts:b.pts.map(q=>trPt(t,q)),tr:t};return itemMarks(o).labs.map(x=>x.t).sort().join(' ');};
+  DX2=C.BL.filter(b=>b.no%1).filter(b=>DXL(b)!==DXL(C.BL.find(x=>x.no===Math.floor(b.no)))).map(b=>'Г'+b.no);G4=['Г4','Г4.1'].map(n=>C.BL.find(b=>'Г'+b.no===n).lines.map(l=>l.kind+l.ang).join(' '));`);
+ok(run('DX2.length')===0&&run('G4[0]===G4[1]'),'зеркальные пары в DXF: подписи сгибов «V161 (4)» у Г4 и Г4.1 (и у всех пар Д11) одни и те же');
+// №4: соседи — по всем рёбрам: у 23 / 23.1 (Д10) участок вдоль 30 и 31 — одна сторона, второй сосед из столбца пропадал
+run(`C=PG('doberman10');R=C.R;P23=['23','23.1'].map(n=>R.parts.find(p=>String(p.no)===n));NB23=P23.map(p=>partNbs(R,p.id).map(g=>NO(R.parts[g.nb].no)).join(', '));
+  SG23=P23.map(p=>p.segs.filter(g=>g.nb>=0).map(g=>NO(R.parts[g.nb].no)).sort().join(', '));LOST=0;FIGS.forEach(id=>{const R=PG(id).R;R.parts.forEach((p,pi)=>{const a=new Set(p.segs.filter(g=>g.nb>=0).map(g=>g.nb)),b=new Set(partNbs(R,pi).map(g=>g.nb));
+    if([...b].some(x=>!a.has(x)))LOST++;const e=new Set();R.edges.forEach(z=>{if(z.p.length===2&&z.p.includes(pi))e.add(z.p[0]===pi?z.p[1]:z.p[0]);});if(e.size!==b.size||[...e].some(x=>!b.has(x)))LOST=-1e9;});});`);
+console.log('     соседи 23 / 23.1 (Д10): «'+run('NB23[0]')+'» / «'+run('NB23[1]')+'»; по сторонам было «'+run('SG23[0]')+'» / «'+run('SG23[1]')+'»; деталей Д7–Д11, у которых по сторонам терялся сосед: '+run('LOST'));
+ok(run('NB23[0]===NB23[1]')&&run("NB23[0].split(', ').includes('30')&&NB23[0].split(', ').includes('31')")&&run('LOST')>0,'соседи детали — все по рёбрам, по номеру: у 23 и 23.1 (Д10) одинаково, и 30, и 31');
+// №19: перемычка от прорези перфорации до кромки ≥ max(3 мм, 2t); было 2,2 мм у Г2–Г4 (линия сгиба подходит к кромке под острым углом)
+run(`PB={n:0,min:1e9,old:1e9,figs:{}};FIGS.slice(2).forEach(id=>{const C=PG(id);C.BL.forEach((b,i)=>{const t=bendAlign(b.pts,true),P=b.pts.map(q=>trPt(t,q)),m=itemMarks({id:'b'+i,no:'Г'+b.no,pts:P,tr:t});
+    m.P.forEach(h=>{PB.n++;PB.min=Math.min(PB.min,perfGap(h,P));});m.V.concat(m.M).forEach(z=>{const L=Math.hypot(z[2]-z[0],z[3]-z[1]);if(L<=20)return;const u=[(z[2]-z[0])/L,(z[3]-z[1])/L];
+      [9,L-11].forEach(s=>{PB.old=Math.min(PB.old,perfGap([z[0]+u[0]*s,z[1]+u[1]*s,z[0]+u[0]*(s+2),z[1]+u[1]*(s+2)],P));});});});});`);
+console.log('     перфорация Д9–Д11: прорезей '+run('PB.n')+', перемычка до кромки от '+run('PB.min.toFixed(2)')+' мм (порог '+run('perfBridge()')+'; по старому правилу 10 мм от конца было бы от '+run('PB.old.toFixed(2)')+')');
+ok(run('PB.n')>500&&run('PB.min')>=run('perfBridge()')-1e-6&&run('perfBridge()')===4&&run('PB.old')<3,'перфорация: перемычка от прорези до кромки не меньше max(3 мм, 2t) — 4 мм при 2 мм; крайняя прорезь у острого угла линии с кромкой сдвинута к середине');
+// №20: в контуре заготовки нет повтора точки — соседние точки не ближе 0,05 мм, и после округления DXF до 0,01 тоже разные
+run(`ZS={n:0,bad:[]};FIGS.forEach(id=>{const C=PG(id);C.BL.forEach(b=>{const P=b.pts;ZS.n++;P.forEach((q,i)=>{const z=P[(i+1)%P.length];if(Math.hypot(z[0]-q[0],z[1]-q[1])<=.05||dn(z[0])===dn(q[0])&&dn(z[1])===dn(q[1]))ZS.bad.push(NM(id)+' Г'+b.no);});});});`);
+ok(run('ZS.n')>200&&run('ZS.bad.length')===0,'контур заготовки Д7–Д11 без нулевых отрезков (было: Д10 Г20, Г23, Г23.1, Г25; Д11 Г22, Г24): точки не ближе 0,05 мм, в DXF не совпадают');
 console.log(bad?'ОШИБОК: '+bad:'всё ок');process.exit(bad?1:0);

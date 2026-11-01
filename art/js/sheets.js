@@ -77,7 +77,7 @@ function sheetGeneral(){const T=CUR.T,b=meshBox(CUR.M3.V),[W,H,D]=b.size,bf=proj
 const TR_FS=4,TR_P=5.4,trW=w=>Math.floor(w/(.43*TR_FS))-4,TR_W=trW(110);   // шрифт, шаг строк, знаков в строке по ширине w мм (с отступом продолжения)
 function techReq(bend,w=110){const Q=[],g=mmT(ST.gap);
   if(bend)Q.push('V — гнуть на себя, m — от себя, глядя на сторону с гравировкой (внутреннюю). Число у линии — угол между гранями после гибки, в скобках — порядок гибки.',
-    'Линии сгиба — в DXF гравировкой на слоях BEND_V и BEND_M'+(perfOn()?`, по ним сквозные прорези ${fmt(ST.perfL,1)} мм шагом до ${ST.perfStep} мм — слой PERF.`:'.'),
+    'Линии сгиба — в DXF гравировкой на слоях BEND_V и BEND_M'+(perfOn()?`, по ним сквозные прорези ${fmt(ST.perfL,1)} мм шагом до ${ST.perfStep} мм, до кромки не ближе ${fmt(perfBridge(),0)} мм — слой PERF.`:'.'),
     'Порядок на лазере: ENGRAVE, BEND_V и BEND_M, PERF, последним — контур CUT (внутреннее раньше наружного, иначе вырезанная деталь упадёт). Мелкие детали — на микроперемычках.',
     'Толстый лист: пропил болгаркой — только по V и только изнутри.');
   else if(ST.engrave)Q.push('Порядок на лазере: гравировка ENGRAVE, последним — контур CUT.');
@@ -114,7 +114,7 @@ function asmUnits(){const R=CUR.R,u=new Map();[...R.parts].sort((a,b)=>a.no-b.no
 // Зеркальная пара — один шаг, если и зеркальный кусок есть к чему приварить (или оба — начало). w — к чему варить: [{nb, dih, ed}], done — собрано после шага
 function asmSteps(){const {L:U,of}=asmUnits(),R=CUR.R,n=U.length,placed=new Set(),pu=new Set(),steps=[],own=U.map(x=>new Set(x.ps.map(p=>p.id))),UE=U.map(()=>[]);
   R.edges.forEach(e=>{if(e.p.length!==2)return;const a=of.get(e.p[0]),b=of.get(e.p[1]);if(a===b)return;UE[a].push(e);UE[b].push(e);});
-  const weldTo=(i,set)=>{const m=new Map();UE[i].forEach(e=>{const b=own[i].has(e.p[0])?e.p[1]:e.p[0];if(!set.has(b))return;if(!m.has(b))m.set(b,{nb:b,dih:e.dih,ed:[]});m.get(b).ed.push([e.a,e.b]);});return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);};
+  const weldTo=(i,set)=>{const m=new Map();UE[i].forEach(e=>{const a=own[i].has(e.p[0])?e.p[0]:e.p[1],b=a===e.p[0]?e.p[1]:e.p[0];if(!set.has(b))return;if(!m.has(b))m.set(b,{nb:b,dih:seamDih(R,a,b),ed:[]});m.get(b).ed.push([e.a,e.b]);});return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);};
   const twinOf=i=>U[i].tw;
   while(pu.size<n){let i=-1;for(let k=0;k<n&&i<0;k++)if(!pu.has(k)&&(!placed.size||U[k].ps[0].back||weldTo(k,placed).length))i=k;
     for(let k=0;k<n&&i<0;k++)if(!pu.has(k))i=k;
@@ -169,7 +169,7 @@ function sheetsSpec(){const dens=DENS[ST.mat]||7850,R=CUR.R,cols=[{t:'№',w:15,
   // зеркальная пара (две отдельные детали или две заготовки) — одной строкой «7 / 7.1», кол. 2
   const pc=new Map(CUR.PC.map(o=>[String(o.no),o])),twinOf=o=>{const nm=String(o.no);return nm.endsWith('.1')?null:pc.get(nm+'.1')||null;};
   const rows=CUR.PC.filter(o=>!String(o.no).endsWith('.1')||!pc.has(String(o.no).slice(0,-2))).map(o=>{const tw=twinOf(o),xs=o.pts.map(q=>q[0]),ys=o.pts.map(q=>q[1]),a=Math.abs(area2(o.pts)),in_=new Set(o.parts),nb=new Map();
-    o.parts.forEach(pi=>R.parts[pi].segs.forEach(g=>{if(g.nb>=0&&!in_.has(g.nb))nb.set(R.parts[g.nb].no+' '+angT(g.dih),1);}));
+    o.parts.forEach(pi=>partNbs(R,pi).forEach(g=>{if(!in_.has(g.nb))nb.set(R.parts[g.nb].no+' '+angT(g.dih),1);}));
     // заготовка — одной строкой: габарит по развёртке, детали в ней
     const gab=o.B?`${Math.round(o.B.L)} × ${Math.round(o.B.W)}`:`${Math.round(Math.max(...xs)-Math.min(...xs))} × ${Math.round(Math.max(...ys)-Math.min(...ys))}`;
     return [tw?`${o.no} / ${tw.no}`:o.no,gab,fmt(a/100,1),fmt(a*1e-9*ST.t*dens,3),Math.round(perim(o.pts)),tw?2:1,(tw?'зеркально; ':'')+(o.B?`дет. ${o.parts.map(pi=>R.parts[pi].no).join(', ')}; `:'')+[...nb.keys()].join(', ')];});
@@ -193,8 +193,16 @@ const perim=P=>P.reduce((a,q,i)=>{const z=P[(i+1)%P.length];return a+Math.hypot(
 // перфорация линий сгиба (галочка, только лазер): сквозные прорези длиной d вдоль линии (рез без ширины — ширина = рез лазера), центр первой — в edge от конца отрезка линии,
 // дальше равномерно с шагом не больше step; отрезок короче 2·edge — одна посередине. → отрезки [x1, y1, x2, y2]
 const perfOn=()=>!!ST.perf&&ST.cut!=='plasma',perfKey=()=>perfOn()?[ST.perfL,ST.perfStep,ST.perfEdge].join('/'):'';
-function perfHoles(S){const d=ST.perfL,st=ST.perfStep,ed=ST.perfEdge,out=[];S.forEach(z=>{const L=Math.hypot(z[2]-z[0],z[3]-z[1]);if(L<d+4)return;const P=t=>[z[0]+(z[2]-z[0])*t/L,z[1]+(z[3]-z[1])*t/L],at=t=>out.push([...P(t-d/2),...P(t+d/2)]);
-    if(L<=2*ed){at(L/2);return;}const n=Math.ceil((L-2*ed)/st-1e-9)+1;for(let i=0;i<n;i++)at(ed+(L-2*ed)*i/(n-1));});return out;}
+// C — контур куска (те же координаты): перемычка от прорези до кромки не меньше perfBridge. Линия сгиба подходит к кромке под острым углом — крайняя прорезь
+// в 10 мм от конца линии оказывалась в 2 мм от края (Г2–Г4 у Д10) и при гибке рвалась; такую сдвигаем к середине линии шагами 0,5 мм (не дальше полшага), не вышло — без неё
+const perfBridge=()=>Math.max(3,2*(ST.t||0));   // не тоньше двух толщин (перемычку тянет при гибке), но и не меньше 3 мм — тоньше лазер пережигает
+const perfGap=(h,C)=>{const a=[h[0],h[1]],b=[h[2],h[3]];let m=Infinity;C.forEach((p,i)=>{const q=C[(i+1)%C.length];m=Math.min(m,ptSegD(a,p,q),ptSegD(b,p,q),ptSegD(p,a,b));});return m;};
+function perfHoles(S,C){const d=ST.perfL,st=ST.perfStep,ed=ST.perfEdge,mb=perfBridge(),out=[];S.forEach(z=>{const L=Math.hypot(z[2]-z[0],z[3]-z[1]);if(L<d+4)return;const P=t=>[z[0]+(z[2]-z[0])*t/L,z[1]+(z[3]-z[1])*t/L],hole=t=>[...P(t-d/2),...P(t+d/2)];
+    const T=L<=2*ed?[L/2]:(n=>Array.from({length:n},(_,i)=>ed+(L-2*ed)*i/(n-1)))(Math.ceil((L-2*ed)/st-1e-9)+1),put=[];
+    T.forEach((t0,i)=>{const dir=t0<L/2?1:-1;for(let s=0;s<=st/2+1e-9;s+=.5){const t=t0+dir*s;if(t<d/2||t>L-d/2)break;
+      if(s>0&&(put.length&&t-put[put.length-1]<d+mb-1e-9||T[i+1]!=null&&T[i+1]-t<d+mb-1e-9))break;   // сдвинутая — не ближе перемычки к соседним прорезям
+      if(!C||perfGap(hole(t),C)>=mb-1e-9){put.push(t);break;}}});
+    put.forEach(t=>out.push(hole(t)));});return out;}
 function itemMarks(o){const eng=ST.engrave||isTpl(o),pk=perfKey();if(o._mk&&o._mk.bl===CUR.BL&&o._mk.e===eng&&o._mk.pk===pk)return o._mk.r;let r;
   if(!isBlank(o)){const g=eng?engraveSegs(o.no,o.pts):null;r={eng:g||[],miss:eng&&!g?[itemName(o)]:[],V:[],M:[],P:[]};}
   else{const B=CUR.BL[+o.id.slice(1)],T=q=>trPt(o.tr,q);r={eng:[],miss:[],V:[],M:[],P:[],num:[],labs:[]};
@@ -202,7 +210,7 @@ function itemMarks(o){const eng=ST.engrave||isTpl(o),pk=perfKey();if(o._mk&&o._m
     // Подписи нет места — номера рядом с линией мельче, ступенями до 5 мм (номер остаётся в той же точке, только меньше)
     const N=B.regions.map(z=>({no:CUR.R.parts[z.pi].no,pts:z.pts.map(T),h:20})),put=n=>{n.g=engraveSegs(n.no,n.pts,{maxH:n.h});n.box=n.g?segBox(n.g,.5):null;};
     if(eng)N.forEach(put);
-    B.lines.forEach(l=>{const S=l.segs.map(z=>{const a=T([z[0],z[1]]),b=T([z[2],z[3]]);return [a[0],a[1],b[0],b[1]];});(l.kind==='V'?r.V:r.M).push(...S);if(pk)r.P.push(...perfHoles(S));if(!eng||!S.length)return;
+    B.lines.forEach(l=>{const S=l.segs.map(z=>{const a=T([z[0],z[1]]),b=T([z[2],z[3]]);return [a[0],a[1],b[0],b[1]];});(l.kind==='V'?r.V:r.M).push(...S);if(pk)r.P.push(...perfHoles(S,o.pts));if(!eng||!S.length)return;
       const z=S.reduce((a,b)=>Math.hypot(b[2]-b[0],b[3]-b[1])>Math.hypot(a[2]-a[0],a[3]-a[1])?b:a),L=Math.hypot(z[2]-z[0],z[3]-z[1])||1,ux=(z[2]-z[0])/L,uy=(z[3]-z[1])/L,e=15,
         zone=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[(a<0?z[0]-ux*e:z[2]+ux*e)-uy*e*b,(a<0?z[1]-uy*e:z[3]+uy*e)+ux*e*b]);   // где искать подпись: линия ± 15 мм
       let g=null;for(const h of [20,12,8,5]){N.forEach(n=>{if(n.h>h&&n.box&&quadHit(n.box,zone)){n.h=h;put(n);}});g=bendLabel(bendTxt(l),z,o.pts,4,N.filter(n=>n.box).map(n=>n.box).concat(r.labs.map(x=>x.g.box)));if(g)break;}
@@ -240,7 +248,7 @@ function wrapA4(b,o){return `<svg xmlns="http://www.w3.org/2000/svg" class="shs"
   +`<text class="hd" x="24" y="13.5">${shEsc(b.head)}</text><text class="h2" x="201" y="13.5" text-anchor="end">${shEsc(b.title)}</text>${b.body}${stamp(20,276,b,o)}<text class="sm" x="205" y="295.6" text-anchor="end">Формат А4</text></svg>`;}
 // швы куска (own — его детали): по каждому соседу снаружи — длина, угол (по самому длинному ребру), рёбра
 function pieceWelds(own){const R=CUR.R,V=CUR.M3.V,m=new Map();R.edges.forEach(e=>{if(e.p.length!==2)return;const i=own.has(e.p[0]);if(i===own.has(e.p[1]))return;const nb=i?e.p[1]:e.p[0],l=V3.len(V3.sub(V[e.a],V[e.b]));
-    if(!m.has(nb))m.set(nb,{nb,len:0,dih:e.dih,ml:0,ed:[]});const w=m.get(nb);w.len+=l;w.ed.push([e.a,e.b]);if(l>w.ml){w.ml=l;w.dih=e.dih;}});
+    if(!m.has(nb))m.set(nb,{nb,len:0,dih:e.dih,ml:0,ed:[]});const w=m.get(nb);w.len+=l;w.ed.push([e.a,e.b]);if(l>w.ml){w.ml=l;w.dih=seamDih(R,i?e.p[0]:e.p[1],nb);}});   // угол — как у зеркального шва
   return [...m.values()].sort((a,b)=>R.parts[a.nb].no-R.parts[b.nb].no);}
 // профиль шва: свой лист (оранжевый) и соседний (серый) под углом a, шов — красная точка; в угол вставлен уголок, нет его — дуга (выставить транспортиром).
 // Внутри фигуры — сверху, как гравировка в клетках гибки: обычный шов — сосед вверх, уголок сверху (изнутри); out — шов «внутрь»: сосед вниз, уголок снизу (снаружи). x — левый край, y — низ
