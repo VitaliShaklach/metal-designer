@@ -22,6 +22,9 @@ function airGeo(){const L=AIR_L+2*AIR_TH,x0=AIR_X0-AIR_TH;
 // колосник печи: лист 15 мм с отверстиями Ø20
 function stoveGrateGeo(){const z0=W/2-GP_W/2;return {loops:[rect(GR_LEN,GP_W)],circles:gpX().flatMap(x=>gpZ().map(z=>[x-GR_X0,z-z0,GP_D/2])),bends:[]};}
 const geoR=(w,h)=>({loops:[rect(w,h)],circles:[],bends:[]});
+// колосник мангала (половина): лист 5 мм, отверстия Ø10 (CG_D) сеткой с шагом 20 (CG_P), по центру; от края до центра крайнего — не меньше 15 мм
+const cgGrid=L=>{const n=Math.floor((L-3)/CG_P+1e-9)+1,o=(L-(n-1)*CG_P)/2;return Array.from({length:n},(_,i)=>o+i*CG_P);};
+function grillGrateGeo(){return {loops:[rect(CG_L,CG_W)],circles:cgGrid(CG_L).flatMap(x=>cgGrid(CG_W).map(z=>[x,z,CG_D/2])),bends:[]};}
 
 // список листовых деталей текущего проекта (режим и галочки — как на модели)
 function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
@@ -32,6 +35,8 @@ function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
     add('grill_end_right','Торец жаровни правый',5,1,'gEnd',()=>geoR(W-2*t,H1-t));
     if(S.mode==='grill')add('grill_end_left','Торец жаровни левый',5,1,'gEnd0',()=>logoWallGeo(t,W-2*t,B+t,H1-t),S.logo?'с логотипом':'');
     if(S.div)add('grill_divider','Перегородка жаровни',5,1,'div',dividerGeo,'тело, ушки и ручка — одна деталь');
+    if(S.cgr){const nh=`${cgGrid(CG_L).length*cgGrid(CG_W).length} отв. Ø${CG_D*10} шагом ${CG_P*10}`;   // половины одинаковые; две строки — чтобы выбирались на модели по отдельности
+      add('grill_grate_1','Колосник мангала 1 (левая половина)',5,1,'cgr1',grillGrateGeo,nh);add('grill_grate_2','Колосник мангала 2 (правая, у ручки)',5,1,'cgr2',grillGrateGeo,nh);}
     if(S.airSl)add('grill_air_slider','Задвижка поддува',3,2,'air',airGeo,'отгибы по концам 20 мм — слой BEND');}
   if(k){add('stove_side_back','Боковина печи задняя',5,1,'sK0',()=>shapeGeo(stoveWallShape(true)),S.chim?'с отверстием трубы 60 × 60':'');
     add('stove_side_front','Боковина печи передняя',5,1,'sK1',()=>shapeGeo(stoveWallShape(false)));
