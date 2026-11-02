@@ -89,21 +89,21 @@ function drawCut(){
   h+=`<tr class="tot"><td colspan="4">Итого металла ${({both:'всего мангала',grill:'мангала',stove:'печи'})[S.mode]} (без колёс)</td><td class="n r">${kg(tot)}</td></tr></tbody>`;
   document.getElementById('cut').innerHTML=h;
   const ln=(a)=>fmt(a/100,2)+' м',ar=(a)=>fmt(a/10000,2)+' м²';
-  const g=gOn(),k=sOn(),LL=legsList(),nW=LL.filter(l=>l[3]).length,nF=LL.length-nW;
+  const g=gOn(),k=sOn(),LL=legsList(),no=nestOpts();
   const legM=LL.reduce((a,[x,z,top,wh])=>a+legTube(top,wh),0);
-  const a5=(g?2*L1*(H1-t)+L1*W+(W-2*t)*(H1-t)*(S.mode==='grill'?2:1):0)+(k?2*L2*(H2-t)+L2*WK+(WK-2*t)*(H2-t)+TIE_W*(WK-2*t)+(WK-2*t)*(FL_H-t)+FB_L*fbW():0)+LL.length*8*8+nF*FTX*FTX+nW*PADX*PADZ
-    +(g?2*(AIR_L+2*AIR_TH)*AIR_H+4*ahArea():0),   // задвижки поддува (заготовка с отгибами) и скобы задвижек — лист 5 мм
-    a3=k?WK*DH()+SH_L*SH_W:0;
+  // листы — из того же списка, что «Раскрой» (laserParts, те же галочки колосника и задвижек): площадь по габариту детали, 5 мм первым
+  const shA={},shN={};laserParts().filter(p=>p.q>0&&(no.cgr||!NEST_CGR(p))&&(no.air||!NEST_AIR(p))).forEach(p=>{let m=null;try{m=partMM(p);}catch(e){}const a=m?m.w*m.h/100*p.q:0;if(!(Number.isFinite(a)&&a>0))return;   // пустой контур (боковины в Node) — пропускаем
+    shA[p.mm]=(shA[p.mm]||0)+a;const nm=p.name.charAt(0).toLowerCase()+p.name.slice(1);(shN[p.mm]=shN[p.mm]||[]).includes(nm)||shN[p.mm].push(nm);});
+  const sheets=Object.keys(shA).map(Number).sort((a,b)=>(b===5)-(a===5)||a-b).map(mm=>[`Лист ${mm} мм`,ar(shA[mm]),shN[mm].join(', ')]);
   const mt=[
-    ['Лист 5 мм',ar(a5),[g&&'боковины, дно и торцы жаровни',g&&'задвижки поддува, скобы задвижек',k&&'боковины, дно, перегородка, полоса и глухой верх печи, отсекатель',nF&&'пятки','площадки под гайки',nW&&'опоры под колёса 150 × 150'].filter(Boolean).join(', ')],
-    ...(a3?[['Лист 3 мм',ar(a3),'дверца, шибер']]:[]),   // в режиме «мангал» листа 3 мм нет: задвижки поддува — 5 мм
+    ...sheets,
     ['Труба Ø40×3',ln(legM),'ножки'],
     ...(S.rain?[['Труба Ø26×3',ln(4*TUBE_H),'трубки под стойки крыши']]:[]),
     ['Труба Ø25×2',ln(2*HX+HG),S.mode==='stove'?'ручка печи':'ручка'],
     ...(S.rain?[['Арматура Ø16',ln(2*BAR_F+2*BAR_B),'стойки крыши']]:[]),
-    ...(!k?[]:S.grType==='plate'?[[`Лист ${GP_T*10} мм`,ar(GR_LEN*GP_W),'колосник']]:[['Арматура Ø20',ln(2*GR_LEN+grBars().length*GR_W),'колосник']]),
+    ...(k&&S.grType!=='plate'?[['Арматура Ø20',ln(2*GR_LEN+grBars().length*GR_W),'колосник']]:[]),
     ...(k?[['Уголок 40×40×4',ln(2*ANG_LEN),'опоры колосника']]:[]),
-    ...(g?[['Уголок 30×30×3',ln(2*GA_L),'уголки в жаровне'],...(S.cgr?[['Уголок 30×30×4',ln(2*CA_L),'опоры колосника'],['Перфолист 5–10 мм',ar(2*CG_L*CG_W),'колосниковая решётка, 2 половины']]:[])]:[]),
+    ...(g?[['Уголок 30×30×3',ln(2*GA_L),'уголки в жаровне'],...(S.cgr?[['Уголок 30×30×4',ln(2*CA_L),'опоры колосника'],...(!no.cgr?[['Перфолист 5–10 мм',ar(2*CG_L*CG_W),'колосниковая решётка, 2 половины']]:[])]:[])]:[]),
     ...(k?[['Квадрат 6×6',ln(2*SH_L),'проставки направляющих шибера'],['Полоса 20×3',ln(2*SH_L),'направляющие шибера'],['Профтруба 60×60×2',ln(CH_H+CH_V+CH+CH_X_L),'труба печи + удлинитель 1 м'],['Пруток Ø12',ln(18),'ручка дверцы']]:[]),
   ];
   document.getElementById('metal').innerHTML=mt.map(([n,q,w])=>`<li><b>${n}</b> — ${q} · ${w}</li>`).join('');

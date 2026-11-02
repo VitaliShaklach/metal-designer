@@ -24,7 +24,12 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
         if(S.rain){if(!roofEl||!roofPt||!roofDim.length)throw new Error('крыша включена, а элемента/деталей/размеров крыши нет');
           [['cut',/Крыша — защита от дождя/],['metal',/Арматура Ø16/],['metal',/Труба Ø26×3/],['notesBox',/Крыша от дождя/],['lede',/Крыша от дождя/],['fit',/Крыша спереди/],['stats',/верх стоек/]].forEach(([k,rx])=>{if(!rx.test(tx(k)))throw new Error('крыша включена, а в '+k+' нет '+rx);});}
         else{if(roofEl||roofPt)throw new Error('крыша выключена, а элемент «Крыша» есть в списке');if(roofDim.length)throw new Error('крыша выключена, а размеры остались: '+roofDim.join(', '));
-          const m=all.match(roofRx);if(m)throw new Error('крыша выключена, а в тексте «'+m[0]+'»: '+all.slice(Math.max(0,m.index-60),m.index+40).replace(/<[^>]+>/g,''));}}`,ctx);
+          const m=all.match(roofRx);if(m)throw new Error('крыша выключена, а в тексте «'+m[0]+'»: '+all.slice(Math.max(0,m.index-60),m.index+40).replace(/<[^>]+>/g,''));}
+        {const N=nestJob(),want={},got={};N.groups.forEach(G=>G.types.forEach(t=>{want[G.mm]=(want[G.mm]||0)+t.m.w*t.m.h*t.q/1e6;}));   // прокат «Лист N мм» = габариты деталей «Раскроя»
+          for(const r of tx('metal').matchAll(/<b>Лист ([0-9]+) мм<.b> — ([0-9,]+) м²/g))got[r[1]]=+r[2].replace(',','.');
+          Object.keys(got).forEach(mm=>{if(!(mm in want))throw new Error('в прокате лишний «Лист '+mm+' мм»');});
+          Object.keys(want).forEach(mm=>{if(!(mm in got)||Math.abs(got[mm]-want[mm])>.006)throw new Error('прокат «Лист '+mm+' мм»: '+got[mm]+' м², в раскрое '+want[mm].toFixed(3));});
+          if(N.cgr&&/Перфолист/.test(tx('metal')))throw new Error('колосник на листе, а в прокате перфолист');}}`,ctx);
       // раскрой листа: детали для раскладки (у боковин в Node контур пустой — пропускаются), раскладка и рисунок
       vm.runInContext("{const N=nestJob(),res=N.groups.map(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);return v.value;});nestDraw(N,res);nestUI();nestUI(true);}",ctx);
       // колосник мангала: на листе 5 мм, когда он есть на модели; галочка «на листе» снята — нет; у половины 18 × 19 отверстий Ø10

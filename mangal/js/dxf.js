@@ -54,7 +54,8 @@ function laserParts(){const g=gOn(),k=sOn(),LL=legsList(),r=[];
     if(S.draft)add('stove_shiber','Шибер поддувала',3,1,'shib',()=>geoR(SH_L,SH_W),'край отогнуть вниз на 25 мм — ручка');
     if(S.grate&&S.grType==='plate')add('stove_grate','Колосник печи',15,1,'grate',stoveGrateGeo);}
   if(S.legs){add('leg_mount_plate','Площадка под ножку (на дно)',5,LL.length,'legs',()=>geoR(8,8));
-    const nW=LL.filter(l=>l[3]).length;if(nW)add('wheel_pad','Площадка под колесо',5,nW,'pads',()=>geoR(PADX,PADZ),'4 отверстия под колесо — сверлить по факту');}
+    const nW=LL.filter(l=>l[3]).length;if(nW)add('wheel_pad','Площадка под колесо',5,nW,'pads',()=>geoR(PADX,PADZ),'4 отверстия под колесо — сверлить по факту');
+    if(LL.length>nW)add('leg_foot','Пятка ножки без колеса',Math.round(FT*10),LL.length-nW,'feet',()=>geoR(FTX,FTX),'приварить к низу ножки');}
   return r;}
 
 // деталь → мм, сдвиг в (0,0), длина реза и врезки
