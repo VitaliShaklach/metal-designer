@@ -67,29 +67,30 @@ function nestLoop(l){if(!Array.isArray(l))return null;const P=[],same=(a,b)=>Mat
   for(const p of l){if(!Array.isArray(p)||!Number.isFinite(p[0])||!Number.isFinite(p[1]))return null;if(!P.length||!same(P[P.length-1],p))P.push([p[0],p[1]]);}
   while(P.length>1&&same(P[0],P[P.length-1]))P.pop();
   return P.length>=3&&Math.abs(area2(P))>1?P:null;}
-// значения полей: зазор 1…50 мм с шагом 0,5; лист — из списка; cgr — колосник мангала на листе (галочка); gil — заготовки с гильотины (галочка, по умолчанию снята);
+// значения полей: зазор 1…50 мм с шагом 0,5; лист — из списка; cgr — колосник мангала на листе (галочка); air — задвижки поддува на листе (галочка, скобы не трогает); gil — заготовки с гильотины (галочка, по умолчанию снята);
 // edge — подрезка кромки на схеме гильотины 0…30 мм, целые (по умолчанию 10); sel — выбор «гильотина | лазер» по деталям ({file: 'gil' | 'laser'}, память браузера md-gilsel)
-const NEST_CGR=p=>p.pt==='cgr1'||p.pt==='cgr2';
+const NEST_CGR=p=>p.pt==='cgr1'||p.pt==='cgr2',NEST_AIR=p=>p.pt==='air';
 const gilSelStore=()=>{try{const v=store('md-gilsel');return v&&typeof v==='object'?v:{};}catch(e){return {};}};   // store — в ui.js; до его загрузки — умолчания
-function nestOpts(){const gi=document.getElementById('nGap'),si=document.getElementById('nSheet'),ci=document.getElementById('nCgr'),li=document.getElementById('nGil'),ei=document.getElementById('nEdge');
+function nestOpts(){const gi=document.getElementById('nGap'),si=document.getElementById('nSheet'),ci=document.getElementById('nCgr'),ai=document.getElementById('nAir'),li=document.getElementById('nGil'),ei=document.getElementById('nEdge');
   let gap=parseFloat(String(gi&&gi.value!=null?gi.value:'').replace(',','.'));if(!Number.isFinite(gap))gap=5;gap=Math.min(50,Math.max(1,Math.round(gap*2)/2));
   let edge=parseFloat(String(ei&&ei.value!=null?ei.value:'').replace(',','.'));if(!Number.isFinite(edge))edge=10;edge=Math.min(30,Math.max(0,Math.round(edge)));
-  const v=si&&typeof si.value==='string'?si.value:'',sk=NEST_SHEETS[v]?v:'1250x2500',[W,H]=NEST_SHEETS[sk];return {gap,sk,W,H,edge,cgr:!(ci&&ci.checked===false),gil:!!(li&&li.checked===true),sel:gilSelStore()};}
+  const v=si&&typeof si.value==='string'?si.value:'',sk=NEST_SHEETS[v]?v:'1250x2500',[W,H]=NEST_SHEETS[sk];return {gap,sk,W,H,edge,cgr:!(ci&&ci.checked===false),air:!(ai&&ai.checked===false),gil:!!(li&&li.checked===true),sel:gilSelStore()};}
 // «гильотина | лазер» по умолчанию: деталь уже GIL_MIN_W — лазер, остальные — гильотина
 const gilDef=m=>Math.min(m.w,m.h)<GIL_MIN_W?'laser':'gil';
 // задание: группы по толщине (5 мм первой), в каждой — типы деталей (номер, контур, кол-во) и штуки для раскладки; key — для кэша.
-// over — поменять поля (smoke: {cgr:false}, {gil:true,edge:10,sel:{…}}); hasCgr — есть ли колосник мангала (показать галочку).
+// over — поменять поля (smoke: {cgr:false}, {air:false}, {gil:true,edge:10,sel:{…}}); hasCgr, hasAir — есть ли колосник мангала, задвижки поддува (показать галочку).
+// Снятая галочка убирает деталь отовсюду: с листа и куска, со схемы гильотины, из таблиц, CSV и ZIP.
 // У типа sel — «гильотина | лазер», kind — вид детали (partKind по sel), b — геометрия по заготовке (blankMM, только у zag).
 // С gil на лазерную раскладку идут только детали «лазер» (kind 'list') — на кусок не больше листа минус подрезка (LW × LH); в таблицах остаются все типы (номера те же)
-function nestJob(over){const o=Object.assign(nestOpts(),over),all=laserParts(),hasCgr=all.some(NEST_CGR),L=o.cgr?all:all.filter(p=>!NEST_CGR(p)),ths=[...new Set(L.map(p=>p.mm))].sort((a,b)=>(b===5)-(a===5)||a-b),groups=[];let no=0;
+function nestJob(over){const o=Object.assign(nestOpts(),over),all=laserParts(),hasCgr=all.some(NEST_CGR),hasAir=all.some(NEST_AIR),L=all.filter(p=>(o.cgr||!NEST_CGR(p))&&(o.air||!NEST_AIR(p))),ths=[...new Set(L.map(p=>p.mm))].sort((a,b)=>(b===5)-(a===5)||a-b),groups=[];let no=0;
   ths.forEach(mm=>{const G={mm,types:[],items:[]};
     L.filter(p=>p.mm===mm&&p.q>0).forEach(p=>{let m=null;try{m=partMM(p);}catch(e){}const P=m&&nestLoop(m.loops[0]);if(!P)return;   // пустой или вырожденный контур — пропускаем
       const v=o.sel[p.file],sel=v==='gil'||v==='laser'?v:gilDef(m),kind=partKind(m,sel),ty={no:++no,p,m,P,q:p.q,sel,kind,b:kind==='zag'?blankMM(p,m):null};G.types.push(ty);
       if(!o.gil||kind==='list')for(let j=0;j<p.q;j++)G.items.push({id:G.items.length,no:ty.no,pts:P,ty});});
     if(G.types.length)groups.push(G);});
   const LW=o.gil?o.W-2*o.edge:o.W,LH=o.gil?o.H-2*o.edge:o.H;
-  const key=JSON.stringify([o.W,o.H,o.gap,o.gil,o.gil?o.edge:0,groups.map(G=>[G.mm,G.items.length,G.types.map(ty=>[ty.no,ty.q,o.gil?ty.kind:'',ty.P.map(q=>q.map(v=>Math.round(v*10)))])])]);
-  return {...o,LW,LH,groups,key,hasCgr};}
+  const key=JSON.stringify([o.W,o.H,o.gap,o.cgr,o.air,o.gil,o.gil?o.edge:0,groups.map(G=>[G.mm,G.items.length,G.types.map(ty=>[ty.no,ty.q,o.gil?ty.kind:'',ty.P.map(q=>q.map(v=>Math.round(v*10)))])])]);
+  return {...o,LW,LH,groups,key,hasCgr,hasAir};}
 
 /* ---------- рисунок листа (SVG, мм) ---------- */
 const n1=v=>Math.round(v*10)/10;
@@ -206,26 +207,47 @@ function gilDxf(N,G,sh){const f=v=>Math.round(v*100)/100,W=N.W,H=N.H,m={sheet:re
 const gilFile=(N,G,P,si)=>`gilotina_${G.mm}mm_${N.sk}${P.sheets.length>1?'_'+(si+1):''}.dxf`;
 // DXF детали для лазера: с gil у zag — по заготовке (_zag), у gil — не нужен (null)
 const partOut=(N,ty)=>!N.gil||ty.kind==='list'?[dxfName(ty.p),dxfText(ty.m)]:ty.kind==='zag'?[dxfNameZ(ty.p),dxfText(ty.b)]:null;
+/* ---------- всё, что едет на лазер (режим gil): куски листа под лазер и заготовки zag ----------
+   На лазере (CypCut и т. п.) каждую заготовку кладут отдельно и привязывают поиском кромки — поэтому у каждой свой файл с нулём в левом нижнем углу,
+   а не одна общая раскладка заготовок. */
+// файлы толщины: DXF кусков (как «Скачать DXF куска под лазер») + _zag.dxf каждого типа заготовки
+function laserFiles(N,G,R){const F=((R&&R.sheets)||[]).map((sh,si)=>[nestFile(N,G,R,si),nestDxf(N,G,sh)]);
+  G.types.forEach(ty=>{if(ty.kind==='zag')F.push(partOut(N,ty));});return F;}
+const laserZip=G=>`${MODE_FILE()}_na_lazer_${G.mm}mm.zip`;
+// что на лазер: куски (размер и детали: [no, имя, шт]), заготовки zag; рез, мм и врезки — детали куска целиком (по тому, что легло), заготовки по ty.b
+function laserSum(N,G,R){let cut=0,pierce=0;
+  const pieces=((R&&R.sheets)||[]).map(sh=>{const c=new Map();sh.items.forEach(it=>{const ty=G.items[it.id].ty;c.set(ty,(c.get(ty)||0)+1);cut+=ty.m.cut;pierce+=ty.m.pierce;});
+    return {wh:nestPiece(N,sh),sh,parts:[...c].sort((a,b)=>a[0].no-b[0].no).map(([ty,q])=>[ty.no,ty.p.name,q])};});
+  const zag=G.types.filter(ty=>ty.kind==='zag');zag.forEach(ty=>{cut+=ty.b.cut*ty.q;pierce+=ty.b.pierce*ty.q;});
+  return {pieces,zag,cut,pierce};}
+// блок «На лазер · N мм» (режим gil): кусок(и) листа с деталями и рисунком, заготовки с гильотины, итого. Нет ни кусков, ни заготовок — ''
+function laserBlock(N,G,R,isOn,wide){const L=laserSum(N,G,R),np=L.pieces.length;if(!np&&!L.zag.length)return '';
+  const PT='Врезки по заготовке — с запасом: по одной на каждый паз или вырез с кромки, хотя цех может заходить с кромки без прожига';
+  let h=`<div class="nlz"><h4 class="ngil">На лазер · ${G.mm} мм</h4>`;
+  L.pieces.forEach((pc,si)=>{h+=`<figure class="nsheet nlaser"><figcaption>Кусок листа${np>1?` ${si+1}`:''} ${pc.wh.join(' × ')} (зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм): ${pc.parts.map(([no,nm,q])=>`<b>${no}</b> ${nm} × ${q}`).join(', ')}</figcaption>${nestSvg(N,G,pc.sh,isOn,wide)}</figure>`;});
+  if(L.zag.length)h+=`<div class="nlzz"><p>Заготовки с гильотины — привязать поиском кромки, класть как на эскизе: ноль — левый нижний угол</p><ul>${L.zag.map(ty=>`<li><b>${ty.no}</b> ${ty.p.name}, ${fmt(ty.m.w,0)} × ${fmt(ty.m.h,0)} — ${ty.q} шт</li>`).join('')}</ul></div>`;
+  return h+`<p class="nlzt" title="${PT}">Итого на лазер: рез ${fmt(L.cut/1000,2)} м, врезок ${L.pierce}</p></div>`;}
 // вкладка: на каждую толщину (5 → 3 → 15 мм) — заголовок, кнопки скачивания, лист, под ним детали этого листа (как была таблица «Лазер · DXF»);
 // № в таблице — тот же, что на листе; выбранное на модели подсвечено. С gil: вместо листа — схема гильотины (gilSvg) и легенда, под ней —
-// кусок листа под лазер с деталями «лазер»; в строках таблицы — переключатель «гильотина | лазер», рез и врезки по заготовке (мелко — «из листа»), ниже «На гильотину»
+// блок «На лазер» (laserBlock: кусок листа под лазер с деталями «лазер», заготовки, итого); в строках таблицы — переключатель «гильотина | лазер», рез и врезки по заготовке (мелко — «из листа»), ниже «На гильотину»
 function nestDraw(N,res){const box=document.getElementById('nestBox');if(!box)return;box.classList.remove('busy');NST.cur={N,res};
   const isOn=ty=>!!S.sel.el&&inSel(PDF_ELEM(ty.p.pt),ty.p.pt),wide=!(box.clientWidth>0&&box.clientWidth<600);   // узкий экран (телефон): шрифт на листах крупнее — иначе номера ~4 px
   box.innerHTML=N.groups.length?N.groups.map((G,gi)=>{const R=res[gi]||{sheets:[],too:[]},main=G.mm===5,ns=R.sheets.length,P=N.gil?gilScheme(N,G,R):null;
     let h=`<section class="nblock${main?' main':''}"><h3>Лист ${G.mm} мм</h3>`,bt='';
     if(P)P.sheets.forEach((sh,si)=>{bt+=`<button class="dxfbtn" data-act="gil" data-g="${gi}" data-s="${si}">Скачать схему гильотины (DXF)${P.sheets.length>1?' '+(si+1):''}</button>`;});
     R.sheets.forEach((sh,si)=>{bt+=`<button class="dxfbtn" data-act="sheet" data-g="${gi}" data-s="${si}">${N.gil?'Скачать DXF куска под лазер':'Скачать DXF листа'}${ns>1?' '+(si+1):''}</button>`;});
+    if(N.gil&&(ns||G.types.some(ty=>ty.kind==='zag')))bt+=`<button class="dxfbtn" data-act="laser" data-g="${gi}" title="Куски листа под лазер и каждая заготовка с гильотины — отдельным DXF, ноль в левом нижнем углу">Всё на лазер · ${G.mm} мм (ZIP)</button>`;
     if(bt)h+=`<div class="nbtns">${bt}</div>`;
-    const lsr=(sh,si)=>N.gil?`Кусок листа под лазер ${nestPiece(N,sh).join(' × ')}${ns>1?` (${si+1} из ${ns})`:''} · деталей ${sh.items.length} · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм`
-      :`${ns>1?`Лист ${si+1} из ${ns} · `:''}${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм`;
+    const lsr=(sh,si)=>`${ns>1?`Лист ${si+1} из ${ns} · `:''}${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм`;
     if(P){const np=P.sheets.length;
       P.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet"><figcaption title="Отход — обрезки внутри занятого прямоугольника (от угла листа), вместе с подрезкой кромки; остальное — целый остаток листа">Лист ${G.mm} мм${np>1?`, ${si+1} из ${np}`:''} · гильотина: резов ${sh.cuts}, заготовок ${sh.items.length}, занято ${Math.round(sh.used*100)} %, отход ${Math.round(sh.waste*100)} % · ${N.H} × ${N.W}, подрезка кромки ${N.edge} мм</figcaption>${gilSvg(N,G,sh,isOn,wide)}</figure>`;});
       if(np)h+='<p class="glegend"><span><i class="lg gil">▪</i> серый — готовая деталь (только гильотина)</span><span><i class="lg las">▪</i> оранжевый — заготовка, дальше на лазер</span></p>';
       if(P.too.length)h+=`<p class="nwarn">Не помещается на лист с подрезкой кромки: ${P.too.map(r=>r.kind==='piece'?r.name:`${r.no} ${r.ty.p.name}`).join(', ')}</p>`;}
-    R.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet${N.gil?' nlaser':''}"><figcaption>${lsr(sh,si)}</figcaption>${nestSvg(N,G,sh,isOn,wide)}</figure>`;});
+    if(N.gil)h+=laserBlock(N,G,R,isOn,wide);   // кусок(и) под лазер с подписью, заготовки, итого
+    else R.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet"><figcaption>${lsr(sh,si)}</figcaption>${nestSvg(N,G,sh,isOn,wide)}</figure>`;});
     if(R.too.length){const c={};R.too.forEach(o=>c[o.no]=(c[o.no]||0)+1);
       h+=`<p class="nwarn">Не поместилось: ${Object.keys(c).map(no=>{const ty=G.types.find(t=>t.no===+no);return `${no} ${ty.p.name}${c[no]>1?` × ${c[no]}`:''}`;}).join(', ')}</p>`;}
-    const PT='Врезки по заготовке — с запасом: по одной на каждый паз или вырез с кромки, хотя цех может заходить с кромки без прожига';
+    const PT='Врезки по заготовке — с запасом: по одной на каждый паз или вырез с кромки, хотя цех может заходить с кромки без прожига';   // и в laserBlock
     let tc=0,tp=0,tq=0,zc=0,zp=0,t=`<thead><tr><th class="r">№</th><th>Деталь</th><th>Эскиз</th><th class="r">Кол-во</th><th>Габарит, мм</th><th class="r">Рез, м</th><th class="r"${N.gil?` title="${PT}"`:''}>Врезок</th><th class="r dl">Скачать</th></tr></thead><tbody>`;
     const was=v=>`<small class="was">из листа ${v}</small>`,btn=ti=>`<button class="dxfbtn dl" data-act="part" data-g="${gi}" data-t="${ti}" title="Скачать DXF детали" aria-label="Скачать DXF детали">⬇\uFE0E DXF</button>`;
     const sw=(ty,ti)=>`<span class="gsel" role="group" aria-label="Чем резать: ${ty.p.name}">${[['gil','гильотина'],['laser','лазер']].map(([v,n])=>`<button data-act="gsel" data-g="${gi}" data-t="${ti}" data-v="${v}" aria-pressed="${ty.sel===v}">${n}</button>`).join('')}</span>`;
@@ -240,10 +262,12 @@ function nestDraw(N,res){const box=document.getElementById('nestBox');if(!box)re
     return h+'</section>';}).join(''):'<p class="tabnote">Листовых деталей нет</p>';}
 // «Скачать всё (ZIP)»: DXF каждого листа и каждой детали — то, что на вкладке; с gil — схемы гильотины, куски листа под лазер, детали zag по заготовке (_zag),
 // gil без DXF, и gilotina_<N>mm.csv на толщину
-function saveAll(){if(NST.run||!NST.cur)return;const {N,res}=NST.cur,F=[];
+function allFiles(N,res){const F=[];
   N.groups.forEach((G,gi)=>{const R=res[gi];if(R&&N.gil){const P=gilScheme(N,G,R);P.sheets.forEach((sh,si)=>F.push([gilFile(N,G,P,si),gilDxf(N,G,sh)]));}
     if(R)R.sheets.forEach((sh,si)=>F.push([nestFile(N,G,R,si),nestDxf(N,G,sh)]));G.types.forEach(ty=>{const o=partOut(N,ty);if(o)F.push(o);});
     if(N.gil)F.push([`gilotina_${G.mm}mm.csv`,gilCsv(N,G,R)]);});
+  return F;}
+function saveAll(){if(NST.run||!NST.cur)return;const {N,res}=NST.cur,F=allFiles(N,res);
   if(F.length)saveOut(`${MODE_FILE()}_raskroy_${N.sk}.zip`,zipFiles(F));}
 // «гильотина | лазер» у детали: запомнить (ключ — p.file) и пересчитать; null — сбросить всё к умолчаниям
 function gilSet(file,v){const m=file?gilSelStore():{};if(file)m[file]=v;store('md-gilsel',m);nestUI(true);}
@@ -254,22 +278,23 @@ function nestClick(e){const b=e.target.closest&&e.target.closest('button[data-ac
   if(NST.run)return;
   if(b.dataset.act==='sheet'&&R&&R.sheets[+b.dataset.s])saveDxf(nestFile(N,G,R,+b.dataset.s),nestDxf(N,G,R.sheets[+b.dataset.s]));
   else if(b.dataset.act==='gil'&&R&&N.gil){const P=gilScheme(N,G,R),sh=P.sheets[+b.dataset.s];if(sh)saveDxf(gilFile(N,G,P,+b.dataset.s),gilDxf(N,G,sh));}
-  else if(b.dataset.act==='part'&&G.types[+b.dataset.t]){const o=partOut(N,G.types[+b.dataset.t]);if(o)saveDxf(...o);}}
+  else if(b.dataset.act==='part'&&G.types[+b.dataset.t]){const o=partOut(N,G.types[+b.dataset.t]);if(o)saveDxf(...o);}
+  else if(b.dataset.act==='laser'&&N.gil){const F=laserFiles(N,G,R);if(F.length)saveOut(laserZip(G),zipFiles(F));}}
 
 /* ---------- когда считать: только при открытой вкладке, через 0,3 с после правки; кусками по ~60 мс, кэш по ключу ---------- */
 const NST={key:'',res:null,run:null,t:0,init:false,cur:null};   // cur — что сейчас нарисовано ({N,res}): для кнопок скачивания
 const nestMsg=t=>{const m=document.getElementById('nestMsg');if(m)m.textContent=t;};
 // поля «Между деталями», «Лист», «Подрезка кромки» и галочки: значения из памяти браузера (store — в ui.js, к первому показу вкладки он уже есть)
 function nestInit(){if(NST.init)return;NST.init=true;const gi=document.getElementById('nGap'),si=document.getElementById('nSheet'),ei=document.getElementById('nEdge');if(!gi||!si)return;
-  const g=store('md-ngap'),s=store('md-sheet'),c=store('md-ncgr'),l=store('md-ngil'),ed=store('md-nedge'),ci=document.getElementById('nCgr'),li=document.getElementById('nGil');if(Number.isFinite(+g)&&g!==null)gi.value=g;if(s&&NEST_SHEETS[s])si.value=s;if(ci&&typeof c==='boolean')ci.checked=c;if(li&&typeof l==='boolean')li.checked=l;
+  const g=store('md-ngap'),s=store('md-sheet'),c=store('md-ncgr'),a=store('md-nair'),l=store('md-ngil'),ed=store('md-nedge'),ci=document.getElementById('nCgr'),ai=document.getElementById('nAir'),li=document.getElementById('nGil');if(Number.isFinite(+g)&&g!==null)gi.value=g;if(s&&NEST_SHEETS[s])si.value=s;if(ci&&typeof c==='boolean')ci.checked=c;if(ai&&typeof a==='boolean')ai.checked=a;if(li&&typeof l==='boolean')li.checked=l;
   if(ei&&Number.isFinite(+ed)&&ed!==null)ei.value=ed;
-  const ch=()=>{const o=nestOpts();store('md-ngap',o.gap);store('md-sheet',o.sk);store('md-ncgr',o.cgr);store('md-ngil',o.gil);store('md-nedge',o.edge);nestUI();};
-  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);if(ci)ci.addEventListener('change',ch);if(li)li.addEventListener('change',()=>{ch();nestUI(true);});
+  const ch=()=>{const o=nestOpts();store('md-ngap',o.gap);store('md-sheet',o.sk);store('md-ncgr',o.cgr);store('md-nair',o.air);store('md-ngil',o.gil);store('md-nedge',o.edge);nestUI();};
+  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);if(ci)ci.addEventListener('change',ch);if(ai)ai.addEventListener('change',ch);if(li)li.addEventListener('change',()=>{ch();nestUI(true);});
   if(ei){ei.addEventListener('input',ch);ei.addEventListener('change',()=>{ei.value=nestOpts().edge;ch();});}
   const box=document.getElementById('nestBox'),all=document.getElementById('dxfAll'),rs=document.getElementById('nGilReset');if(box)box.addEventListener('click',nestClick);if(all)all.addEventListener('click',saveAll);if(rs)rs.addEventListener('click',()=>gilSet(null));}
 function nestUI(now){clearTimeout(NST.t);if(!now){NST.t=setTimeout(()=>nestUI(true),300);return;}
   const pane=document.getElementById('tab-cut');if(!pane||pane.hidden!==false)return;
-  nestInit();const N=nestJob(),cb=document.getElementById('nCgrBox');if(cb)cb.hidden=!N.hasCgr;   // галочка колосника — только когда он есть (мангал, «Колосниковая решётка»)
+  nestInit();const N=nestJob(),cb=document.getElementById('nCgrBox'),ab=document.getElementById('nAirBox');if(cb)cb.hidden=!N.hasCgr;if(ab)ab.hidden=!N.hasAir;   // галочки колосника и задвижек — только когда они есть на модели
   ['nEdgeBox','nGilReset'].forEach(id=>{const e=document.getElementById(id);if(e)e.hidden=!N.gil;});   // подрезка кромки и «Сбросить выбор» — только с гильотиной
   if(NST.res&&NST.key===N.key){NST.run=null;nestMsg('');nestDraw(N,NST.res);return;}   // уже посчитано (лишний счёт, если шёл, — останавливаем)
   if(NST.run&&NST.run.key===N.key)return;   // уже считается

@@ -1,7 +1,8 @@
 /* ---------- файлы для лазера: DXF каждой листовой детали из той же геометрии, что 3D ----------
    Деталь: {loops:[[[x,y]…]…], circles:[[x,y,r]…], bends:[[[x,y],[x,y]]…]} в см; в файл — мм, начало в левом нижнем углу.
    Контуры и отверстия — слой CUT, линии гиба — слой BEND (не резать), рамка в DXF всего листа — слой SHEET (не резать),
-   прямоугольник заготовки в DXF «по заготовке» (_zag) — слой BLANK (не резать, для базирования). */
+   прямоугольник заготовки в DXF «по заготовке» (_zag) — слой ZAGOTOVKA_NE_REZAT, серый (не резать: заготовку режет гильотина; для привязки),
+   заготовки на схеме гильотины — слой BLANK. */
 const rect=(w,h)=>[[0,0],[w,0],[w,h],[0,h],[0,0]];
 // THREE.Shape → деталь: внешний контур + отверстия (окружности — CIRCLE)
 function shapeGeo(s){const g={loops:[s.getPoints().map(p=>[p.x,p.y])],circles:[],bends:[]};
@@ -69,8 +70,10 @@ function partMM(p){const G=p.geo(),xs=[],ys=[];G.loops.forEach(l=>l.forEach(([x,
           (отверстия, вырезы, пазы с кромки; у перегородки жаровни с ушками и ручкой — почти весь контур);
    list — «лазер»: лазер режет деталь целиком из куска листа под лазер. */
 const BLANK_EPS=.01;   // допуск «отрезок лежит на стороне габарита», мм
+const ZAG_OVER=2,ZAG_LAYER='ZAGOTOVKA_NE_REZAT',ZAG_COLOR=8;   // _zag.dxf: вылет открытого реза за кромку заготовки, мм (режет воздух — паз прорезан до конца); слой и цвет (8 — серый) рамки заготовки
 // деталь по заготовке (мм): из наружного контура выкинуты отрезки на сторонах габарита — остаются открытые ломаные (пазы и вырезы с кромки);
-// внутренние контуры, окружности и гибы — как есть. blank — прямоугольник заготовки (слой BLANK).
+// внутренние контуры, окружности и гибы — как есть. blank — прямоугольник заготовки (слой ZAGOTOVKA_NE_REZAT).
+// Конец открытой ломаной на стороне заготовки продлён наружу перпендикулярно стороне на ZAG_OVER (в углу — нет); в cut вылет не входит.
 // pierce — с запасом: по одной на каждую открытую ломаную, хотя цех может заходить с кромки без прожига
 function blankMM(p,m=partMM(p)){const E=BLANK_EPS,w=m.w,h=m.h,O=m.loops[0]||[],ax=v=>Math.abs(v)<E,
     on=(a,b)=>ax(a[0])&&ax(b[0])||ax(a[0]-w)&&ax(b[0]-w)||ax(a[1])&&ax(b[1])||ax(a[1]-h)&&ax(b[1]-h),seg=[];
@@ -79,24 +82,29 @@ function blankMM(p,m=partMM(p)){const E=BLANK_EPS,w=m.w,h=m.h,O=m.loops[0]||[],a
   if(k<0){if(O.length)open.push(O);}   // контур касается габарита только точками — режем весь
   else{let cur=null;for(let j=1;j<=seg.length;j++){const s=seg[(k+j)%seg.length];   // начинаем после отрезка на стороне — ломаная не рвётся на стыке начала и конца
     if(s[2]){if(cur)open.push(cur);cur=null;}else{if(!cur)cur=[s[0]];cur.push(s[1]);}}}
-  const inner=m.loops.slice(1),loops=[...open,...inner],len=l=>{let c=0;for(let i=0;i<l.length-1;i++)c+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);return c;};
-  const cut=loops.reduce((a,l)=>a+len(l),0)+m.circles.reduce((a,c)=>a+2*Math.PI*c[2],0);
-  return {w,h,loops,circles:m.circles,bends:m.bends,blank:rect(w,h),open:open.length,cut,pierce:inner.length+m.circles.length+open.length};}
+  const inner=m.loops.slice(1),len=l=>{let c=0;for(let i=0;i<l.length-1;i++)c+=Math.hypot(l[i+1][0]-l[i][0],l[i+1][1]-l[i][1]);return c;};
+  const cut=[...open,...inner].reduce((a,l)=>a+len(l),0)+m.circles.reduce((a,c)=>a+2*Math.PI*c[2],0);
+  // вылет за кромку: точка на одной стороне — шаг наружу; в углу или не на стороне — null
+  const D=.02,o=ZAG_OVER,out=([x,y])=>{const s=[Math.abs(x)<D&&[-o,0],Math.abs(x-w)<D&&[o,0],Math.abs(y)<D&&[0,-o],Math.abs(y-h)<D&&[0,o]].filter(Boolean);
+    return s.length===1?[Math.round((x+s[0][0])*100)/100,Math.round((y+s[0][1])*100)/100]:null;};
+  const ext=k<0?open:open.map(l=>{const a=out(l[0]),b=out(l[l.length-1]);return [...(a?[a]:[]),...l,...(b?[b]:[])];});
+  return {w,h,loops:[...ext,...inner],circles:m.circles,bends:m.bends,blank:rect(w,h),open:open.length,cut,pierce:inner.length+m.circles.length+open.length};}
 // вид детали по partMM (мм) и переключателю sel ('gil' — гильотина, 'laser' — лазер): 'gil' | 'zag' | 'list'; контура нет (в Node у боковин) — 'list'
 function partKind(m,sel='gil'){if(sel==='laser'||!m||!m.loops||!m.loops[0]||!m.loops[0].length||!(m.w>0&&m.h>0))return 'list';
   return !blankMM(null,m).open&&m.loops.length===1&&!m.circles.length?'gil':'zag';}
 // m.sheet — рамка листа (замкнутый контур), только у DXF всего листа (nestDxf, gilDxf); m.blank — прямоугольник заготовки (blankMM);
-// m.blanks — заготовки на схеме гильотины (gilDxf), слой BLANK; m.texts — [x, y, высота, строка] — надписи R12 TEXT по центру, слой TEXT
-function dxfText(m){const e=[],L=(a,b,lay)=>e.push('0','LINE','8',lay,'10',a[0],'20',a[1],'30',0,'11',b[0],'21',b[1],'31',0);
+// m.blanks — заготовки на схеме гильотины (gilDxf), слой BLANK; m.blank — слой ZAG_LAYER цветом ZAG_COLOR; m.texts — [x, y, высота, строка] — надписи R12 TEXT по центру, слой TEXT
+function dxfText(m){const e=[],L=(a,b,lay,col)=>e.push('0','LINE','8',lay,...(col?['62',col]:[]),'10',a[0],'20',a[1],'30',0,'11',b[0],'21',b[1],'31',0);
   if(m.sheet)for(let i=0;i<m.sheet.length-1;i++)L(m.sheet[i],m.sheet[i+1],'SHEET');
-  [m.blank,...(m.blanks||[])].forEach(b=>{if(b)for(let i=0;i<b.length-1;i++)L(b[i],b[i+1],'BLANK');});
+  if(m.blank)for(let i=0;i<m.blank.length-1;i++)L(m.blank[i],m.blank[i+1],ZAG_LAYER,ZAG_COLOR);
+  (m.blanks||[]).forEach(b=>{for(let i=0;i<b.length-1;i++)L(b[i],b[i+1],'BLANK');});
   (m.texts||[]).forEach(([x,y,h,s])=>e.push('0','TEXT','8','TEXT','10',x,'20',y,'30',0,'40',h,'1',s,'72',1,'11',x,'21',y,'31',0,'73',2));
   (m.loops||[]).forEach(l=>{for(let i=0;i<l.length-1;i++)if(l[i][0]!==l[i+1][0]||l[i][1]!==l[i+1][1])L(l[i],l[i+1],'CUT');});
   (m.circles||[]).forEach(([x,y,r])=>e.push('0','CIRCLE','8','CUT','10',x,'20',y,'30',0,'40',r));
   (m.bends||[]).forEach(([a,b])=>L(a,b,'BEND'));
   return ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','9','$INSUNITS','70',4,'0','ENDSEC','0','SECTION','2','ENTITIES',...e,'0','ENDSEC','0','EOF'].join('\r\n')+'\r\n';}
 const dxfName=p=>`${p.file}_${p.mm}mm_x${p.q}.dxf`;
-const dxfNameZ=p=>`${p.file}_${p.mm}mm_x${p.q}_zag.dxf`;   // по заготовке: CUT — только то, что режет лазер, BLANK — заготовка
+const dxfNameZ=p=>`${p.file}_${p.mm}mm_x${p.q}_zag.dxf`;   // по заготовке: CUT — только то, что режет лазер, ZAGOTOVKA_NE_REZAT — заготовка, ноль — её левый нижний угол
 
 // zip без сжатия (stored) — несколько DXF одним файлом
 const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
@@ -121,12 +129,13 @@ const MODE_FILE=()=>({both:'mangal_s_pechyu',grill:'mangal',stove:'pech'})[S.mod
 const PDF_ELEM=pt=>{for(const e of PARTS)if(e.d.some(d=>d[0]===pt))return e.id;return null;};
 
 // эскиз детали — из той же геометрии, что уходит в DXF. kind (режим гильотины): 'gil' — просто прямоугольник,
-// 'zag' — контур заготовки тонким пунктиром, линии лазера (b — blankMM: пазы, вырезы, отверстия) сплошные; иначе — полный контур
-function dxfSketch(m,kind,b){const k=Math.min(230/m.w,64/m.h),w=Math.max(8,m.w*k),h=Math.max(8,m.h*k),H=m.h,pl=(l,c)=>`<polyline${c?` class="${c}"`:''} points="${l.map(([x,y])=>`${x},${H-y}`).join(' ')}"/>`;
+// 'zag' — контур заготовки тонким пунктиром, линии лазера (b — blankMM: пазы, вырезы, отверстия) сплошные, ноль DXF — точка в левом нижнем углу; иначе — полный контур
+function dxfSketch(m,kind,b){const k=Math.min(230/m.w,64/m.h),z=kind==='zag'&&b,pd=z?Math.max(2,4.5/k):2,w=Math.max(8,(m.w+2*pd-4)*k),h=Math.max(8,(m.h+2*pd-4)*k),H=m.h,pl=(l,c)=>`<polyline${c?` class="${c}"`:''} points="${l.map(([x,y])=>`${x},${H-y}`).join(' ')}"/>`;
   let g='';
   if(kind==='gil')g=pl(rect(m.w,m.h));
   else{const d=kind==='zag'&&b?b:m;if(d!==m)g+=pl(rect(m.w,m.h),'bl');
     d.loops.forEach(l=>g+=pl(l));
     d.circles.forEach(([x,y,r])=>g+=`<circle cx="${x}" cy="${H-y}" r="${r}"/>`);
-    d.bends.forEach(([a,c])=>g+=`<line class="bd" x1="${a[0]}" y1="${H-a[1]}" x2="${c[0]}" y2="${H-c[1]}"/>`);}
-  return `<svg class="dxfsk" width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="-2 -2 ${m.w+4} ${m.h+4}" aria-hidden="true">${g}</svg>`;}
+    d.bends.forEach(([a,c])=>g+=`<line class="bd" x1="${a[0]}" y1="${H-a[1]}" x2="${c[0]}" y2="${H-c[1]}"/>`);
+    if(z)g+=`<circle class="o0" cx="0" cy="${H}" r="${Math.round(3/k*100)/100}"/>`;}   // ноль: заготовку кладут так, как на эскизе
+  return `<svg class="dxfsk" width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="${-pd} ${-pd} ${m.w+2*pd} ${m.h+2*pd}" aria-hidden="true">${g}</svg>`;}
