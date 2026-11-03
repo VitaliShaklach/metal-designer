@@ -4,11 +4,24 @@ const P=path.join(__dirname,'..');
 const dimIds=[...fs.readFileSync(P+'/js/dims.js','utf8').matchAll(/^\s*\['([A-Za-z]\w*)',/gm)].map(m=>m[1]);
 const mk=()=>{const U=new Proxy(function(){},{get:(t,k)=>{if(k===Symbol.toPrimitive)return()=>0;if(k===Symbol.iterator)return function*(){};if(k==='then')return undefined;return U;},apply:()=>U,construct:()=>U,set:()=>true});return U;};
 let fails=0,airMM=null,hookMM=null;   // габариты развёртки задвижки и скобы из partMM — для раскладки на прямоугольниках
+const NESTSEEN=new Set();   // наборы, уже проверенные NESTCHK (у видов одного режима детали те же)
+// проверка раскладки (строка — вставляется в vm): для каждого набора [items, W, H, gap, имя] новая раскладка ('best') против старой жадной (mode 2):
+// не больше листов, при равных листах — не длиннее (сумма длин по контурам), детерминирована, всё в листе с краем 10 мм, зазоры не меньше gap, ничего не потеряно
+const NESTCHK=`(sets=>{const run=(I,W,H,gap,m)=>{const g=nestGen(I,W,H,gap,10,5,m);let v;do{v=g.next();}while(!v.done);return v.value;},len=R=>R.sheets.reduce((a,s)=>a+Math.max(...s.items.map(i=>i.bb[2])),0);
+  sets.forEach(([I,W,H,gap,nm])=>{const key=JSON.stringify([I.map(i=>i.pts),W,H,gap]);if(!I.length||NESTSEEN.has(key))return;NESTSEEN.add(key);const o=run(I,W,H,gap,2),a=run(I,W,H,gap),b=run(I,W,H,gap),sig=R=>JSON.stringify(R.sheets.map(s=>s.items.map(i=>[i.id,i.pts])));
+    if(sig(a)!==sig(b))throw new Error(nm+': раскладка не детерминирована');
+    if(a.too.length>o.too.length||a.sheets.length>o.sheets.length)throw new Error(nm+': листов '+a.sheets.length+' (было '+o.sheets.length+'), не влезло '+a.too.length);
+    if(a.sheets.length===o.sheets.length&&a.too.length===o.too.length&&len(a)>len(o)+1e-6)throw new Error(nm+': длина раскладки '+len(a).toFixed(1)+' > старой '+len(o).toFixed(1));
+    if(a.sheets.reduce((q,s)=>q+s.items.length,0)+a.too.length!==I.length)throw new Error(nm+': потеряны детали');
+    a.sheets.forEach(s=>{const A=s.items;if(Math.abs(s.len-Math.max(...A.map(i=>i.bb[2])))>1e-6)throw new Error(nm+': len не по контурам');
+      A.forEach(o=>{const xs=o.pts.map(p=>p[0]),ys=o.pts.map(p=>p[1]);if(Math.min(...xs)<10-1e-6||Math.min(...ys)<10-1e-6||Math.max(...xs)>W-10+1e-6||Math.max(...ys)>H-10+1e-6)throw new Error(nm+': деталь '+o.no+' ближе 10 мм к краю');});
+      for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++){const d=polyGap(A[i].pts,A[j].pts);if(d<gap-1e-6)throw new Error(nm+': зазор '+A[i].no+'–'+A[j].no+' '+d.toFixed(3)+' < '+gap);}});
+    NESTLOG.push(nm+' '+W+'×'+H+' зазор '+gap+': '+o.sheets.length+' л '+Math.round(len(o))+' → '+a.sheets.length+' л '+Math.round(len(a)));});})`;
 // {rain:false} — без крыши от дождя (галочка снята): ни крыши, ни трубок, ни строк крыши в размерах, «Массе», «Что купить», «Заметках»
 for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:true,gAng:false},{man:true,cgr:true,div:true,obe:true,grType:'rebar',skew:true,skewD:true,grates2:true,grillGrate:true},{rain:false,man:true}]){
   const U=mk(),errs=[];
   const flags=JSON.stringify(Object.assign({rain:true,mode},extra));
-  const ctx={THREE:U,__U:U,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&dims='+dimIds.join(',')+'&flags='+encodeURIComponent(flags)},
+  const ctx={THREE:U,__U:U,NESTLOG:[],NESTSEEN,document:U,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&dims='+dimIds.join(',')+'&flags='+encodeURIComponent(flags)},
     addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>0},navigator:U,URLSearchParams,console,Math,JSON,Set,Object,Array,Number,String,Symbol,setTimeout,clearTimeout};
   vm.createContext(ctx);
   // классические скрипты делят одну лексическую область — склеиваем
@@ -32,6 +45,8 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
           if(N.cgr&&/Перфолист/.test(tx('metal')))throw new Error('колосник на листе, а в прокате перфолист');}}`,ctx);
       // раскрой листа: детали для раскладки (у боковин в Node контур пустой — пропускаются), раскладка и рисунок
       vm.runInContext("{const N=nestJob(),res=N.groups.map(G=>{const g=nestGen(G.items,N.W,N.H,N.gap,NEST_EDGE,NEST_CELL);let v;do{v=g.next();}while(!v.done);return v.value;});nestDraw(N,res);nestUI();nestUI(true);}",ctx);
+      // раскладка v1.7 (мультистарт + прижатие) на деталях модели: не длиннее старой жадной (mode 2), тот же ответ дважды, все детали в листе с краем 10 мм, зазоры точно
+      vm.runInContext(NESTCHK+"(nestJob().groups.map(G=>[G.items,2500,1250,5,'модель '+G.mm+' мм']))",ctx);
       // колосник мангала: на листе 5 мм, когда он есть на модели; галочка «на листе» снята — нет; у половины 18 × 19 отверстий Ø10
       vm.runInContext(`{const has=N=>N.groups.some(G=>G.types.some(t=>NEST_CGR(t.p))),a=nestJob(),b=nestJob({cgr:false}),want=gOn()&&S.cgr;
         if(has(a)!==want||a.hasCgr!==want)throw new Error('колосник мангала: на листе '+has(a)+', ждали '+want);if(has(b))throw new Error('колосник мангала остался при снятой галочке');
@@ -104,7 +119,7 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
           const bad=lab.find(t=>/[0-9],[0-9]/.test(t));if(bad)throw new Error('gil: дробные мм в подписи: '+bad);});
         if(nestJob({gil:true}).key===N0.key&&N0.groups.some(G=>G.types.some(t=>t.kind!=='list')))throw new Error('gil: ключ раскладки не меняется от галочки');}`,ctx);}
   catch(e){errs.push(e.message+' '+(e.stack.split('\n')[1]||''));}
-  console.log(mode,JSON.stringify(extra).slice(0,30),errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
+  console.log(mode,JSON.stringify(extra).slice(0,30),ctx.NESTLOG.length?'· раскладка '+ctx.NESTLOG.map(l=>l.replace(/^модель /,'')).join(', '):'',errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
 // по умолчанию (ссылка без flags) крыши нет: S.rain===false; старая ссылка «Поделиться видом» с flags {"rain":true} — крыша есть
 for(const [search,want] of [['',false],['?view=1,1,1,0,0,0',false],['?view=1,1,1,0,0,0&flags='+encodeURIComponent('{"rain":true}'),true]]){
@@ -220,6 +235,35 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
   catch(e){errs.push(e.message+' '+((e.stack||'').split('\n')[1]||''));}
   console.log('виды',mode,JSON.stringify(extra).slice(0,30),st,errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 
+// вкладка «Раскрой» целиком: nestUI с таймерами (очередь setTimeout, часы +25 мс за вызов — раскладка идёт кусками по ~60 мс) доходит до рисунка листа с подписью длины,
+// «Раскладываю… N из M» — N растёт и не больше M; галочка «Заготовки с гильотины» сразу пересчитывает (кусок листа под лазер), снятие — обратно лист
+{const U=mk(),errs=[],Q=[],el={},H={};let msgs=[],clk=0;   // часы: +25 мс за вызов — раскладка идёт многими кусками
+  const E=(id,o)=>el[id]||(el[id]=Object.assign({id,hidden:false,checked:true,value:'',innerHTML:'',textContent:'',clientWidth:1200,classList:{add(){},remove(){}},querySelector:()=>null,
+    addEventListener:(t,f)=>{(H[id+':'+t]=H[id+':'+t]||[]).push(f);}},o));
+  E('nGap',{value:'5'});E('nSheet',{value:'1250x2500'});E('nGil',{checked:false});E('nEdge',{value:'10'});
+  E('nestMsg');Object.defineProperty(el.nestMsg,'textContent',{get(){return msgs.length?msgs[msgs.length-1]:'';},set(v){msgs.push(v);}});
+  const doc=new Proxy({},{get:(t,k)=>k==='getElementById'?(id=>['tab-cut','nestBox','nestMsg','nGap','nSheet','nGil','nEdge','nCgr','nAir','nCgrBox','nAirBox','nEdgeBox','nGilReset','dxfAll'].includes(id)?E(id):U):U});
+  const ctx={THREE:U,__U:U,document:doc,window:{addEventListener:()=>{}},location:{hash:'',href:'http://x/',search:'?view=1,1,1,0,0,0&flags='+encodeURIComponent('{"mode":"grill"}')},localStorage:{getItem:()=>null,setItem:()=>{}},
+    addEventListener:()=>{},requestAnimationFrame:()=>{},ResizeObserver:U,MutationObserver:U,devicePixelRatio:1,performance:{now:()=>(clk+=25)},navigator:U,URLSearchParams,console,Math,JSON,Set,Object,Array,Number,String,Symbol,
+    setTimeout:(f,t)=>{Q.push(f);return Q.length;},clearTimeout:()=>{}};
+  const drain=()=>{let n=0;while(Q.length&&n++<100000)Q.shift()();};
+  try{vm.createContext(ctx);vm.runInContext(['params','parts','model','dims','cut','dxf','nest','ui'].map(f=>fs.readFileSync(P+'/js/'+f+'.js','utf8')).join('\n;\n'),ctx,{filename:'all.js'});
+    drain();vm.runInContext('nestUI(true)',ctx);drain();   // вкладка открыта — раскладка начинается уже при загрузке
+    const html=el.nestBox.innerHTML,st=vm.runInContext('({res:!!NST.res,run:!!NST.run,key:NST.key})',ctx);
+    if(!st.res||st.run)errs.push('раскладка не закончилась (NST.res '+st.res+', NST.run '+st.run+')');
+    if(!/<svg class="nestsv"/.test(html))errs.push('нет рисунка листа');
+    if(!/длина раскладки \d+ мм, остаток \d+ × 1250 целый/.test(html))errs.push('нет подписи «длина раскладки…, остаток … целый»');
+    const pr=msgs.map(m=>m.match(/^Раскладываю… (\d+) из (\d+)$/)).filter(Boolean).map(m=>[+m[1],+m[2]]);
+    if(pr.some(([a,b])=>a>b)||pr.some((p,i)=>i&&p[0]<pr[i-1][0]))errs.push('прогресс: '+pr.map(p=>p.join('/')).join(' '));
+    if(msgs[msgs.length-1]!=='')errs.push('сообщение не убрано: '+msgs[msgs.length-1]);
+    el.nGil.checked=true;(H['nGil:change']||[]).forEach(f=>f());drain();
+    const st2=vm.runInContext('({key:NST.key,gil:NST.cur&&NST.cur.N.gil})',ctx);
+    if(st2.key===st.key||!st2.gil||!/Кусок листа/.test(el.nestBox.innerHTML))errs.push('галочка «Заготовки с гильотины» не пересчитывает раскрой');
+    el.nGil.checked=false;(H['nGil:change']||[]).forEach(f=>f());drain();
+    if(vm.runInContext('NST.key',ctx)!==st.key||!/длина раскладки/.test(el.nestBox.innerHTML))errs.push('галочка снята — лист не вернулся');
+    console.log('вкладка «Раскрой» (nestUI с таймерами): шагов прогресса '+pr.length+(pr.length?', последний '+pr[pr.length-1].join(' из '):''),errs.length?'FAIL '+errs.join(' | '):'ok');}
+  catch(e){console.log('вкладка «Раскрой» FAIL '+e.message+' '+((e.stack||'').split('\n')[1]||''));errs.push(e);}
+  fails+=errs.length;}
 // раскладка на прямоугольниках: 5-мм детали «печь + мангал» — все на одном листе 1250 × 2500; зазор между деталями и край листа — точно (polyGap)
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
   if(!airMM||!hookMM){console.log('раскладка: нет размеров задвижки/скобы из partMM FAIL');fails++;}
@@ -235,6 +279,17 @@ for(const mode of ['both','grill','stove'])for(const extra of [{},{cgr:true,div:
         A.forEach(o=>{const xs=o.pts.map(p=>p[0]),ys=o.pts.map(p=>p[1]);if(Math.min(...xs)<10-1e-6||Math.min(...ys)<10-1e-6||Math.max(...xs)>2490+1e-6||Math.max(...ys)>1240+1e-6)errs.push('деталь '+o.no+' ближе 10 мм к краю');});
         for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++){const d=ctx.polyGap(A[i].pts,A[j].pts);if(d<gap-1e-6)errs.push(`зазор ${A[i].no}–${A[j].no} ${d.toFixed(2)} < ${gap}`);}});}
     console.log(`раскладка, зазор ${gap}${cg?', с колосником мангала':''}:`,N?`${N.sheets.length} лист, ${N.sheets.reduce((a,s)=>a+s.items.length,0)} деталей, занято ${Math.round(N.used*100)} %`:'',errs.length?'FAIL '+errs.slice(0,5).join(' | '):'ok');fails+=errs.length;}}
+// раскладка v1.7 на прямоугольниках и фигурных контурах (уголки, гребёнки, треугольники): против старой жадной, детерминизм, край, зазоры; разные листы и зазоры
+{const ctx={NESTLOG:[],NESTSEEN};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
+  const R=(w,h)=>[[0,0],[w,0],[w,h],[0,h]],Lsh=(w,h,t)=>[[0,0],[w,0],[w,t],[t,t],[t,h],[0,h]],Cmb=(w,h,n)=>{const P=[[0,0],[w,0],[w,h]];for(let k=n;k>0;k--){const x=w*k/(n+1);P.push([x+10,h],[x+10,h+40],[x-10,h+40],[x-10,h]);}P.push([0,h]);return P;},Tri=(w,h)=>[[0,0],[w,0],[0,h]];
+  const mk=S=>{const I=[];S.forEach(([pts,q],k)=>{for(let j=0;j<q;j++)I.push({id:I.length,no:k+1,pts});});return I;};
+  const base=[[R(800,195),2],[R(800,420),1],[R(410,195),1],[R(600,495),2],[R(600,440),1],[R(430,495),1],[R(150,430),1],[R(430,145),1],[R(300,160),1],[R(80,80),4],[R(150,150),4],[R(...(airMM||[838,30])),2],[[[0,0],[12,0],[12,30],[7,30],[7,8],[0,8]],4]];
+  const odd=[[Lsh(600,400,80),2],[Cmb(700,150,6),2],[Tri(500,300),3],[R(382,390),2],[Lsh(300,300,40),3],[R(838,30),2],[R(150,150),4],[[[0,0],[12,0],[12,30],[7,30],[7,8],[0,8]],4]];
+  let sd=11;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647,rs=Array.from({length:12},()=>[R(10*Math.round(5+rnd()*70),10*Math.round(3+rnd()*40)),1+Math.floor(rnd()*3)]);
+  const sets=[[mk(base),2500,1250,5,'прямоугольники'],[mk(base),2000,1000,20,'прямоугольники'],[mk(odd),2500,1250,5,'фигурные'],[mk(odd),1500,1000,10,'фигурные'],[mk(rs),2500,1250,5,'случайные'],[mk(base.slice(9)),1230,600,5,'кусок']];
+  const errs=[];try{vm.runInContext(NESTCHK+'('+JSON.stringify(sets)+')',ctx);}catch(e){errs.push(e.message);}
+  ctx.NESTLOG.forEach(l=>console.log('раскладка v1.7, '+l));
+  console.log('раскладка v1.7 (мультистарт): не длиннее старой, детерминирована, край и зазоры',errs.length?'FAIL '+errs.join(' | '):'ok');fails+=errs.length;}
 // схема гильотины на прямоугольниках: 5-мм детали «печь + мангал» + 3 случайных набора — внутри листа с подрезкой, без пересечений, сквозные резы
 {const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(P+'/js/nest.js','utf8'),ctx,{filename:'nest.js'});
   let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;

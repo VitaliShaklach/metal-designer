@@ -5,8 +5,8 @@
    Отличия от art (помечены «мангал:»): без зеркала, клетка 5 мм, клетка ровно на ползазора свободна; для скорости — nearPoly, polyClose и шаги на подготовке. */
 const area2=P=>{let a=0;P.forEach((p,i)=>{const q=P[(i+1)%P.length];a+=p[0]*q[1]-q[0]*p[1];});return a/2;};
 // ---------- раскладка по форме ----------
-// Лист — сетка клеток cell мм. Каждая деталь пробуется во всех положениях «сторона вдоль листа»;
-// ставим туда, где правый край раскладки получается ближе всего к началу листа — детали заполняют пустоты между собой.
+// Лист — сетка клеток cell мм. Каждая деталь пробуется во всех положениях «сторона вдоль листа» (у прямоугольника — 0° и 90°);
+// раскладок несколько (порядок деталей × правило места), каждая прижимается влево, берётся самая короткая от левого края — правее неё лист целый (nestGen).
 // Занятость — клетки, которых касается деталь; проверка — та же деталь, расширенная на зазор. W — длинная сторона листа.
 function ptSegD(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);}
 function inPoly(p,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
@@ -14,9 +14,12 @@ function segX(a,b,c,d){const o=(p,q,r)=>Math.sign((q[0]-p[0])*(r[1]-p[1])-(q[1]-
 function polyGap(A,B){let d=Infinity;for(let i=0;i<A.length;i++){const a=A[i],a2=A[(i+1)%A.length];for(let j=0;j<B.length;j++){const b=B[j],b2=B[(j+1)%B.length];if(segX(a,a2,b,b2))return 0;d=Math.min(d,ptSegD(a,b,b2),ptSegD(b,a,a2));}}if(inPoly(A[0],B)||inPoly(B[0],A))return 0;return d;}
 // мангал: есть ли сторона контура ближе d к точке — то же, что polyDist(P)(p) < d, но без Math.hypot и с ранним выходом (сетка детали в разы быстрее)
 function nearPoly(P,p,d){const d2=d*d;for(let i=0,n=P.length;i<n;i++){const a=P[i],b=P[i+1<n?i+1:0],dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l)),ex=p[0]-a[0]-t*dx,ey=p[1]-a[1]-t*dy;if(ex*ex+ey*ey<d2)return true;}return false;}
-// мангал: polyGap(A,B) < g — тот же ответ, но далёкие пары сторон отсеиваются по габариту и выход на первой близкой (боковины жаровни — 140 × 140 сторон)
-function polyClose(A,B,g){for(let i=0;i<A.length;i++){const a=A[i],a2=A[(i+1)%A.length],x0=Math.min(a[0],a2[0])-g,x1=Math.max(a[0],a2[0])+g,y0=Math.min(a[1],a2[1])-g,y1=Math.max(a[1],a2[1])+g;
-    for(let j=0;j<B.length;j++){const b=B[j],b2=B[(j+1)%B.length];if(Math.max(b[0],b2[0])<x0||Math.min(b[0],b2[0])>x1||Math.max(b[1],b2[1])<y0||Math.min(b[1],b2[1])>y1)continue;
+// мангал: polyGap(A,B) < g — тот же ответ, но в пары идут только стороны у габарита другой детали (± g), выход на первой близкой (боковины жаровни — 140 × 140 сторон)
+function polyClose(A,B,g){const box=P=>{let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const p of P){if(p[0]<x0)x0=p[0];if(p[0]>x1)x1=p[0];if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1];}return [x0-g,y0-g,x1+g,y1+g];};
+  const near=(P,b)=>{const S=[];for(let i=0,n=P.length;i<n;i++){const a=P[i],c=P[i+1<n?i+1:0];if(Math.max(a[0],c[0])<b[0]||Math.min(a[0],c[0])>b[2]||Math.max(a[1],c[1])<b[1]||Math.min(a[1],c[1])>b[3])continue;S.push([a,c]);}return S;};
+  const SA=near(A,box(B)),SB=SA.length?near(B,box(A)):[];
+  for(const [a,a2] of SA){const x0=Math.min(a[0],a2[0])-g,x1=Math.max(a[0],a2[0])+g,y0=Math.min(a[1],a2[1])-g,y1=Math.max(a[1],a2[1])+g;
+    for(const [b,b2] of SB){if(Math.max(b[0],b2[0])<x0||Math.min(b[0],b2[0])>x1||Math.max(b[1],b2[1])<y0||Math.min(b[1],b2[1])>y1)continue;
       if(segX(a,a2,b,b2)||ptSegD(a,b,b2)<g||ptSegD(b,a,a2)<g)return true;}}
   return inPoly(A[0],B)||inPoly(B[0],A);}
 function polyDist(P){return p=>{let d=Infinity;P.forEach((a,i)=>{d=Math.min(d,ptSegD(p,a,P[(i+1)%P.length]));});return d;};}
@@ -37,27 +40,111 @@ function nestOrient(P,cell,r,flips=[false]){const out=[],seen=new Set();
     const cr=rows(core);out.push({Q,w,h,o,core:cr,dil:cr,flip,tr:{f:flip,c,s,x:-mx,y:-my}});});});});
   return out;}
 // мангал: деталь только поворачивается (flips=[false]) — на листе она такая же, как в DXF; клетка 5 мм (в art — 2,5), зазор всё равно точный (polyGap)
-function* nestGen(items,W,H,gap,margin,cell=5,mode=2){const r=gap/2,GW=Math.floor((W-2*margin)/cell),GH=Math.floor((H-2*margin)/cell);
+// мангал (v1.7): мультистарт. Положения деталей (nestOrient) считаются один раз, дальше — жадная раскладка с разными порядками деталей (NEST_ORD)
+// и правилами места (r — меньше правый край детали, L — не удлинять раскладку, а в её длине — левее, x — левее всего), после каждой — прижатие (nestPolish).
+// Лучшая: меньше не поместившихся, меньше листов, короче раскладка от левого края (по контурам деталей), плотнее; goal 'box' (кусок листа под лазер, режим gil) —
+// сначала меньше площадь габарита раскладки (кусок режет гильотина), потом длина. Без случайностей — один вход, один ответ.
+// mode 0 / 1 / 2 — одна старая жадная раскладка без прижатия (2 — по ширине и левее всего, как до v1.7; smoke сравнивает с ней)
+const NEST_ORD={w:p=>p.mw,a:p=>p.area,l:p=>p.ml,s:p=>p.ms,b:p=>p.box};   // по ширине положения, площади, длинной стороне, короткой стороне, габариту
+const NEST_STRATS=[];['w','a','l','b','s'].forEach(k=>['r','L','x'].forEach(r=>NEST_STRATS.push([k,r])));
+// улучшение лучшего варианта: в его порядке укладки меняем местами соседние детали (первые NEST_SWAP пар) и раскладываем заново; стало лучше — оставляем
+const NEST_SWAP=16;
+const nestSteps=(n,mode='best')=>n+(mode==='best'?NEST_STRATS.length+NEST_SWAP:1);   // сколько шагов (yield) у nestGen — для «Раскладываю… N из M»
+const lexLess=(a,b)=>{for(let i=0;i<a.length;i++){if(a[i]<b[i]-1e-9)return true;if(a[i]>b[i]+1e-9)return false;}return false;};
+function* nestGen(items,W,H,gap,margin,cell=5,mode='best',goal='len'){const r=gap/2,GW=Math.floor((W-2*margin)/cell),GH=Math.floor((H-2*margin)/cell),one=mode!=='best',steps=nestSteps(items.length,mode);
   // мангал: сетки деталей — по одной за шаг (yield), чтобы страница не замирала на подготовке
-  const it=[];for(const o of items){it.push({id:o.id,no:o.no,area:Math.abs(area2(o.pts)),or:nestOrient(o.pts,cell,r,[false])});yield {done:0,of:items.length};}
-  it.sort((a,b)=>mode===2?Math.max(...b.or.map(o=>o.w))-Math.max(...a.or.map(o=>o.w)):b.area-a.area);
-  const sheets=[],too=[];
-  const newSheet=()=>{const sh={items:[],occ:new Uint8Array(GW*GH),pre:new Int32Array((GW+1)*GH),len:0};sheets.push(sh);return sh;};
-  const free=(sh,R,x,y)=>{for(let ry=0;ry<R.length;ry++){const iv=R[ry];if(!iv.length)continue;const base=(y+ry)*(GW+1);for(const [a,b] of iv)if(sh.pre[base+x+b+1]-sh.pre[base+x+a])return false;}return true;};
-  const gapOK=(sh,o,x,y)=>{const ox=margin+(x+o.o)*cell,oy=margin+(y+o.o)*cell,P=o.Q.map(q=>[q[0]+ox,q[1]+oy]),bx=[Math.min(...P.map(p=>p[0]))-gap,Math.min(...P.map(p=>p[1]))-gap,Math.max(...P.map(p=>p[0]))+gap,Math.max(...P.map(p=>p[1]))+gap];
+  const it=[];for(const o of items){const or=nestOrient(o.pts,cell,r,[false]),Q=or[0].Q,bw=Math.max(...Q.map(q=>q[0])),bh=Math.max(...Q.map(q=>q[1]));
+    it.push({id:o.id,no:o.no,idx:it.length,area:Math.abs(area2(o.pts)),or,mw:Math.max(...or.map(q=>q.w)),ml:Math.max(...or.map(q=>Math.max(q.w,q.h))),ms:Math.min(...or.map(q=>Math.min(q.w,q.h))),box:bw*bh});yield {done:it.length,of:steps};}
+  const newSheet=()=>({items:[],occ:new Uint8Array(GW*GH),pre:new Int32Array((GW+1)*GH),gl:0});
+  // свободны ли клетки детали в (x, y): отрезки строк — плоско [строка, от, до], строки вперемешку (края, середина, четверти…) — занятое находится раньше
+  const flat=o=>{if(o.fl)return o.fl;const R=o.dil,n=R.length,ord=n>1?[0,n-1]:[0],seen=new Uint8Array(n);ord.forEach(r=>seen[r]=1);
+    for(let st=1<<Math.ceil(Math.log2(n||1));st>=1;st>>=1)for(let r=0;r<n;r+=st)if(!seen[r]){seen[r]=1;ord.push(r);}
+    const F=[];ord.forEach(r=>{R[r].forEach(([a,b])=>F.push(r,a,b+1));});return o.fl=Int32Array.from(F);};
+  const free=(sh,o,x,y)=>{const F=o.fl||flat(o),pre=sh.pre,W1=GW+1;for(let k=0;k<F.length;k+=3){const base=(y+F[k])*W1+x;if(pre[base+F[k+2]]!==pre[base+F[k+1]])return false;}return true;};
+  // точный зазор: у двух деталей на сетке ответ polyClose зависит только от их положений и сдвига в клетках — запоминаем (одни и те же пары во всех стратегиях и при прижатии)
+  let uid=0;it.forEach(p=>p.or.forEach(o=>{o.uid=uid++;o.qw=Math.max(...o.Q.map(q=>q[0]));o.qh=Math.max(...o.Q.map(q=>q[1]));}));
+  const memo=new Map(),U=uid,DX=2*GW+1,DY=2*GH+1;
+  // polyClose(A + (sx, sy), B, g) для двух положений: стороны — заранее в Float64Array [x0, y0, x1, y1], в пары — только стороны у габарита другой детали (± g)
+  const segs=o=>{if(o.sg)return o.sg;const Q=o.Q,n=Q.length,S=new Float64Array(n*4);for(let i=0;i<n;i++){const a=Q[i],b=Q[i+1<n?i+1:0];S[4*i]=a[0];S[4*i+1]=a[1];S[4*i+2]=b[0];S[4*i+3]=b[1];}return o.sg=S;};
+  // сетка-индекс сторон положения (клетка BK мм): в пары идут только стороны из клеток, что попали в зону (габарит другой детали ± g)
+  const BK=40;let stamp=0;
+  const index=o=>{if(o.ix)return o.ix;const S=segs(o),nx=Math.floor(o.qw/BK)+1,ny=Math.floor(o.qh/BK)+1,C=Array.from({length:nx*ny},()=>[]),cl=(v,n)=>Math.max(0,Math.min(n-1,Math.floor(v/BK)));
+    for(let i=0;i<S.length;i+=4){const X0=cl(Math.min(S[i],S[i+2]),nx),X1=cl(Math.max(S[i],S[i+2]),nx),Y0=cl(Math.min(S[i+1],S[i+3]),ny),Y1=cl(Math.max(S[i+1],S[i+3]),ny);
+      for(let y=Y0;y<=Y1;y++)for(let x=X0;x<=X1;x++)C[y*nx+x].push(i);}
+    return o.ix={nx,ny,C,seen:new Int32Array(S.length/4)};};
+  const pick=(o,dx,dy,x0,y0,x1,y1)=>{const S=segs(o),I=index(o),r=[],cl=(v,n)=>Math.floor(v/BK);x0-=dx;x1-=dx;y0-=dy;y1-=dy;   // зона — в координатах положения
+    if(x1<0||y1<0||x0>o.qw||y0>o.qh)return r;const X0=Math.max(0,cl(x0)),X1=Math.min(I.nx-1,cl(x1)),Y0=Math.max(0,cl(y0)),Y1=Math.min(I.ny-1,cl(y1));stamp++;
+    for(let y=Y0;y<=Y1;y++)for(let x=X0;x<=X1;x++)for(const i of I.C[y*I.nx+x]){if(I.seen[i/4]===stamp)continue;I.seen[i/4]=stamp;
+      const ax=S[i],ay=S[i+1],bx=S[i+2],by=S[i+3];if(Math.max(ax,bx)<x0||Math.min(ax,bx)>x1||Math.max(ay,by)<y0||Math.min(ay,by)>y1)continue;r.push([ax+dx,ay+dy],[bx+dx,by+dy]);}
+    return r;};
+  const closeOr=(A,sx,sy,B,g)=>{const SA=pick(A,sx,sy,-g,-g,B.qw+g,B.qh+g);
+    if(SA.length){const SB=pick(B,0,0,sx-g,sy-g,sx+A.qw+g,sy+A.qh+g);
+      for(let i=0;i<SA.length;i+=2){const a=SA[i],a2=SA[i+1],x0=Math.min(a[0],a2[0])-g,x1=Math.max(a[0],a2[0])+g,y0=Math.min(a[1],a2[1])-g,y1=Math.max(a[1],a2[1])+g;
+        for(let j=0;j<SB.length;j+=2){const b=SB[j],b2=SB[j+1];if(Math.max(b[0],b2[0])<x0||Math.min(b[0],b2[0])>x1||Math.max(b[1],b2[1])<y0||Math.min(b[1],b2[1])>y1)continue;
+          if(segX(a,a2,b,b2)||ptSegD(a,b,b2)<g||ptSegD(b,a,a2)<g)return true;}}}
+    const p=A.Q[0],q=B.Q[0];return inPoly([p[0]+sx,p[1]+sy],B.Q)||inPoly([q[0]-sx,q[1]-sy],A.Q);};
+  const gapOK=(sh,o,x,y)=>{const ox=margin+(x+o.o)*cell,oy=margin+(y+o.o)*cell,bx=[ox-gap,oy-gap,ox+o.qw+gap,oy+o.qh+gap];
     if(bx[0]<margin-.01||bx[1]<margin-.01||bx[2]>W-margin+gap+.01||bx[3]>H-margin+gap+.01)return false;
-    for(const it of sh.items){const b=it.bb;if(b[0]>bx[2]||b[2]<bx[0]||b[1]>bx[3]||b[3]<bx[1])continue;if(polyClose(P,it.pts,gap))return false;}return true;};
-  const fit=(sh,o,limit)=>{for(let x=0;x+o.w<=GW;x++){if(x+o.w>=limit)return null;for(let y=0;y+o.h<=GH;y++)if(free(sh,o.dil,x,y)&&gapOK(sh,o,x,y))return {x,y};}return null;};
-  const place=(sh,o,x,y)=>{o.core.forEach((iv,ry)=>{const Y=y+ry;if(Y>=GH)return;iv.forEach(([a,b])=>{for(let X=x+a;X<=x+b&&X<GW;X++)sh.occ[Y*GW+X]=1;});
+    for(const it of sh.items){const b=it.bb;if(b[0]>bx[2]||b[2]<bx[0]||b[1]>bx[3]||b[3]<bx[1])continue;
+      const dx=x-it._x,dy=y-it._y,k=((o.uid*U+it._o.uid)*DX+(dx+GW))*DY+(dy+GH);let c=memo.get(k);
+      // считаем в координатах пары (вторая деталь — в своём нуле): ответ зависит только от ключа, а не от места на листе (иначе касание ровно на зазоре
+      // в плавающей точке то 4,9999999, то 5,0000001 — и стратегии влияют друг на друга); касание ровно на зазоре разрешено (допуск 1e-6 мм)
+      if(c===undefined){c=closeOr(o,(dx+o.o-it._o.o)*cell,(dy+o.o-it._o.o)*cell,it._o,gap-1e-6);memo.set(k,c);}
+      if(c)return false;}
+    return true;};
+  // первое место слева (x, потом y), где x + ширина < limit; null — нет
+  const fit=(sh,o,limit)=>{for(let x=0;x+o.w<=GW;x++){if(x+o.w>=limit)return null;for(let y=0;y+o.h<=GH;y++)if(free(sh,o,x,y)&&gapOK(sh,o,x,y))return {x,y};}return null;};
+  // занять (v=1) или освободить (v=0) клетки детали и пересчитать суммы строк
+  const mark=(sh,o,x,y,v)=>{o.core.forEach((iv,ry)=>{const Y=y+ry;if(Y>=GH||!iv.length)return;iv.forEach(([a,b])=>{for(let X=x+a;X<=x+b&&X<GW;X++)sh.occ[Y*GW+X]=v;});
       const base=Y*(GW+1);let acc=0;for(let X=0;X<GW;X++){sh.pre[base+X]=acc;acc+=sh.occ[Y*GW+X];}sh.pre[base+GW]=acc;});};
-  for(let pi=0;pi<it.length;pi++){const p=it[pi];let done=false;yield {done:pi,of:it.length};
-    for(const sh of sheets.concat([null])){const S=sh||newSheet();let best=null;
-      p.or.forEach(o=>{if(o.w>GW||o.h>GH)return;const f=fit(S,o,best?(mode?best.x+1+o.w:best.score):Infinity);if(f){const score=mode?f.x*1e4+f.y:f.x+o.w;if(!best||score<best.score||score===best.score&&f.y<best.y)best={o,...f,score,right:f.x+o.w};}});
-      if(best){place(S,best.o,best.x,best.y);const ox=margin+(best.x+best.o.o)*cell,oy=margin+(best.y+best.o.o)*cell;
-        const pts=best.o.Q.map(q=>[q[0]+ox,q[1]+oy]);const t=best.o.tr;S.items.push({id:p.id,no:p.no,flip:best.o.flip,tr:{...t,x:t.x+ox,y:t.y+oy},area:p.area,x:0,y:0,pts,bb:[Math.min(...pts.map(q=>q[0])),Math.min(...pts.map(q=>q[1])),Math.max(...pts.map(q=>q[0])),Math.max(...pts.map(q=>q[1]))]});S.len=Math.max(S.len,margin+best.right*cell);done=true;break;}
-      if(!sh){sheets.pop();break;}}
-    if(!done)too.push({id:p.id,no:p.no});}
-  sheets.forEach(s=>{const a=s.items.reduce((q,o)=>q+o.area,0);s.used=a/(W*H);s.dense=a/((s.len-margin)*(H-2*margin)||1);delete s.occ;delete s.pre;});
+  const glen=sh=>sh.items.reduce((m,e)=>Math.max(m,e._x+e._o.w),0);
+  const place=(sh,p,o,x,y)=>{mark(sh,o,x,y,1);const ox=margin+(x+o.o)*cell,oy=margin+(y+o.o)*cell,pts=o.Q.map(q=>[q[0]+ox,q[1]+oy]),t=o.tr;
+    const e={id:p.id,no:p.no,flip:o.flip,tr:{...t,x:t.x+ox,y:t.y+oy},area:p.area,x:0,y:0,pts,bb:[Math.min(...pts.map(q=>q[0])),Math.min(...pts.map(q=>q[1])),Math.max(...pts.map(q=>q[0])),Math.max(...pts.map(q=>q[1]))],_p:p,_o:o,_x:x,_y:y};
+    sh.items.push(e);sh.gl=Math.max(sh.gl,x+o.w);return e;};
+  const unplace=(sh,e)=>{mark(sh,e._o,e._x,e._y,0);sh.items.splice(sh.items.indexOf(e),1);sh.gl=glen(sh);};
+  // место детали по правилу: r — [правый край, y, x], L — [длина раскладки, x, y], x — [x, y]; cap — правый край меньше cap (клеток)
+  const choose=(sh,p,rule,cap=Infinity)=>{const cur=sh.gl;let best=null;
+    for(const o of p.or){if(o.w>GW||o.h>GH)continue;
+      let lim=cap;if(best)lim=Math.min(lim,rule==='x'?best.x+1+o.w:rule==='r'||best.nl>cur?best.right+1:best.x+1+o.w);
+      const f=fit(sh,o,lim);if(!f)continue;const right=f.x+o.w,nl=Math.max(cur,right),sc=rule==='x'?[f.x,f.y]:rule==='r'?[right,f.y,f.x]:[nl,f.x,f.y];
+      if(!best||lexLess(sc,best.sc))best={o,x:f.x,y:f.y,right,nl,sc};}
+    return best;};
+  // жадная раскладка: детали по порядку, каждая — на первый лист, где есть место
+  const sorted=ord=>it.slice().sort((a,b)=>NEST_ORD[ord](b)-NEST_ORD[ord](a)||a.idx-b.idx);
+  function* greedy(L,rule,step){const sheets=[],too=[];
+    for(let i=0;i<L.length;i++){const p=L[i];let done=false;if(one)yield {done:step,of:steps};
+      for(const sh of sheets.concat([null])){const S=sh||newSheet(),b=choose(S,p,rule);
+        if(b){if(!sh)sheets.push(S);place(S,p,b.o,b.x,b.y);done=true;break;}}
+      if(!done)too.push(p);}
+    return {sheets,too,L,rule};}
+  // прижатие: каждую деталь (слева направо) вынуть и поставить в любом положении туда, где её правый край (по контуру) меньше, при равном — левее, ниже;
+  // так детали съезжают влево и вниз, а крайние справа уходят в дыры левее. Повтор, пока что-то сдвинулось (не больше 8 проходов).
+  // Если листов больше одного — детали с последнего листа пробуем переложить на прежние
+  // правый край детали по контуру (мм от края поля) и предел fit, чтобы он был не правее R: прижатие не удлиняет раскладку ни на мм
+  const rx=(o,x)=>(x+o.o)*cell+o.qw,xlim=(o,R)=>Math.floor((R-o.qw)/cell+1e-9)-o.o+o.w+1;
+  const polish=R=>{R.sheets.forEach(S=>{for(let pass=0;pass<8;pass++){let moved=false;
+      const L=S.items.slice().sort((a,b)=>a._x-b._x||a._y-b._y||a._p.idx-b._p.idx);
+      for(const e of L){const p=e._p,o0=e._o,x0=e._x,y0=e._y,old=[rx(o0,x0),x0,y0];unplace(S,e);
+        let best=null;for(const o of p.or){if(o.w>GW||o.h>GH)continue;const f=fit(S,o,xlim(o,best?best.sc[0]:old[0]));if(!f)continue;const sc=[rx(o,f.x),f.x,f.y];if(!best||lexLess(sc,best.sc))best={o,...f,sc};}
+        if(best&&lexLess(best.sc,old)){place(S,p,best.o,best.x,best.y);moved=true;}else place(S,p,o0,x0,y0);}
+      if(!moved)break;}});
+    while(R.sheets.length>1){const last=R.sheets[R.sheets.length-1];
+      for(const e of last.items.slice().sort((a,b)=>a._p.idx-b._p.idx)){for(const S of R.sheets.slice(0,-1)){const b=choose(S,e._p,'r');if(b){unplace(last,e);place(S,e._p,b.o,b.x,b.y);break;}}}
+      if(last.items.length)break;R.sheets.pop();}
+    return R;};
+  const realLen=sh=>sh.items.reduce((m,e)=>Math.max(m,e.bb[2]),margin);
+  const realTop=sh=>sh.items.reduce((m,e)=>Math.max(m,e.bb[3]),margin);
+  const score=R=>[R.too.length,R.sheets.length,goal==='box'?R.sheets.reduce((a,s)=>a+realLen(s)*realTop(s),0):0,R.sheets.reduce((a,s)=>a+realLen(s),0),-R.sheets.reduce((a,s)=>a+s.items.reduce((q,o)=>q+o.area,0)/Math.max(1,realLen(s)-margin),0)];
+  let best=null;
+  if(one){const [ord,rule]=mode===2?['w','x']:mode===1?['a','x']:['a','r'];best=yield* greedy(sorted(ord),rule,it.length);}
+  else for(let si=0;si<NEST_STRATS.length;si++){yield {done:it.length+si,of:steps};const [ord,rule]=NEST_STRATS[si],R=polish(yield* greedy(sorted(ord),rule,0));R.sc=score(R);if(!best||lexLess(R.sc,best.sc))best=R;}
+  // перестановки: пара (i, i+1) в порядке лучшего; одинаковые детали не меняем (тот же результат)
+  if(!one)for(let i=0,j=0;j<NEST_SWAP&&i+1<best.L.length;i++){const a=best.L[i],b=best.L[i+1];if(a.no===b.no)continue;yield {done:it.length+NEST_STRATS.length+j,of:steps};j++;
+    const L=best.L.slice();L[i]=b;L[i+1]=a;const R=polish(yield* greedy(L,best.rule,0));R.sc=score(R);if(lexLess(R.sc,best.sc))best=R;}
+  const {sheets}=best,too=best.too.slice().sort((a,b)=>a.idx-b.idx).map(p=>({id:p.id,no:p.no}));
+  // len — правый край раскладки по контурам деталей (мм от левого края листа): правее него лист целый
+  sheets.forEach(s=>{s.items.sort((a,b)=>a.id-b.id);s.items.forEach(e=>{delete e._p;delete e._o;delete e._x;delete e._y;});
+    const a=s.items.reduce((q,o)=>q+o.area,0);s.len=realLen(s);s.used=a/(W*H);s.dense=a/((s.len-margin)*(H-2*margin)||1);delete s.occ;delete s.pre;delete s.gl;});
   return {sheets,too,W,H,gap,used:sheets.length?sheets.reduce((a,s)=>a+s.used,0)/sheets.length:0};}
 
 /* ---------- детали для раскладки ---------- */
@@ -118,6 +205,8 @@ function nestSvg(N,G,sh,isOn,big){const [W,H]=N.gil?nestPiece(N,sh):[N.W,N.H],fk
     const hide=lbl.some(b=>b.no===ty.no&&Math.abs(b.x-L.p[0])<(b.w+lw)/2&&Math.abs(b.y-L.p[1])<(b.h+fz)/2);if(!hide)lbl.push({no:ty.no,x:L.p[0],y:L.p[1],w:lw,h:fz});
     g+=`<g class="np${isOn(ty)?' on':''}"><title>${ty.no} — ${ty.p.name}</title><path d="${d}"/>${bd}${hide?'':`<text x="${n1(L.p[0])}" y="${n1(Y(L.p[1]))}" dy=".36em" font-size="${fz}" text-anchor="middle">${ty.no}</text>`}</g>`;});
   return `<svg class="nestsv${N.gil?' npc':''}" viewBox="${-pd} ${-pd} ${W+pd+10} ${H+pd+10}" role="img" aria-label="${N.gil?'Кусок листа под лазер':'Лист'} ${G.mm} мм, ${H} × ${W}, деталей ${sh.items.length}">${g}</svg>`;}
+// длина раскладки от левого края листа (по контурам деталей, целые мм вверх) и целый остаток справа — цех может посчитать только использованный кусок
+const nestRest=(N,sh)=>{const L=Math.ceil(sh.len-1e-6);return L<N.W?` · длина раскладки ${L} мм, остаток ${N.W-L} × ${N.H} целый`:` · длина раскладки ${L} мм`;};
 // кусок листа под лазер (режим gil): от угла раскладки до её габарита плюс край NEST_EDGE, вверх до 10 мм, не больше листа минус подрезка (LW × LH); его режет гильотина
 function nestPiece(N,sh){const up=v=>Math.ceil((v+NEST_EDGE)/10-1e-9)*10,mx=Math.max(0,...sh.items.map(it=>it.bb[2])),my=Math.max(0,...sh.items.map(it=>it.bb[3]));
   return [Math.min(N.LW,up(mx)),Math.min(N.LH,up(my))];}
@@ -238,7 +327,7 @@ function nestDraw(N,res){const box=document.getElementById('nestBox');if(!box)re
     R.sheets.forEach((sh,si)=>{bt+=`<button class="dxfbtn" data-act="sheet" data-g="${gi}" data-s="${si}">${N.gil?'Скачать DXF куска под лазер':'Скачать DXF листа'}${ns>1?' '+(si+1):''}</button>`;});
     if(N.gil&&(ns||G.types.some(ty=>ty.kind==='zag')))bt+=`<button class="dxfbtn" data-act="laser" data-g="${gi}" title="Куски листа под лазер и каждая заготовка с гильотины — отдельным DXF, ноль в левом нижнем углу">Всё на лазер · ${G.mm} мм (ZIP)</button>`;
     if(bt)h+=`<div class="nbtns">${bt}</div>`;
-    const lsr=(sh,si)=>`${ns>1?`Лист ${si+1} из ${ns} · `:''}${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм`;
+    const lsr=(sh,si)=>`${ns>1?`Лист ${si+1} из ${ns} · `:''}${N.H} × ${N.W} · деталей ${sh.items.length} · занято ${Math.round(sh.used*100)} % · зазор ${fmt(N.gap,1)} мм, от края ${NEST_EDGE} мм${nestRest(N,sh)}`;
     if(P){const np=P.sheets.length;
       P.sheets.forEach((sh,si)=>{h+=`<figure class="nsheet"><figcaption title="Отход — обрезки внутри занятого прямоугольника (от угла листа), вместе с подрезкой кромки; остальное — целый остаток листа">Лист ${G.mm} мм${np>1?`, ${si+1} из ${np}`:''} · гильотина: резов ${sh.cuts}, заготовок ${sh.items.length}, занято ${Math.round(sh.used*100)} %, отход ${Math.round(sh.waste*100)} % · ${N.H} × ${N.W}, подрезка кромки ${N.edge} мм</figcaption>${gilSvg(N,G,sh,isOn,wide)}</figure>`;});
       if(np)h+='<p class="glegend"><span><i class="lg gil">▪</i> серый — готовая деталь (только гильотина)</span><span><i class="lg las">▪</i> оранжевый — заготовка, дальше на лазер</span></p>';
@@ -289,7 +378,8 @@ function nestInit(){if(NST.init)return;NST.init=true;const gi=document.getElemen
   const g=store('md-ngap'),s=store('md-sheet'),c=store('md-ncgr'),a=store('md-nair'),l=store('md-ngil'),ed=store('md-nedge'),ci=document.getElementById('nCgr'),ai=document.getElementById('nAir'),li=document.getElementById('nGil');if(Number.isFinite(+g)&&g!==null)gi.value=g;if(s&&NEST_SHEETS[s])si.value=s;if(ci&&typeof c==='boolean')ci.checked=c;if(ai&&typeof a==='boolean')ai.checked=a;if(li&&typeof l==='boolean')li.checked=l;
   if(ei&&Number.isFinite(+ed)&&ed!==null)ei.value=ed;
   const ch=()=>{const o=nestOpts();store('md-ngap',o.gap);store('md-sheet',o.sk);store('md-ncgr',o.cgr);store('md-nair',o.air);store('md-ngil',o.gil);store('md-nedge',o.edge);nestUI();};
-  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);if(ci)ci.addEventListener('change',()=>{ch();drawCut();});if(ai)ai.addEventListener('change',()=>{ch();drawCut();});   // «Масса» → лист считается из раскрояif(li)li.addEventListener('change',()=>{ch();nestUI(true);});
+  gi.addEventListener('input',ch);gi.addEventListener('change',()=>{gi.value=nestOpts().gap;ch();});si.addEventListener('change',ch);if(ci)ci.addEventListener('change',()=>{ch();drawCut();});if(ai)ai.addEventListener('change',()=>{ch();drawCut();});   // «Масса» → лист считается из раскроя
+  if(li)li.addEventListener('change',()=>{ch();nestUI(true);});
   if(ei){ei.addEventListener('input',ch);ei.addEventListener('change',()=>{ei.value=nestOpts().edge;ch();});}
   const box=document.getElementById('nestBox'),all=document.getElementById('dxfAll'),rs=document.getElementById('nGilReset');if(box)box.addEventListener('click',nestClick);if(all)all.addEventListener('click',saveAll);if(rs)rs.addEventListener('click',()=>gilSet(null));}
 function nestUI(now){clearTimeout(NST.t);if(!now){NST.t=setTimeout(()=>nestUI(true),300);return;}
@@ -298,12 +388,13 @@ function nestUI(now){clearTimeout(NST.t);if(!now){NST.t=setTimeout(()=>nestUI(tr
   ['nEdgeBox','nGilReset'].forEach(id=>{const e=document.getElementById(id);if(e)e.hidden=!N.gil;});   // подрезка кромки и «Сбросить выбор» — только с гильотиной
   if(NST.res&&NST.key===N.key){NST.run=null;nestMsg('');nestDraw(N,NST.res);return;}   // уже посчитано (лишний счёт, если шёл, — останавливаем)
   if(NST.run&&NST.run.key===N.key)return;   // уже считается
-  const run={key:N.key,res:[],gi:0,g:null,done:0},all=N.groups.reduce((a,G)=>a+G.items.length,0);NST.run=run;
+  const run={key:N.key,res:[],gi:0,g:null,done:0},all=N.groups.reduce((a,G)=>a+nestSteps(G.items.length),0);;NST.run=run;   // шаги: подготовка деталей + варианты раскладки
   const box=document.getElementById('nestBox');if(box){if(box.querySelector('svg'))box.classList.add('busy');else box.innerHTML='<p class="tabnote">Раскладываю…</p>';}
   nestMsg('Раскладываю…');
   const step=()=>{if(NST.run!==run)return;const t0=performance.now();
-    while(run.gi<N.groups.length){const G=N.groups[run.gi];if(!run.g)run.g=nestGen(G.items,N.LW,N.LH,N.gap,NEST_EDGE,NEST_CELL);const v=run.g.next();
-      if(v.done){run.res.push(v.value);run.g=null;run.gi++;}else run.done=N.groups.slice(0,run.gi).reduce((a,G)=>a+G.items.length,0)+v.value.done;
+    while(run.gi<N.groups.length){const G=N.groups[run.gi];if(!run.g)run.g=nestGen(G.items,N.LW,N.LH,N.gap,NEST_EDGE,NEST_CELL,'best',N.gil?'box':'len');   // с гильотиной — меньше кусок листа под лазер
+      const v=run.g.next();
+      if(v.done){run.res.push(v.value);run.g=null;run.gi++;}else run.done=N.groups.slice(0,run.gi).reduce((a,G)=>a+nestSteps(G.items.length),0)+v.value.done;
       if(performance.now()-t0>60)break;}
     if(run.gi<N.groups.length){nestMsg(`Раскладываю… ${run.done} из ${all}`);setTimeout(step,0);return;}
     NST.key=run.key;NST.res=run.res;NST.run=null;nestMsg('');nestUI(true);};   // нарисовать; если детали сменились, пока считали, — посчитает заново
